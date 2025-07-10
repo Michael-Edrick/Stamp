@@ -1,0 +1,30 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# Dependencies
+/node_modules
+/mini-app/node_modules
+/smart-contract/node_modules
+
+# Build outputs
+/mini-app/.next/
+/mini-app/out/
+/smart-contract/artifacts/
+/smart-contract/cache/
+
+# Environment variables
+.env
+.env*.local
+/mini-app/.env.local
+/smart-contract/.env
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Other
+.DS_Store
+*.pem
+*.p12
+*.key 
