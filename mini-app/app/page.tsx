@@ -145,7 +145,7 @@ const ProfileCard = ({ profile }: { profile: any }) => (
 const BottomNav = () => (
     <div className="fixed bottom-0 left-0 right-0 w-full max-w-md mx-auto h-24 bg-transparent flex justify-center items-center">
         <div className="flex items-center justify-between bg-black rounded-full shadow-lg p-2 w-48">
-            <button className="p-3 rounded-full bg-gray-700 cursor-not-allowed" disabled><SearchIcon /></button>
+            <Link href="/search" className="p-3 rounded-full hover:bg-gray-800"><SearchIcon /></Link>
             <Link href="/inbox" className="p-3 rounded-full hover:bg-gray-800"><MessageIcon /></Link>
             <Link href="/new-message" className="p-3 rounded-full bg-blue-600 hover:bg-blue-700"><PlusIcon /></Link>
         </div>
