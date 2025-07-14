@@ -32,16 +32,22 @@ export default function App() {
 
   useEffect(() => {
     setIsClient(true);
+    fetchUsers();
   }, []);
 
-  // Mock profile fetching
-  useEffect(() => {
-    const mockProfiles = [
-      { id: '0x1234567890123456789012345678901234567890', name: 'Clemens Scherf', username: 'Clemens' },
-      { id: '0xabcdefabcdefabcdefabcdefabcdefabcdefabcd', name: 'Vitalik Buterin', username: 'vitalik' },
-    ];
-    setProfiles(mockProfiles as any);
-  }, []);
+  const fetchUsers = async () => {
+    try {
+      const response = await fetch('/api/users');
+      if (!response.ok) {
+        throw new Error('Failed to fetch users');
+      }
+      const users = await response.json();
+      setProfiles(users);
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      // Optionally, set an error state to show in the UI
+    }
+  };
 
   const handleSignIn = async () => {
     if (!address || !chainId) {
@@ -107,7 +113,7 @@ export default function App() {
         </main>
       </div>
       <BottomNav onSearchClick={() => setIsSearchModalOpen(true)} />
-      {isSearchModalOpen && <SearchModal onClose={() => setIsSearchModalOpen(false)} />}
+      {isSearchModalOpen && <SearchModal profiles={profiles} onClose={() => setIsSearchModalOpen(false)} />}
     </div>
   );
 }
@@ -130,10 +136,10 @@ const CustomConnectButton = () => {
 const ProfileCard = ({ profile }: { profile: any }) => (
   <div className="bg-[var(--background-card)] rounded-2xl p-4 mb-4 shadow-sm">
     <div className="flex items-center">
-      <Avatar address={profile.id as `0x${string}`} className="w-10 h-10 rounded-full mr-4" />
+      <Avatar address={profile.walletAddress as `0x${string}`} className="w-10 h-10 rounded-full mr-4" />
       <div>
         <p className="font-bold text-lg">{profile.name || "Anonymous"}</p>
-        <p className="text-sm text-[var(--text-muted)]">@{profile.username || profile.id.slice(0, 8)}</p>
+        <p className="text-sm text-[var(--text-muted)]">@{profile.username || (profile.walletAddress ? profile.walletAddress.slice(0, 8) : '')}</p>
       </div>
     </div>
     <div className="mt-3 flex flex-wrap gap-2">
@@ -158,12 +164,7 @@ const SearchIcon = ({ className }: { className?: string }) => (<svg className={`
 const MessageIcon = () => (<svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>);
 const PlusIcon = () => (<svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>);
 
-const SearchModal = ({ onClose }: { onClose: () => void }) => {
-  const mockProfiles = [
-    { id: '0x1234567890123456789012345678901234567890', name: 'Clemens Scherf', username: 'Clemens' },
-    { id: '0xabcdefabcdefabcdefabcdefabcdefabcdefabcd', name: 'Vitalik Buterin', username: 'vitalik' },
-    { id: '0x1111111111111111111111111111111111111111', name: 'Hayden Adams', username: 'hayden' },
-  ];
+const SearchModal = ({ profiles, onClose }: { profiles: any[], onClose: () => void }) => {
   const tags = ['BASE', 'LBS', 'WEB 3', 'LUCID', 'SOLANA', 'ETH'];
 
   return (
@@ -177,7 +178,7 @@ const SearchModal = ({ onClose }: { onClose: () => void }) => {
         
         <h2 className="text-lg font-bold mb-3">Profiles</h2>
         <div className="space-y-3 mb-6">
-          {mockProfiles.map(p => <ModalProfileCard key={p.id} profile={p} />)}
+          {profiles.map(p => <ModalProfileCard key={p.id} profile={p} />)}
         </div>
 
         <h2 className="text-lg font-bold mb-3">Relevant Tags</h2>
@@ -197,10 +198,10 @@ const SearchModal = ({ onClose }: { onClose: () => void }) => {
 const ModalProfileCard = ({ profile }: { profile: any }) => (
   <div className="flex items-center justify-between bg-gray-900 rounded-xl p-3">
     <div className="flex items-center">
-      <Avatar address={profile.id as `0x${string}`} className="w-10 h-10 rounded-full mr-3" />
+      <Avatar address={profile.walletAddress as `0x${string}`} className="w-10 h-10 rounded-full mr-3" />
       <div>
-        <p className="font-semibold">{profile.name}</p>
-        <p className="text-sm text-gray-400">@{profile.username}</p>
+        <p className="font-semibold">{profile.name || 'Anonymous'}</p>
+        <p className="text-sm text-gray-400">@{profile.username || (profile.walletAddress ? profile.walletAddress.slice(0, 8) : '')}</p>
       </div>
     </div>
     <button className="p-2 rounded-full bg-blue-600 hover:bg-blue-700">

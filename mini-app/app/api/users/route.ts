@@ -60,4 +60,19 @@ export async function GET(req: Request) {
         console.error("Error fetching user profile:", error);
         return NextResponse.json({ error: "An error occurred while fetching the profile." }, { status: 500 });
     }
+}
+
+export async function GET() {
+  try {
+    const users = await prisma.user.findMany({
+      // You can add ordering, filtering, etc. here if needed
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+    return NextResponse.json(users);
+  } catch (error) {
+    console.error("Failed to fetch users:", error);
+    return NextResponse.json({ error: "Failed to fetch users" }, { status: 500 });
+  }
 } 
