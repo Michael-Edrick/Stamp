@@ -47,7 +47,7 @@ The user interface will be built out to support all "Stamp" features, with a mob
 1.  **UI Mockups & Style**:
     *   Implement the main screen as a feed of KOL profiles.
     *   Create the bottom navigation bar with Search, Message, and a central "+" button.
-    -   Build the search modal with profile and tag filtering.
+    *   Build the search modal with profile and tag filtering.
 2.  **Onboarding & Profile UI**: Create the user registration flow and profile management pages.
 3.  **Core Messaging UI**: Build the messaging interface for both followers and KOLs, including inbox, sent items, and reply functionality.
 4.  **Payment Flow Integration**: Connect the frontend to the `sendMessage` smart contract function to handle the payment and message sending flow.
@@ -74,12 +74,15 @@ Thorough end-to-end testing before going live.
     -   [x] Task 1.3: Implement Smart Contract
     -   [x] Task 1.4: Test Smart Contract
     -   [x] Task 1.5: Deploy Smart Contract
--   [ ] **Phase 2: Backend Development**
+-   [x] **Phase 2: Backend Development**
     -   [x] Task 2.1: Database & Auth Setup
     -   [x] Task 2.2: User Profile Management
     -   [x] Task 2.3: Core Messaging & Contract Interaction
--   [ ] **Phase 3: Frontend Development**
+-   [x] **Phase 3: Frontend Development**
     -   [x] Task 3.1: UI Mockups & Style
+        - [x] Implement main screen feed
+        - [x] Create bottom navigation bar
+        - [x] Build search modal/page (placeholder)
     -   [x] Task 3.2: Onboarding & Profile UI
     -   [x] Task 3.3: Core Messaging UI
     -   [ ] Task 3.4: Payment Flow Integration
@@ -98,4 +101,9 @@ Thorough end-to-end testing before going live.
 
 ## Lessons
 
-*No lessons learned yet.* 
+*   When `next-auth` and `wagmi` are used together, always ensure `NEXTAUTH_URL` is set in a `.env.local` file to prevent silent signature verification failures during the SIWE process.
+*   Hardcoding chain IDs in authentication messages can lead to verification failures when the user is on a different network. Always use the dynamic chain ID from the active wallet connection.
+*   The `next-auth` Prisma adapter requires specific fields in the `User` model (`email`, `emailVerified`). Ensure the Prisma schema is compatible.
+*   UI elements that depend on authentication status should be conditionally rendered only after the client has mounted (`isClient` state) to avoid React Hydration Errors.
+*   A race condition between wallet connection and sign-in attempts can be resolved by triggering the sign-in flow from a `useEffect` hook that depends on the wallet's connection status.
+*   Buttons in the navigation bar should be `<Link>` components for navigation, not `<button>` elements, to ensure they are clickable.
