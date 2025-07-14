@@ -112,7 +112,7 @@ export default function App() {
             ))}
         </main>
       </div>
-      <BottomNav onSearchClick={() => setIsSearchModalOpen(true)} currentUserAddress={address} />
+      <BottomNav onSearchClick={() => setIsSearchModalOpen(true)} currentUserAddress={address} isClient={isClient} />
       {isSearchModalOpen && <SearchModal profiles={profiles} onClose={() => setIsSearchModalOpen(false)} />}
     </div>
   );
@@ -156,13 +156,13 @@ const ProfileCard = ({ profile }: { profile: any }) => (
   </div>
 );
 
-const BottomNav = ({ onSearchClick, currentUserAddress }: { onSearchClick: () => void, currentUserAddress: `0x${string}` | undefined }) => (
+const BottomNav = ({ onSearchClick, currentUserAddress, isClient }: { onSearchClick: () => void, currentUserAddress: `0x${string}` | undefined, isClient: boolean }) => (
     <div className="fixed bottom-0 left-0 right-0 w-full max-w-md mx-auto h-24 bg-transparent flex justify-center items-center">
         <div className="flex items-center justify-around bg-black rounded-full shadow-lg p-2 w-64">
             <button onClick={onSearchClick} className="p-3 rounded-full hover:bg-gray-800"><SearchIcon /></button>
             <Link href="/inbox" className="p-3 rounded-full bg-orange-500 hover:bg-orange-600"><MessageIcon /></Link>
             <Link href="/profile" className="p-2 rounded-full hover:bg-gray-800">
-              {currentUserAddress ? (
+              {isClient && currentUserAddress ? (
                 <Avatar address={currentUserAddress} className="w-8 h-8 rounded-full" />
               ) : (
                 <UserCircleIcon />
