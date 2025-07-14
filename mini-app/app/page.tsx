@@ -112,7 +112,7 @@ export default function App() {
             ))}
         </main>
       </div>
-      <BottomNav onSearchClick={() => setIsSearchModalOpen(true)} />
+      <BottomNav onSearchClick={() => setIsSearchModalOpen(true)} currentUserAddress={address} />
       {isSearchModalOpen && <SearchModal profiles={profiles} onClose={() => setIsSearchModalOpen(false)} />}
     </div>
   );
@@ -134,7 +134,7 @@ const CustomConnectButton = () => {
 };
 
 const ProfileCard = ({ profile }: { profile: any }) => (
-  <div className="bg-[var(--background-card)] rounded-2xl p-4 mb-4 shadow-sm">
+  <div className="bg-[var(--background-card)] rounded-2xl p-4 mb-4 shadow-sm relative">
     <div className="flex items-center">
       <Avatar address={profile.walletAddress as `0x${string}`} className="w-10 h-10 rounded-full mr-4" />
       <div>
@@ -147,22 +147,34 @@ const ProfileCard = ({ profile }: { profile: any }) => (
       <span className="bg-[var(--accent-orange)] text-white text-xs font-semibold px-2 py-1 rounded-full">LBS</span>
       <span className="bg-[var(--accent-purple)] text-white text-xs font-semibold px-2 py-1 rounded-full">WEB 3</span>
     </div>
+    <Link 
+      href={`/new-message?recipient=${profile.walletAddress}&name=${profile.name || 'Anonymous'}`} 
+      className="absolute top-4 right-4 p-2 rounded-full bg-blue-600 hover:bg-blue-700"
+    >
+      <SendIcon />
+    </Link>
   </div>
 );
 
-const BottomNav = ({ onSearchClick }: { onSearchClick: () => void }) => (
+const BottomNav = ({ onSearchClick, currentUserAddress }: { onSearchClick: () => void, currentUserAddress: `0x${string}` | undefined }) => (
     <div className="fixed bottom-0 left-0 right-0 w-full max-w-md mx-auto h-24 bg-transparent flex justify-center items-center">
-        <div className="flex items-center justify-between bg-black rounded-full shadow-lg p-2 w-48">
+        <div className="flex items-center justify-around bg-black rounded-full shadow-lg p-2 w-64">
             <button onClick={onSearchClick} className="p-3 rounded-full hover:bg-gray-800"><SearchIcon /></button>
-            <Link href="/inbox" className="p-3 rounded-full hover:bg-gray-800"><MessageIcon /></Link>
-            <Link href="/new-message" className="p-3 rounded-full bg-blue-600 hover:bg-blue-700"><PlusIcon /></Link>
+            <Link href="/inbox" className="p-3 rounded-full bg-orange-500 hover:bg-orange-600"><MessageIcon /></Link>
+            <Link href="/profile" className="p-2 rounded-full hover:bg-gray-800">
+              {currentUserAddress ? (
+                <Avatar address={currentUserAddress} className="w-8 h-8 rounded-full" />
+              ) : (
+                <UserCircleIcon />
+              )}
+            </Link>
         </div>
     </div>
 );
 
 const SearchIcon = ({ className }: { className?: string }) => (<svg className={`w-6 h-6 text-white ${className}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>);
 const MessageIcon = () => (<svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>);
-const PlusIcon = () => (<svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>);
+const UserCircleIcon = () => (<svg className="w-8 h-8 text-gray-400" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-6-3a2 2 0 11-4 0 2 2 0 014 0zm-2 4a5 5 0 00-4.546 2.916A5.986 5.986 0 0010 16a5.986 5.986 0 004.546-2.084A5 5 0 0012 11z" clipRule="evenodd" /></svg>);
 
 const SearchModal = ({ profiles, onClose }: { profiles: any[], onClose: () => void }) => {
   const tags = ['BASE', 'LBS', 'WEB 3', 'LUCID', 'SOLANA', 'ETH'];
@@ -204,9 +216,12 @@ const ModalProfileCard = ({ profile }: { profile: any }) => (
         <p className="text-sm text-gray-400">@{profile.username || (profile.walletAddress ? profile.walletAddress.slice(0, 8) : '')}</p>
       </div>
     </div>
-    <button className="p-2 rounded-full bg-blue-600 hover:bg-blue-700">
+    <Link 
+      href={`/new-message?recipient=${profile.walletAddress}&name=${profile.name || 'Anonymous'}`} 
+      className="p-2 rounded-full bg-blue-600 hover:bg-blue-700"
+    >
       <SendIcon />
-    </button>
+    </Link>
   </div>
 );
 
