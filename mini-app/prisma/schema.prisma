@@ -22,6 +22,8 @@ model User {
   username       String?   @unique
   image          String?
   bio            String?
+  instagram      String?
+  x_social       String?
   price          Int?      @default(0) // Price in USDC cents
   refundWindow   Int?      @default(72) // In hours
   

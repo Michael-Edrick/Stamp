@@ -18,6 +18,7 @@ export default function App() {
   const [profiles, setProfiles] = useState([]);
   const [isClient, setIsClient] = useState(false);
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
+  const [expandedProfileId, setExpandedProfileId] = useState<string | null>(null);
   const hasAttemptedSignIn = useRef(false);
 
   useEffect(() => {
@@ -107,8 +108,13 @@ export default function App() {
         </header>
 
         <main className="flex-1">
-            {profiles.map((profile, index) => (
-                <ProfileCard key={index} profile={profile} />
+            {profiles.map((profile: any) => (
+                <ProfileCard 
+                  key={profile.id} 
+                  profile={profile} 
+                  isExpanded={expandedProfileId === profile.id}
+                  onExpand={() => setExpandedProfileId(expandedProfileId === profile.id ? null : profile.id)}
+                />
             ))}
         </main>
       </div>
@@ -144,8 +150,8 @@ const CustomAvatar = ({ profile, className }: { profile: any, className: string 
   return <UserCircleIcon className={`${sizeClass} text-gray-400`} />;
 }
 
-const ProfileCard = ({ profile }: { profile: any }) => (
-  <div className="bg-[var(--background-card)] rounded-2xl p-4 mb-4 shadow-sm relative">
+const ProfileCard = ({ profile, isExpanded, onExpand }: { profile: any, isExpanded: boolean, onExpand: () => void }) => (
+  <div className="bg-[var(--background-card)] rounded-2xl p-4 mb-4 shadow-sm relative transition-all duration-300 ease-in-out" onClick={onExpand}>
     <div className="flex items-center">
       <CustomAvatar profile={profile} className="w-10 h-10 rounded-full mr-4" />
       <div>
@@ -153,14 +159,36 @@ const ProfileCard = ({ profile }: { profile: any }) => (
         <p className="text-sm text-[var(--text-muted)]">@{profile.username || (profile.walletAddress ? profile.walletAddress.slice(0, 8) : '')}</p>
       </div>
     </div>
-    <div className="mt-3 flex flex-wrap gap-2">
-      <span className="bg-[var(--accent-blue)] text-white text-xs font-semibold px-2 py-1 rounded-full">BASE</span>
-      <span className="bg-[var(--accent-orange)] text-white text-xs font-semibold px-2 py-1 rounded-full">LBS</span>
-      <span className="bg-[var(--accent-purple)] text-white text-xs font-semibold px-2 py-1 rounded-full">WEB 3</span>
-    </div>
+    
+    {isExpanded && (
+      <div className="mt-4 pt-4 border-t border-gray-700">
+        <p className="text-sm text-gray-300 mb-4">{profile.bio || 'No bio yet.'}</p>
+        {profile.x_social && (
+          <div className="flex items-center justify-between text-sm bg-gray-800 p-2 rounded-lg mb-2">
+            <span>X (Twitter)</span>
+            <span className="text-blue-400">@{profile.x_social}</span>
+          </div>
+        )}
+        {profile.instagram && (
+          <div className="flex items-center justify-between text-sm bg-gray-800 p-2 rounded-lg">
+            <span>Instagram</span>
+            <span className="text-purple-400">@{profile.instagram}</span>
+          </div>
+        )}
+      </div>
+    )}
+
+    {!isExpanded && (
+      <div className="mt-3 flex flex-wrap gap-2">
+        <span className="bg-[var(--accent-blue)] text-white text-xs font-semibold px-2 py-1 rounded-full">BASE</span>
+        <span className="bg-[var(--accent-orange)] text-white text-xs font-semibold px-2 py-1 rounded-full">LBS</span>
+        <span className="bg-[var(--accent-purple)] text-white text-xs font-semibold px-2 py-1 rounded-full">WEB 3</span>
+      </div>
+    )}
     <Link 
       href={`/new-message?recipient=${profile.walletAddress}&name=${profile.name || 'Anonymous'}`} 
       className="absolute top-4 right-4 p-2 rounded-full bg-blue-600 hover:bg-blue-700"
+      onClick={(e) => e.stopPropagation()}
     >
       <SendIcon />
     </Link>
