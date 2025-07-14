@@ -9,6 +9,17 @@ import { parseEther, keccak256, toBytes } from "viem";
 import Link from "next/link";
 import { Avatar } from "@coinbase/onchainkit/identity";
 
+const UserCircleIcon = ({ className = "w-8 h-8 text-gray-400" }: { className?: string }) => (<svg className={className} fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-6-3a2 2 0 11-4 0 2 2 0 014 0zm-2 4a5 5 0 00-4.546 2.916A5.986 5.986 0 0010 16a5.986 5.986 0 004.546-2.084A5 5 0 0012 11z" clipRule="evenodd" /></svg>);
+
+const CustomAvatar = ({ profile, className }: { profile: any, className: string }) => {
+  if (profile?.image) {
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img src={profile.image} alt={profile.name || 'User avatar'} className={className} />;
+  }
+  const sizeClass = className.split(' ').find(c => c.startsWith('w-') || c.startsWith('h-')) || 'w-10 h-10';
+  return <UserCircleIcon className={`${sizeClass} text-gray-400`} />;
+}
+
 const usdcAddress = "0x6051912FC68729aa994989C8B23666AFfC890204" as const;
 const erc20Abi = [{ "constant": false, "inputs": [{ "name": "spender", "type": "address" }, { "name": "value", "type": "uint256" }], "name": "approve", "outputs": [{ "name": "", "type": "bool" }], "type": "function" }] as const;
 
@@ -121,7 +132,7 @@ function NewMessageForm() {
       <main className="flex-1 p-4 flex flex-col">
         <div className="flex items-center mb-6">
           <span className="text-gray-400 mr-2">To:</span>
-          <Avatar address={recipient as `0x${string}`} className="w-8 h-8 rounded-full mr-3" />
+          <CustomAvatar profile={{ walletAddress: recipient }} className="w-8 h-8 rounded-full mr-3" />
           <span className="font-semibold">{recipientName}</span>
         </div>
         
