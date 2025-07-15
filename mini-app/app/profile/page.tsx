@@ -1,149 +1,150 @@
 "use client";
 
-import { useSession } from "next-auth/react";
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+
+// --- Reusable Components (Ideally in a separate file) ---
+
+const UserCircleIcon = ({ className = "w-8 h-8 text-gray-400" }: { className?: string }) => (<svg className={className} fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-6-3a2 2 0 11-4 0 2 2 0 014 0zm-2 4a5 5 0 00-4.546 2.916A5.986 5.986 0 0010 16a5.986 5.986 0 004.546-2.084A5 5 0 0012 11z" clipRule="evenodd" /></svg>);
+
+const CustomAvatar = ({ profile, className }: { profile: any, className: string }) => {
+  if (profile?.image) {
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img src={profile.image} alt={profile.name || 'User avatar'} className={className} />;
+  }
+  const sizeClass = className.split(' ').find(c => c.startsWith('w-') || c.startsWith('h-')) || 'w-10 h-10';
+  return <UserCircleIcon className={`${sizeClass} text-gray-400`} />;
+}
+
+const ProfileCardPreview = ({ profile }: { profile: any }) => (
+  <div className="bg-gray-800 rounded-2xl p-4 mb-6 shadow-lg">
+    <div className="flex items-center">
+      <CustomAvatar profile={profile} className="w-12 h-12 rounded-full mr-4" />
+      <div>
+        <p className="font-bold text-xl">{profile.name || "Anonymous"}</p>
+        <p className="text-sm text-gray-400">@{profile.username || (profile.walletAddress ? profile.walletAddress.slice(0, 8) : '')}</p>
+      </div>
+    </div>
+    <div className="mt-4 pt-4 border-t border-gray-700">
+      <p className="text-sm text-gray-300 mb-4">{profile.bio || 'Your bio will appear here.'}</p>
+      {profile.x_social && (
+        <div className="flex items-center justify-between text-sm bg-gray-900 p-2 rounded-lg mb-2">
+          <span>X (Twitter)</span>
+          <span className="text-blue-400">@{profile.x_social}</span>
+        </div>
+      )}
+      {profile.instagram && (
+        <div className="flex items-center justify-between text-sm bg-gray-900 p-2 rounded-lg">
+          <span>Instagram</span>
+          <span className="text-purple-400">@{profile.instagram}</span>
+        </div>
+      )}
+    </div>
+  </div>
+);
+
+
+// --- Main Profile Page Component ---
 
 export default function ProfilePage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [formData, setFormData] = useState({
-    username: "",
-    name: "",
-    bio: "",
-    price: 0,
-    refundWindow: 72,
-  });
+  const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    if (status === "unauthenticated") {
-      router.push("/");
+    if (status === 'unauthenticated') {
+      router.push('/');
     }
-    if (status === "authenticated" && session?.user?.id) {
-      setLoading(true);
-      fetch("/api/users/me")
-        .then((res) => res.json())
-        .then((data) => {
-          setFormData({
-            username: data.username || "",
-            name: data.name || "",
-            bio: data.bio || "",
-            price: data.price || 0,
-            refundWindow: data.refundWindow || 72,
-          });
+    if (status === 'authenticated') {
+      fetch('/api/users/me')
+        .then(res => res.json())
+        .then(data => {
+          setProfile(data);
           setLoading(false);
         })
         .catch(() => {
-          setError("Failed to fetch profile data.");
+          setError('Failed to load profile.');
           setLoading(false);
         });
     }
-  }, [status, session, router]);
+  }, [status, router]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
-    setSuccess("");
-    setLoading(true);
-
-    const res = await fetch("/api/users", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(formData),
-    });
-
-    setLoading(false);
-
-    if (res.ok) {
-      setSuccess("Profile updated successfully!");
-    } else {
-      const data = await res.json();
-      setError(data.error || "Failed to update profile.");
+    setError('');
+    try {
+      const response = await fetch('/api/users/me', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(profile),
+      });
+      if (!response.ok) {
+        const errData = await response.json();
+        throw new Error(errData.error || 'Failed to save profile');
+      }
+      alert('Profile saved successfully!');
+    } catch (err: any) {
+      setError(err.message);
     }
   };
 
-  if (status === "loading" || loading) {
-    return <div className="text-center p-10">Loading...</div>;
-  }
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setProfile({ ...profile, [name]: value });
+  };
+
+  if (loading) return <div className="text-center p-10 text-white">Loading Profile...</div>;
 
   return (
-    <div className="w-full max-w-md mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-6 text-center">Your Profile</h1>
-      <form onSubmit={handleSubmit} className="space-y-6">
+    <div className="min-h-screen bg-black text-white font-sans p-4">
+       <header className="py-4 flex items-center">
+        <Link href="/" className="text-xl">&larr;</Link>
+        <h1 className="text-2xl font-bold text-center flex-1">Your Profile</h1>
+        <div className="w-8"></div>
+      </header>
+
+      {profile && <ProfileCardPreview profile={profile} />}
+
+      <form onSubmit={handleSave} className="space-y-6">
+        <h2 className="text-xl font-semibold border-t border-gray-700 pt-6">Edit Details</h2>
+        
         <div>
-          <label htmlFor="username" className="block text-sm font-medium">Username</label>
-          <input
-            type="text"
-            name="username"
-            id="username"
-            value={formData.username}
-            onChange={handleChange}
-            className="mt-1 block w-full rounded-md bg-gray-700 border-gray-600 focus:border-indigo-500 focus:ring-indigo-500"
-          />
+          <label htmlFor="name" className="block text-sm font-medium text-gray-400">Display Name</label>
+          <input type="text" name="name" id="name" value={profile?.name || ''} onChange={handleInputChange} className="mt-1 block w-full rounded-md bg-gray-800 border-transparent focus:border-blue-500 focus:ring-blue-500"/>
         </div>
+        
         <div>
-          <label htmlFor="name" className="block text-sm font-medium">Display Name</label>
-          <input
-            type="text"
-            name="name"
-            id="name"
-            value={formData.name}
-            onChange={handleChange}
-            className="mt-1 block w-full rounded-md bg-gray-700 border-gray-600 focus:border-indigo-500 focus:ring-indigo-500"
-          />
+          <label htmlFor="username" className="block text-sm font-medium text-gray-400">Username</label>
+          <input type="text" name="username" id="username" value={profile?.username || ''} onChange={handleInputChange} className="mt-1 block w-full rounded-md bg-gray-800 border-transparent focus:border-blue-500 focus:ring-blue-500"/>
         </div>
+
         <div>
-          <label htmlFor="bio" className="block text-sm font-medium">Bio</label>
-          <textarea
-            name="bio"
-            id="bio"
-            value={formData.bio}
-            onChange={handleChange}
-            rows={3}
-            className="mt-1 block w-full rounded-md bg-gray-700 border-gray-600 focus:border-indigo-500 focus:ring-indigo-500"
-          />
+          <label htmlFor="bio" className="block text-sm font-medium text-gray-400">Bio</label>
+          <textarea name="bio" id="bio" rows={4} value={profile?.bio || ''} onChange={handleInputChange} className="mt-1 block w-full rounded-md bg-gray-800 border-transparent focus:border-blue-500 focus:ring-blue-500"/>
         </div>
+
         <div>
-          <label htmlFor="price" className="block text-sm font-medium">Price per Message (in USDC cents)</label>
-          <input
-            type="number"
-            name="price"
-            id="price"
-            value={formData.price}
-            onChange={handleChange}
-            className="mt-1 block w-full rounded-md bg-gray-700 border-gray-600 focus:border-indigo-500 focus:ring-indigo-500"
-          />
+          <label htmlFor="image" className="block text-sm font-medium text-gray-400">Profile Picture URL</label>
+          <input type="text" name="image" id="image" value={profile?.image || ''} onChange={handleInputChange} className="mt-1 block w-full rounded-md bg-gray-800 border-transparent focus:border-blue-500 focus:ring-blue-500"/>
         </div>
+
         <div>
-          <label htmlFor="refundWindow" className="block text-sm font-medium">Refund Window (in hours)</label>
-          <input
-            type="number"
-            name="refundWindow"
-            id="refundWindow"
-            value={formData.refundWindow}
-            onChange={handleChange}
-            className="mt-1 block w-full rounded-md bg-gray-700 border-gray-600 focus:border-indigo-500 focus:ring-indigo-500"
-          />
+          <label htmlFor="x_social" className="block text-sm font-medium text-gray-400">X (Twitter) Handle</label>
+          <input type="text" name="x_social" id="x_social" value={profile?.x_social || ''} onChange={handleInputChange} className="mt-1 block w-full rounded-md bg-gray-800 border-transparent focus:border-blue-500 focus:ring-blue-500" placeholder="without the @"/>
         </div>
+
         <div>
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-          >
-            {loading ? "Saving..." : "Save Profile"}
-          </button>
+          <label htmlFor="instagram" className="block text-sm font-medium text-gray-400">Instagram Handle</label>
+          <input type="text" name="instagram" id="instagram" value={profile?.instagram || ''} onChange={handleInputChange} className="mt-1 block w-full rounded-md bg-gray-800 border-transparent focus:border-blue-500 focus:ring-blue-500" placeholder="without the @"/>
         </div>
-        {error && <p className="text-red-500 text-center">{error}</p>}
-        {success && <p className="text-green-500 text-center">{success}</p>}
+
+        {error && <p className="text-red-500 text-sm text-center">{error}</p>}
+        
+        <button type="submit" className="w-full py-3 px-4 rounded-full text-base font-bold bg-blue-600 hover:bg-blue-700 transition-colors">Save Profile</button>
       </form>
     </div>
   );
