@@ -7,6 +7,7 @@ import { signIn, signOut, useSession } from "next-auth/react";
 import Link from 'next/link';
 import { UserCircleIcon, PaperAirplaneIcon, MagnifyingGlassIcon, ChatBubbleOvalLeftEllipsisIcon, PlusIcon } from '@heroicons/react/24/solid';
 import { User as PrismaUser } from '@prisma/client';
+import CustomAvatar from '@/app/components/CustomAvatar';
 
 type Profile = Partial<PrismaUser> & {
   avatar?: string;
@@ -74,14 +75,6 @@ const SocialLink = ({ platform, handle }: { platform: 'Instagram' | 'X', handle:
         </div>
     );
 };
-
-const CustomAvatar = ({ profile, className }: { profile?: Profile, className: string }) => {
-  if (profile?.image || profile?.avatar) {
-    // eslint-disable-next-line @next/next/no-img-element
-    return <img src={profile.image || profile.avatar} alt={profile.name || 'User avatar'} className={className} />;
-  }
-  return <UserCircleIcon className={className} />;
-}
 
 const Tag = ({ text, color }: { text: string, color: string }) => (
   <div className={`text-xs text-white font-semibold px-2.5 py-1 rounded-full`} style={{ backgroundColor: color }}>

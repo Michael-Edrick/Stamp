@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import { useParams } from 'next/navigation';
 import { User as PrismaUser, Message as PrismaMessage } from '@prisma/client';
-import Image from 'next/image';
+import CustomAvatar from "@/app/components/CustomAvatar";
 
 type User = PrismaUser & {
   standardCost?: number | null;
@@ -52,13 +52,6 @@ const PaymentModal = ({ user, onSelect, onClose }: { user: User | null; onSelect
             </div>
         </div>
     );
-};
-
-const CustomAvatar = ({ profile, className }: { profile: User | null; className: string }) => {
-  if (profile?.image) {
-    return <Image src={profile.image} alt={profile.name || 'User avatar'} className={className} width={40} height={40} />;
-  }
-  return <UserCircleIcon className={className} />;
 };
 
 

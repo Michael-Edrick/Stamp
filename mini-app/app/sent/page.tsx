@@ -3,12 +3,17 @@
 import { useSession } from "next-auth/react";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Avatar } from "@coinbase/onchainkit/identity";
+import CustomAvatar from "@/app/components/CustomAvatar";
+import { User, Message } from "@prisma/client";
+
+interface SentMessage extends Message {
+  recipient: Partial<User>;
+}
 
 export default function SentPage() {
-  const { data: session, status } = useSession();
+  const { status } = useSession();
   const router = useRouter();
-  const [messages, setMessages] = useState([]);
+  const [messages, setMessages] = useState<SentMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -46,9 +51,9 @@ export default function SentPage() {
       {error && <p className="text-red-500 text-center">{error}</p>}
       <div className="space-y-4">
         {messages.length > 0 ? (
-          messages.map((msg: any) => (
+          messages.map((msg: SentMessage) => (
             <div key={msg.id} className="bg-gray-800 p-4 rounded-lg flex items-start space-x-4">
-              <Avatar address={msg.recipient.id as `0x${string}`} className="w-10 h-10 rounded-full mt-1" />
+              <CustomAvatar profile={msg.recipient} className="w-10 h-10 rounded-full mt-1" />
               <div className="flex-1">
                 <div className="flex justify-between items-center">
                   <span className="font-bold">To: {msg.recipient.name || "Anonymous"}</span>
@@ -66,7 +71,7 @@ export default function SentPage() {
             </div>
           ))
         ) : (
-          <p className="text-center text-gray-400">You haven't sent any messages.</p>
+          <p className="text-center text-gray-400">You haven&apos;t sent any messages.</p>
         )}
       </div>
     </div>

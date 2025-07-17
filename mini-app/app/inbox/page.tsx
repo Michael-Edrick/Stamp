@@ -3,7 +3,7 @@
 import { useSession } from "next-auth/react";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { CustomAvatar } from "@/app/chat/[userId]/page"; // Note: This is a temporary import path. Ideally, CustomAvatar would be in a shared components directory.
+import CustomAvatar from "@/app/components/CustomAvatar";
 import { User, Message } from "@prisma/client";
 
 interface InboxMessage extends Message {
