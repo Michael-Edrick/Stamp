@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { ChevronLeftIcon, PaperAirplaneIcon, UserCircleIcon, XMarkIcon } from '@heroicons/react/24/solid';
+import { ChevronLeftIcon, PaperAirplaneIcon, XMarkIcon } from '@heroicons/react/24/solid';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import { useParams } from 'next/navigation';

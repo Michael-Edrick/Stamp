@@ -11,7 +11,7 @@ interface SentMessage extends Message {
 }
 
 export default function SentPage() {
-  const { data: session, status } = useSession();
+  const { status } = useSession();
   const router = useRouter();
   const [messages, setMessages] = useState<SentMessage[]>([]);
   const [loading, setLoading] = useState(true);
@@ -71,7 +71,7 @@ export default function SentPage() {
             </div>
           ))
         ) : (
-          <p className="text-center text-gray-400">You haven't sent any messages.</p>
+          <p className="text-center text-gray-400">You haven&apos;t sent any messages.</p>
         )}
       </div>
     </div>
