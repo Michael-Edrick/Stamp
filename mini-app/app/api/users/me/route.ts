@@ -2,6 +2,7 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -56,7 +57,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json(updatedUser, { status: 200 });
   } catch (error: unknown) {
-    if (error instanceof Error && 'code' in error && (error as any).code === 'P2002' && 'meta' in error && (error as any).meta?.target?.includes('username')) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002' && (error.meta?.target as string[])?.includes('username')) {
         return NextResponse.json({ error: "Username is already taken" }, { status: 409 });
     }
     console.error("Error updating user profile:", error);

@@ -11,7 +11,7 @@ interface SentMessage extends Message {
 }
 
 export default function SentPage() {
-  const { status } = useSession();
+  const { data: session, status } = useSession();
   const router = useRouter();
   const [messages, setMessages] = useState<SentMessage[]>([]);
   const [loading, setLoading] = useState(true);
@@ -51,7 +51,7 @@ export default function SentPage() {
       {error && <p className="text-red-500 text-center">{error}</p>}
       <div className="space-y-4">
         {messages.length > 0 ? (
-          messages.map((msg: SentMessage) => (
+          messages.map((msg) => (
             <div key={msg.id} className="bg-gray-800 p-4 rounded-lg flex items-start space-x-4">
               <CustomAvatar profile={msg.recipient} className="w-10 h-10 rounded-full mt-1" />
               <div className="flex-1">
@@ -71,7 +71,7 @@ export default function SentPage() {
             </div>
           ))
         ) : (
-          <p className="text-center text-gray-400">You haven&apos;t sent any messages.</p>
+          <p className="text-center text-gray-400">You haven't sent any messages.</p>
         )}
       </div>
     </div>

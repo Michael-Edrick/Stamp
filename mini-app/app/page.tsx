@@ -12,12 +12,8 @@ import CustomAvatar from '@/app/components/CustomAvatar';
 type Profile = Partial<PrismaUser> & {
   avatar?: string;
   tags?: string[];
-  socials?: {
-    instagram?: string;
-    x?: string;
-  };
-  // Allow any other properties that might exist on dummy data
-  [key: string]: any; 
+  x_social?: string;
+  instagram?: string;
 };
 
 
@@ -29,10 +25,6 @@ const dummyUsers: Profile[] = [
     avatar: 'https://i.pravatar.cc/150?u=clemens',
     bio: 'Founder of the London Blockchain Society, UK country lead at Base. Interested in entrepreneurship and emerging technology.',
     tags: ['BASE', 'LBS', 'WEB 3', 'LUCID', 'BLOCKCHAIN', 'MINI APPS', 'ICEBREAK'],
-    socials: {
-      instagram: 'igaccount',
-      x: 'clemens_sc',
-    }
   },
   {
     id: '2',
@@ -41,10 +33,6 @@ const dummyUsers: Profile[] = [
     avatar: 'https://i.pravatar.cc/150?u=jane',
     bio: 'Web3 enthusiast and digital artist. Exploring the frontiers of decentralized technology and creativity.',
     tags: ['ART', 'NFT', 'DECENTRALIZATION', 'ETH', 'CREATOR'],
-    socials: {
-      instagram: 'janedoe.art',
-      x: 'janedoe_web3',
-    }
   },
   {
     id: '3',
@@ -53,10 +41,6 @@ const dummyUsers: Profile[] = [
     avatar: 'https://i.pravatar.cc/150?u=john',
     bio: 'Building the future of finance with DeFi. Full-stack developer and open-source contributor.',
     tags: ['DEFI', 'SOLIDITY', 'DEVELOPER', 'FINTECH'],
-    socials: {
-      instagram: 'john.smith.dev',
-      x: 'johnsmith_dev',
-    }
   },
 ];
 
@@ -111,11 +95,11 @@ const UserCard = ({ user }: { user: Profile }) => {
       {isExpanded && (
         <div className="mt-4 pt-4 border-t border-gray-100">
           <p className="text-gray-700 text-sm mb-4">{user.bio || 'No bio provided.'}</p>
-          {(user.x_social || user.socials?.x) &&
-            <SocialLink platform="X" handle={user.x_social || user.socials?.x || ''} />
+          {user.x_social &&
+            <SocialLink platform="X" handle={user.x_social} />
           }
-          {(user.instagram || user.socials?.instagram) &&
-            <SocialLink platform="Instagram" handle={user.instagram || user.socials?.instagram || ''} />
+          {user.instagram &&
+            <SocialLink platform="Instagram" handle={user.instagram} />
           }
         </div>
       )}
@@ -189,7 +173,7 @@ export default function HomePage() {
     try {
       const response = await fetch('/api/users');
       if (!response.ok) throw new Error('Failed to fetch users');
-      const users = await response.json();
+      const users: Profile[] = await response.json();
       setRealUsers(users);
     } catch (error) {
       console.error("Error fetching users:", error);
