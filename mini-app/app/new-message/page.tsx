@@ -7,11 +7,10 @@ import { useAccount, useWriteContract } from "wagmi";
 import { messageEscrowAddress, messageEscrowAbi } from "@/lib/contract";
 import { parseEther, keccak256, toBytes } from "viem";
 import Link from "next/link";
-import { Avatar } from "@coinbase/onchainkit/identity";
 
 const UserCircleIcon = ({ className = "w-8 h-8 text-gray-400" }: { className?: string }) => (<svg className={className} fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-6-3a2 2 0 11-4 0 2 2 0 014 0zm-2 4a5 5 0 00-4.546 2.916A5.986 5.986 0 0010 16a5.986 5.986 0 004.546-2.084A5 5 0 0012 11z" clipRule="evenodd" /></svg>);
 
-const CustomAvatar = ({ profile, className }: { profile: any, className: string }) => {
+const CustomAvatar = ({ profile, className }: { profile?: { image?: string | null, name?: string | null }, className: string }) => {
   if (profile?.image) {
     // eslint-disable-next-line @next/next/no-img-element
     return <img src={profile.image} alt={profile.name || 'User avatar'} className={className} />;
@@ -24,7 +23,7 @@ const usdcAddress = "0x6051912FC68729aa994989C8B23666AFfC890204" as const;
 const erc20Abi = [{ "constant": false, "inputs": [{ "name": "spender", "type": "address" }, { "name": "value", "type": "uint256" }], "name": "approve", "outputs": [{ "name": "", "type": "bool" }], "type": "function" }] as const;
 
 function NewMessageForm() {
-  const { data: session, status } = useSession();
+  const { status } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
   const { address } = useAccount();
@@ -36,7 +35,6 @@ function NewMessageForm() {
   const [amount, setAmount] = useState("5");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [txHash, setTxHash] = useState("");
   const [isApproved, setIsApproved] = useState(false);
 
   useEffect(() => {
@@ -77,7 +75,6 @@ function NewMessageForm() {
         functionName: "approve",
         args: [messageEscrowAddress, parseEther(amount)],
       });
-      setTxHash(approvalTx);
       setIsApproved(true);
     } catch (e) {
       console.error(e);
@@ -104,7 +101,6 @@ function NewMessageForm() {
         functionName: 'sendMessage',
         args: [recipient as `0x${string}`, messageId, parseEther(amount), BigInt(7 * 24 * 60 * 60)]
       });
-      setTxHash(sendMessageTx);
       
       await fetch("/api/messages/send", {
         method: "POST",

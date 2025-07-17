@@ -1,21 +1,18 @@
 "use client";
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { ChevronLeftIcon, PaperAirplaneIcon, UserCircleIcon, XMarkIcon } from '@heroicons/react/24/solid';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import { useParams } from 'next/navigation';
 import { User as PrismaUser, Message as PrismaMessage } from '@prisma/client';
+import Image from 'next/image';
 
 type User = PrismaUser & {
   standardCost?: number | null;
   premiumCost?: number | null;
   tags?: string[];
 };
-// We need to extend the default NextAuth session user type
-interface SessionUser extends User {
-    id: string;
-}
 
 interface MessageWithSender extends PrismaMessage {
   sender: User;
@@ -59,7 +56,7 @@ const PaymentModal = ({ user, onSelect, onClose }: { user: User | null; onSelect
 
 const CustomAvatar = ({ profile, className }: { profile: User | null; className: string }) => {
   if (profile?.image) {
-    return <img src={profile.image} alt={profile.name || 'User avatar'} className={className} />;
+    return <Image src={profile.image} alt={profile.name || 'User avatar'} className={className} width={40} height={40} />;
   }
   return <UserCircleIcon className={className} />;
 };
@@ -84,17 +81,7 @@ export default function ChatPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  useEffect(() => {
-    if (loggedInUserId && userId) {
-      fetchConversation();
-    }
-  }, [loggedInUserId, userId]);
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [conversation?.messages]);
-
-  const fetchConversation = async () => {
+  const fetchConversation = useCallback(async () => {
     setIsLoading(true);
     try {
       const response = await fetch(`/api/conversations/${userId}`);
@@ -113,7 +100,17 @@ export default function ChatPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [userId]);
+
+  useEffect(() => {
+    if (loggedInUserId && userId) {
+      fetchConversation();
+    }
+  }, [loggedInUserId, userId, fetchConversation]);
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [conversation?.messages]);
 
   const handleSendMessage = async (paymentDetails: { amount: number | null, txHash: string } | null = null) => {
     if (!message.trim()) return;

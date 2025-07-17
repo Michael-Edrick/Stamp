@@ -1,15 +1,28 @@
 "use client";
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAccount, useSignMessage, useConnect, useDisconnect } from "wagmi";
 import { injected } from 'wagmi/connectors'
 import { SiweMessage } from "siwe";
 import { signIn, signOut, useSession } from "next-auth/react";
 import Link from 'next/link';
 import { UserCircleIcon, PaperAirplaneIcon, MagnifyingGlassIcon, ChatBubbleOvalLeftEllipsisIcon, PlusIcon } from '@heroicons/react/24/solid';
+import { User as PrismaUser } from '@prisma/client';
 
-const dummyUsers = [
+type Profile = Partial<PrismaUser> & {
+  avatar?: string;
+  tags?: string[];
+  socials?: {
+    instagram?: string;
+    x?: string;
+  };
+  // Allow any other properties that might exist on dummy data
+  [key: string]: any; 
+};
+
+
+const dummyUsers: Profile[] = [
   {
-    id: 1,
+    id: '1',
     name: 'Clemens Scherf',
     username: 'Clemens',
     avatar: 'https://i.pravatar.cc/150?u=clemens',
@@ -21,7 +34,7 @@ const dummyUsers = [
     }
   },
   {
-    id: 2,
+    id: '2',
     name: 'Jane Doe',
     username: 'janedoe',
     avatar: 'https://i.pravatar.cc/150?u=jane',
@@ -33,7 +46,7 @@ const dummyUsers = [
     }
   },
   {
-    id: 3,
+    id: '3',
     name: 'John Smith',
     username: 'johnsmith',
     avatar: 'https://i.pravatar.cc/150?u=john',
@@ -62,10 +75,10 @@ const SocialLink = ({ platform, handle }: { platform: 'Instagram' | 'X', handle:
     );
 };
 
-const CustomAvatar = ({ profile, className }: { profile: any, className: string }) => {
-  if (profile?.image) {
+const CustomAvatar = ({ profile, className }: { profile?: Profile, className: string }) => {
+  if (profile?.image || profile?.avatar) {
     // eslint-disable-next-line @next/next/no-img-element
-    return <img src={profile.image} alt={profile.name || 'User avatar'} className={className} />;
+    return <img src={profile.image || profile.avatar} alt={profile.name || 'User avatar'} className={className} />;
   }
   return <UserCircleIcon className={className} />;
 }
@@ -76,12 +89,12 @@ const Tag = ({ text, color }: { text: string, color: string }) => (
   </div>
 );
 
-const UserCard = ({ user }: { user: any }) => {
+const UserCard = ({ user }: { user: Profile }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const tagColors = ['#4A90E2', '#F5A623', '#9013FE', '#4CAF50', '#2196F3', '#FF5722', '#607D8B'];
   
   // Use user's tags if they exist and are not empty, otherwise use a default set for display
-  const userTags = user.tags && user.tags.length > 0 ? user.tags : ['BASE', 'LBS', 'WEB 3'];
+  const userTags = user.tags && user.tags.length > 0 ? user.tags : [];
   const displayedTags = isExpanded ? userTags : userTags.slice(0, 4);
 
   return (
@@ -91,12 +104,7 @@ const UserCard = ({ user }: { user: any }) => {
     >
       <div className="flex items-start justify-between">
         <div className="flex items-center">
-            {user.avatar ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={user.avatar} alt={user.name} className="w-10 h-10 rounded-full mr-3" />
-            ) : (
-                <UserCircleIcon className="w-10 h-10 text-gray-300 mr-3" />
-            )}
+            <CustomAvatar profile={user} className="w-10 h-10 rounded-full mr-3" />
             <div>
                 <p className="font-bold text-gray-900">{user.name}</p>
                 <p className="text-sm text-gray-500">@{user.username}</p>
@@ -111,10 +119,10 @@ const UserCard = ({ user }: { user: any }) => {
         <div className="mt-4 pt-4 border-t border-gray-100">
           <p className="text-gray-700 text-sm mb-4">{user.bio || 'No bio provided.'}</p>
           {(user.x_social || user.socials?.x) &&
-            <SocialLink platform="X" handle={user.x_social || user.socials.x} />
+            <SocialLink platform="X" handle={user.x_social || user.socials?.x || ''} />
           }
           {(user.instagram || user.socials?.instagram) &&
-            <SocialLink platform="Instagram" handle={user.instagram || user.socials.instagram} />
+            <SocialLink platform="Instagram" handle={user.instagram || user.socials?.instagram || ''} />
           }
         </div>
       )}
@@ -139,7 +147,7 @@ export default function HomePage() {
   const { signMessageAsync } = useSignMessage();
   const { data: session, status: sessionStatus } = useSession();
   const { disconnect } = useDisconnect();
-  const [realUsers, setRealUsers] = useState([]);
+  const [realUsers, setRealUsers] = useState<Profile[]>([]);
   const [isClient, setIsClient] = useState(false);
   const hasAttemptedSignIn = useRef(false);
 
@@ -148,28 +156,7 @@ export default function HomePage() {
     fetchUsers();
   }, []);
 
-  useEffect(() => {
-    if (isConnected && sessionStatus === "unauthenticated" && !hasAttemptedSignIn.current) {
-      hasAttemptedSignIn.current = true;
-      handleSignIn();
-    }
-    if (!isConnected) {
-      hasAttemptedSignIn.current = false;
-    }
-  }, [isConnected, sessionStatus, address, chainId]);
-
-  const fetchUsers = async () => {
-    try {
-      const response = await fetch('/api/users');
-      if (!response.ok) throw new Error('Failed to fetch users');
-      const users = await response.json();
-      setRealUsers(users);
-    } catch (error) {
-      console.error("Error fetching users:", error);
-    }
-  };
-
-  const handleSignIn = async () => {
+  const handleSignIn = useCallback(async () => {
     if (!address || !chainId) {
       console.error("Wallet not fully connected, cannot sign in.");
       hasAttemptedSignIn.current = false;
@@ -192,6 +179,27 @@ export default function HomePage() {
     } catch (error) {
         console.error("Sign-in error", error);
         hasAttemptedSignIn.current = false;
+    }
+  }, [address, chainId, signMessageAsync]);
+
+  useEffect(() => {
+    if (isConnected && sessionStatus === "unauthenticated" && !hasAttemptedSignIn.current) {
+      hasAttemptedSignIn.current = true;
+      handleSignIn();
+    }
+    if (!isConnected) {
+      hasAttemptedSignIn.current = false;
+    }
+  }, [isConnected, sessionStatus, address, chainId, handleSignIn]);
+
+  const fetchUsers = async () => {
+    try {
+      const response = await fetch('/api/users');
+      if (!response.ok) throw new Error('Failed to fetch users');
+      const users = await response.json();
+      setRealUsers(users);
+    } catch (error) {
+      console.error("Error fetching users:", error);
     }
   };
 
@@ -218,11 +226,11 @@ export default function HomePage() {
         {dummyUsers.map(user => (
           <UserCard key={user.id} user={user} />
         ))}
-        {realUsers.map((user: any) => (
+        {realUsers.map((user) => (
             <UserCard key={user.id} user={user} />
         ))}
       </div>
-       <BottomNav currentUser={session?.user} isClient={isClient} />
+       <BottomNav currentUser={session?.user as Profile} isClient={isClient} />
     </div>
   );
 }
@@ -236,7 +244,7 @@ const CustomConnectButton = () => {
   );
 };
 
-const BottomNav = ({ currentUser, isClient }: { currentUser: any, isClient: boolean }) => {
+const BottomNav = ({ currentUser, isClient }: { currentUser?: Profile, isClient: boolean }) => {
     const navButtonBase = "w-12 h-12 rounded-full flex items-center justify-center transition-transform duration-200 hover:scale-110";
 
     return (

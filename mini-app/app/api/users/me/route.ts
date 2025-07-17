@@ -3,7 +3,7 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 
-export async function GET(req: Request) {
+export async function GET() {
   const session = await getServerSession(authOptions);
 
   if (!session || !session.user || !session.user.id) {
@@ -55,8 +55,8 @@ export async function POST(req: Request) {
     });
 
     return NextResponse.json(updatedUser, { status: 200 });
-  } catch (error: any) {
-    if (error.code === 'P2002' && error.meta?.target?.includes('username')) {
+  } catch (error: unknown) {
+    if (error instanceof Error && 'code' in error && (error as any).code === 'P2002' && 'meta' in error && (error as any).meta?.target?.includes('username')) {
         return NextResponse.json({ error: "Username is already taken" }, { status: 409 });
     }
     console.error("Error updating user profile:", error);

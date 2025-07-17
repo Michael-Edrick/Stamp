@@ -3,12 +3,17 @@
 import { useSession } from "next-auth/react";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Avatar } from "@coinbase/onchainkit/identity";
+import { CustomAvatar } from "@/app/chat/[userId]/page"; // Note: This is a temporary import path. Ideally, CustomAvatar would be in a shared components directory.
+import { User, Message } from "@prisma/client";
+
+interface InboxMessage extends Message {
+  sender: Partial<User>;
+}
 
 export default function InboxPage() {
-  const { data: session, status } = useSession();
+  const { status } = useSession();
   const router = useRouter();
-  const [messages, setMessages] = useState([]);
+  const [messages, setMessages] = useState<InboxMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -46,9 +51,9 @@ export default function InboxPage() {
       {error && <p className="text-red-500 text-center">{error}</p>}
       <div className="space-y-4">
         {messages.length > 0 ? (
-          messages.map((msg: any) => (
+          messages.map((msg: InboxMessage) => (
             <div key={msg.id} className="bg-gray-800 p-4 rounded-lg flex items-start space-x-4">
-              <Avatar address={msg.sender.id as `0x${string}`} className="w-10 h-10 rounded-full mt-1" />
+              <CustomAvatar profile={msg.sender} className="w-10 h-10 rounded-full mt-1" />
               <div className="flex-1">
                 <div className="flex justify-between items-center">
                   <span className="font-bold">{msg.sender.name || "Anonymous"}</span>

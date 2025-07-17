@@ -143,8 +143,12 @@ export default function ProfilePage() {
       // Update initial state to match saved state
       setInitialProfile(profile);
       router.push('/');
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError('An unknown error occurred');
+      }
     } finally {
       setSaving(false);
     }
