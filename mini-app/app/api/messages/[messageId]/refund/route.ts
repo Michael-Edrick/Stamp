@@ -1,4 +1,3 @@
-import "@/types/next-auth.d.ts";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { NextResponse } from "next/server";
