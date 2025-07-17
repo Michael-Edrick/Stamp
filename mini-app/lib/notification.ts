@@ -6,7 +6,7 @@ export async function getUserNotificationDetails(
   fid: number,
 ): Promise<FrameNotificationDetails | null> {
   console.log('getUserNotificationDetails not implemented', fid);
-  return null;
+    return null;
 }
 
 export async function setUserNotificationDetails(

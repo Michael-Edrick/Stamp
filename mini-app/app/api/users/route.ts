@@ -1,9 +1,19 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '../auth/[...nextauth]/options';
 
 export async function GET() {
+  const session = await getServerSession(authOptions);
+  const loggedInUserId = session?.user?.id;
+
   try {
     const users = await prisma.user.findMany({
+      where: {
+        id: {
+          not: loggedInUserId,
+        },
+      },
       orderBy: {
         createdAt: 'desc',
       },

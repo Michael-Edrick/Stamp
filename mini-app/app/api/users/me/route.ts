@@ -38,7 +38,7 @@ export async function POST(req: Request) {
 
   try {
     const body = await req.json();
-    const { name, username, bio, image, instagram, x_social } = body;
+    const { name, username, bio, image, instagram, x_social, standardCost, premiumCost } = body;
 
     const updatedUser = await prisma.user.update({
       where: { id: session.user.id },
@@ -49,6 +49,8 @@ export async function POST(req: Request) {
         image,
         instagram,
         x_social,
+        standardCost,
+        premiumCost
       },
     });
 

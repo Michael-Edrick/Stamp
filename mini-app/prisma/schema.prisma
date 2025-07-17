@@ -26,11 +26,15 @@ model User {
   x_social       String?
   price          Int?      @default(0) // Price in USDC cents
   refundWindow   Int?      @default(72) // In hours
+  tags           String[]  @default([])
+  standardCost   Int?      @default(1)
+  premiumCost    Int?      @default(5)
   
   accounts       Account[]
   sessions       Session[]
   sentMessages   Message[] @relation("SentMessages")
-  receivedMessages Message[] @relation("ReceivedMessages")
+  
+  conversations  Conversation[] @relation("ConversationParticipants")
   
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
@@ -55,6 +59,16 @@ model Account {
   @@unique([provider, providerAccountId])
 }
 
+model Conversation {
+  id                String    @id @default(cuid())
+  participants      User[]    @relation("ConversationParticipants")
+  messages          Message[]
+  messagesRemaining Int       @default(10)
+  
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+}
+
 model Session {
   id           String   @id @default(cuid())
   sessionToken String   @unique
@@ -72,14 +86,19 @@ enum MessageStatus {
 model Message {
   id          String   @id @default(cuid())
   content     String
-  txHash      String   @unique
+  txHash      String?  @unique
+  amount      Int?     // Amount in USDC cents for the message that initiated a bundle
   status      MessageStatus @default(SENT)
 
   senderId    String
-  recipientId String
-
   sender      User     @relation("SentMessages", fields: [senderId], references: [id])
-  recipient   User     @relation("ReceivedMessages", fields: [recipientId], references: [id])
+  
+  // No longer direct recipient on message, it's on the conversation
+  // recipientId String
+  // recipient   User     @relation("ReceivedMessages", fields: [recipientId], references: [id])
+  
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
