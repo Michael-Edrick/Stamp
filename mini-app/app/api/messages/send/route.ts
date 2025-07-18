@@ -90,6 +90,7 @@ export async function POST(req: Request) {
           amount: conversation.messagesRemaining === 10 ? amount : null, // only set amount on first message of bundle
           txHash: conversation.messagesRemaining === 10 ? txHash : null,
           senderId,
+          recipientId,
           conversationId: conversation.id,
         },
       });
