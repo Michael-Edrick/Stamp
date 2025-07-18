@@ -3,9 +3,9 @@ import prisma from "@/lib/prisma";
 
 export async function GET(
   req: Request,
-  { params }: { params: { username: string } }
+  { params }: { params: Promise<{ username: string }> }
 ) {
-  const { username } = params;
+  const { username } = await params;
 
   if (!username) {
     return NextResponse.json({ error: "Username is required" }, { status: 400 });
