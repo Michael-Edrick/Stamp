@@ -13,7 +13,13 @@ export async function GET() {
   try {
     const messages = await prisma.message.findMany({
       where: {
-        recipientId: session.user.id,
+        conversation: {
+          participants: {
+            some: {
+              id: session.user.id,
+            },
+          },
+        },
       },
       include: {
         sender: {
