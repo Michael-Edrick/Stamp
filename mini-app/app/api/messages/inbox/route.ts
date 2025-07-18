@@ -11,18 +11,16 @@ export async function GET() {
   }
 
   try {
-    const messages = await prisma.message.findMany({
+    const conversations = await prisma.conversation.findMany({
       where: {
-        conversation: {
-          participants: {
-            some: {
-              id: session.user.id,
-            },
+        participants: {
+          some: {
+            id: session.user.id,
           },
         },
       },
       include: {
-        sender: {
+        participants: {
           select: {
             id: true,
             name: true,
@@ -30,13 +28,22 @@ export async function GET() {
             image: true,
           },
         },
+        messages: {
+          orderBy: {
+            createdAt: 'desc',
+          },
+          take: 1, // Only take the most recent message
+          include: {
+            sender: true,
+          }
+        },
       },
       orderBy: {
-        createdAt: "desc",
+        updatedAt: 'desc',
       },
     });
 
-    return NextResponse.json(messages, { status: 200 });
+    return NextResponse.json(conversations, { status: 200 });
   } catch (error) {
     console.error("Error fetching inbox:", error);
     return NextResponse.json(

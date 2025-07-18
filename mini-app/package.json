@@ -7,6 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "migrate": "dotenv -e .env -- prisma migrate dev",
+    "migrate:reset": "dotenv -e .env -- prisma migrate reset",
     "postinstall": "prisma generate && prisma migrate deploy"
   },
   "dependencies": {
@@ -29,6 +31,7 @@
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
+    "dotenv-cli": "^8.0.0",
     "eslint": "^8",
     "eslint-config-next": "15.3.3",
     "eslint-config-prettier": "^10.1.1",

@@ -14,6 +14,16 @@ export async function GET() {
           not: loggedInUserId,
         },
       },
+      select: {
+        id: true,
+        name: true,
+        username: true,
+        image: true,
+        bio: true,
+        tags: true,
+        x_social: true,
+        instagram: true,
+      },
       orderBy: {
         createdAt: 'desc',
       },

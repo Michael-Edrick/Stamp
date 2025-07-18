@@ -19,6 +19,7 @@ interface MessageWithSender extends PrismaMessage {
 }
 
 interface Conversation {
+  id: string;
   messages: MessageWithSender[];
   messagesRemaining: number;
   participants: User[];
@@ -66,6 +67,7 @@ export default function ChatPage() {
   const [message, setMessage] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [sending, setSending] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -88,7 +90,8 @@ export default function ChatPage() {
       console.error(error);
       const mockUser = { id: userId, name: "User", username: "user" } as User;
       setOtherUser(mockUser);
-      setConversation({ messages: [], messagesRemaining: 0, participants: [mockUser] });
+      // Ensure mock conversation has an ID to prevent key errors
+      setConversation({ id: `mock-${userId}`, messages: [], messagesRemaining: 0, participants: [mockUser] });
     } finally {
       setIsLoading(false);
     }
@@ -105,16 +108,44 @@ export default function ChatPage() {
   }, [conversation?.messages]);
 
   const handleSendMessage = async (paymentDetails: { amount: number | null, txHash: string } | null = null) => {
-    if (!message.trim()) return;
+    if (!message.trim() || sending) return;
 
     if (!conversation?.messagesRemaining && !paymentDetails) {
         setShowPaymentModal(true);
         return;
     }
+    
+    setSending(true);
+
+    const tempId = `temp-${Date.now()}`;
+    const newMessage: MessageWithSender = {
+      id: tempId,
+      content: message,
+      senderId: loggedInUserId!,
+      conversationId: conversation?.id ?? '',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      status: 'SENT',
+      amount: paymentDetails?.amount || null,
+      txHash: paymentDetails?.txHash || null,
+      recipientId: userId,
+      sender: session?.user as User,
+    };
+
+    setConversation(prev => {
+      if (!prev) return null;
+      return {
+        ...prev,
+        messages: [...prev.messages, newMessage]
+      };
+    });
+    
+    setMessage('');
+    setShowPaymentModal(false);
 
     try {
         const payload = {
-            content: message,
+            content: newMessage.content,
             recipientId: userId,
             ...paymentDetails
         };
@@ -125,22 +156,40 @@ export default function ChatPage() {
             body: JSON.stringify(payload)
         });
 
+        const responseData = await response.json();
+
         if (!response.ok) {
-            const errorData = await response.json();
-            if(errorData.paymentRequired) {
+            if(responseData.paymentRequired) {
                 setShowPaymentModal(true);
-                return;
             }
-            throw new Error(errorData.error || 'Failed to send message');
+            throw new Error(responseData.error || 'Failed to send message');
         }
         
-        setMessage('');
-        setShowPaymentModal(false);
-        await fetchConversation();
+        // Update the temporary message with the real one from the server
+        setConversation(prev => {
+          if (!prev) return null;
+          const newMessages = prev.messages.map(m => m.id === tempId ? responseData.newMessage : m)
+          return {
+            ...prev,
+            messages: newMessages,
+            messagesRemaining: responseData.updatedConversation.messagesRemaining
+          };
+        });
+
     } catch (error) {
         const err = error as Error;
         console.error("Sending message failed:", err);
         alert(err.message);
+        // Remove the optimistic message on failure
+        setConversation(prev => {
+          if (!prev) return null;
+          return {
+            ...prev,
+            messages: prev.messages.filter(m => m.id !== tempId)
+          };
+        });
+    } finally {
+      setSending(false);
     }
   };
   
@@ -216,8 +265,9 @@ export default function ChatPage() {
               onChange={(e) => setMessage(e.target.value)}
               placeholder="Message"
               className="flex-1 w-full px-4 py-2 bg-gray-100 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+              disabled={sending}
             />
-            <button onClick={() => handleSendMessage()} className="ml-3 p-2 bg-blue-500 rounded-full text-white">
+            <button onClick={() => handleSendMessage()} className="ml-3 p-2 bg-blue-500 rounded-full text-white" disabled={sending}>
                 <PaperAirplaneIcon className="w-6 h-6" />
             </button>
         </div>

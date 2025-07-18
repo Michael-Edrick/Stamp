@@ -8,6 +8,7 @@ import Link from 'next/link';
 import { UserCircleIcon, PaperAirplaneIcon, MagnifyingGlassIcon, ChatBubbleOvalLeftEllipsisIcon, PlusIcon } from '@heroicons/react/24/solid';
 import { User as PrismaUser } from '@prisma/client';
 import CustomAvatar from '@/app/components/CustomAvatar';
+import SearchModal from '@/app/components/SearchModal';
 
 type Profile = Partial<PrismaUser> & {
   avatar?: string;
@@ -128,6 +129,7 @@ export default function HomePage() {
   const { disconnect } = useDisconnect();
   const [realUsers, setRealUsers] = useState<Profile[]>([]);
   const [isClient, setIsClient] = useState(false);
+  const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
   const hasAttemptedSignIn = useRef(false);
 
   useEffect(() => {
@@ -176,6 +178,7 @@ export default function HomePage() {
       const response = await fetch('/api/users');
       if (!response.ok) throw new Error('Failed to fetch users');
       const users: Profile[] = await response.json();
+      console.log("Fetched users:", users); // Added for debugging
       setRealUsers(users);
     } catch (error) {
       console.error("Error fetching users:", error);
@@ -209,7 +212,12 @@ export default function HomePage() {
             <UserCard key={user.id} user={user} />
         ))}
       </div>
-       <BottomNav currentUser={session?.user as Profile} isClient={isClient} />
+       <BottomNav 
+        currentUser={session?.user as Profile} 
+        isClient={isClient}
+        onSearchClick={() => setIsSearchModalOpen(true)}
+       />
+       {isSearchModalOpen && <SearchModal onClose={() => setIsSearchModalOpen(false)} />}
     </div>
   );
 }
@@ -223,13 +231,13 @@ const CustomConnectButton = () => {
   );
 };
 
-const BottomNav = ({ currentUser, isClient }: { currentUser?: Profile, isClient: boolean }) => {
+const BottomNav = ({ currentUser, isClient, onSearchClick }: { currentUser?: Profile, isClient: boolean, onSearchClick: () => void }) => {
     const navButtonBase = "w-12 h-12 rounded-full flex items-center justify-center transition-transform duration-200 hover:scale-110";
 
     return (
         <div className="fixed bottom-6 left-0 right-0 w-full flex justify-center items-center">
             <div className="flex items-center justify-center gap-x-4 bg-black rounded-full shadow-lg p-3">
-                <button className={`${navButtonBase} bg-neutral-800 cursor-not-allowed`} disabled>
+                <button className={`${navButtonBase} bg-neutral-800`} onClick={onSearchClick}>
                     <MagnifyingGlassIcon className="w-7 h-7 text-white"/>
                 </button>
                 <Link href="/inbox" className={`${navButtonBase} bg-orange-500`}>

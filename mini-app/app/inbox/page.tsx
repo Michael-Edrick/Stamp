@@ -3,17 +3,20 @@
 import { useSession } from "next-auth/react";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Link from 'next/link';
 import CustomAvatar from "@/app/components/CustomAvatar";
-import { User, Message } from "@prisma/client";
+import { User, Message, Conversation as PrismaConversation } from "@prisma/client";
+import { ArrowLeftIcon } from "@heroicons/react/24/solid";
 
-interface InboxMessage extends Message {
-  sender: Partial<User>;
+interface ConversationWithDetails extends PrismaConversation {
+  participants: Partial<User>[];
+  messages: (Message & { sender: Partial<User> })[];
 }
 
 export default function InboxPage() {
-  const { status } = useSession();
+  const { data: session, status } = useSession();
   const router = useRouter();
-  const [messages, setMessages] = useState<InboxMessage[]>([]);
+  const [conversations, setConversations] = useState<ConversationWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -31,7 +34,7 @@ export default function InboxPage() {
           return res.json();
         })
         .then((data) => {
-          setMessages(data);
+          setConversations(data);
           setLoading(false);
         })
         .catch((err) => {
@@ -42,30 +45,47 @@ export default function InboxPage() {
   }, [status, router]);
 
   if (status === "loading" || loading) {
-    return <div className="text-center p-10">Loading inbox...</div>;
+    return <div className="min-h-screen bg-[#F0F2F5] flex items-center justify-center">Loading...</div>;
   }
 
   return (
-    <div className="w-full max-w-md mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-6">Inbox</h1>
-      {error && <p className="text-red-500 text-center">{error}</p>}
-      <div className="space-y-4">
-        {messages.length > 0 ? (
-          messages.map((msg: InboxMessage) => (
-            <div key={msg.id} className="bg-gray-800 p-4 rounded-lg flex items-start space-x-4">
-              <CustomAvatar profile={msg.sender} className="w-10 h-10 rounded-full mt-1" />
-              <div className="flex-1">
-                <div className="flex justify-between items-center">
-                  <span className="font-bold">{msg.sender.name || "Anonymous"}</span>
-                  <span className="text-xs text-gray-400">{new Date(msg.createdAt).toLocaleDateString()}</span>
-                </div>
-                <p className="text-gray-300 mt-1 truncate">{msg.content}</p>
-              </div>
-            </div>
-          ))
-        ) : (
-          <p className="text-center text-gray-400">Your inbox is empty.</p>
-        )}
+    <div className="min-h-screen bg-[#F0F2F5] font-sans">
+      <header className="fixed top-0 left-0 right-0 z-10 w-full max-w-md mx-auto flex items-center p-4 bg-[#F0F2F5]">
+        <Link href="/" className="p-2 -ml-2">
+          <ArrowLeftIcon className="w-6 h-6 text-gray-700" />
+        </Link>
+        <h1 className="text-xl font-bold text-gray-900 mx-auto">Inbox</h1>
+        <div className="w-6 h-6"></div> {/* Spacer */}
+      </header>
+      <div className="w-full max-w-md mx-auto pt-20 pb-24 px-4">
+        {error && <p className="text-red-500 text-center">{error}</p>}
+        <div className="space-y-4">
+          {conversations.length > 0 ? (
+            conversations.map((convo: ConversationWithDetails) => {
+              const lastMessage = convo.messages[0];
+              const otherParticipant = convo.participants.find(p => p.id !== session?.user?.id);
+              if (!lastMessage || !otherParticipant) return null;
+
+              return (
+                <Link href={`/chat/${otherParticipant.id}`} key={convo.id} className="block bg-white p-4 rounded-2xl flex items-start space-x-4 shadow-sm border border-gray-200 hover:bg-gray-50 transition-colors">
+                  <CustomAvatar profile={otherParticipant} className="w-10 h-10 rounded-full mt-1" />
+                  <div className="flex-1 overflow-hidden">
+                    <div className="flex justify-between items-center">
+                      <span className="font-bold text-gray-900">{otherParticipant.name || "Anonymous"}</span>
+                      <span className="text-xs text-gray-500">{new Date(lastMessage.createdAt).toLocaleDateString()}</span>
+                    </div>
+                    <p className="text-gray-600 mt-1 truncate">
+                      <span className="font-semibold text-gray-800">{lastMessage.senderId === session?.user?.id ? "You: " : ""}</span>
+                      {lastMessage.content}
+                    </p>
+                  </div>
+                </Link>
+              )
+            })
+          ) : (
+            <p className="text-center text-gray-500 mt-10">Your inbox is empty.</p>
+          )}
+        </div>
       </div>
     </div>
   );
