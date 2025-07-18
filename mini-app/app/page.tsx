@@ -17,6 +17,7 @@ type Profile = Partial<PrismaUser> & {
 };
 
 
+/*
 const dummyUsers: Profile[] = [
   {
     id: '1',
@@ -43,6 +44,7 @@ const dummyUsers: Profile[] = [
     tags: ['DEFI', 'SOLIDITY', 'DEVELOPER', 'FINTECH'],
   },
 ];
+*/
 
 const SocialLink = ({ platform, handle }: { platform: 'Instagram' | 'X', handle: string }) => {
     const Icon = () => platform === 'Instagram'
@@ -200,9 +202,9 @@ export default function HomePage() {
           </div>
       </header>
       <div className="w-full max-w-md mx-auto pt-20 pb-24 px-4">
-        {dummyUsers.map(user => (
+        {/* {dummyUsers.map(user => (
           <UserCard key={user.id} user={user} />
-        ))}
+        ))} */}
         {realUsers.map((user) => (
             <UserCard key={user.id} user={user} />
         ))}
@@ -227,7 +229,7 @@ const BottomNav = ({ currentUser, isClient }: { currentUser?: Profile, isClient:
     return (
         <div className="fixed bottom-6 left-0 right-0 w-full flex justify-center items-center">
             <div className="flex items-center justify-center gap-x-4 bg-black rounded-full shadow-lg p-3">
-                <button className={`${navButtonBase} bg-neutral-800`}>
+                <button className={`${navButtonBase} bg-neutral-800 cursor-not-allowed`} disabled>
                     <MagnifyingGlassIcon className="w-7 h-7 text-white"/>
                 </button>
                 <Link href="/inbox" className={`${navButtonBase} bg-orange-500`}>
