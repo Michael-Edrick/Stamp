@@ -16,7 +16,6 @@ type User = PrismaUser & {
 
 interface MessageWithSender extends PrismaMessage {
   sender: User;
-  amount?: number | null; // Add amount here
 }
 
 interface Conversation {
