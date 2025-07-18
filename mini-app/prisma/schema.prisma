@@ -33,6 +33,7 @@ model User {
   accounts       Account[]
   sessions       Session[]
   sentMessages   Message[] @relation("SentMessages")
+  receivedMessages Message[] @relation("ReceivedMessages")
   
   conversations  Conversation[] @relation("ConversationParticipants")
   
@@ -94,8 +95,8 @@ model Message {
   sender      User     @relation("SentMessages", fields: [senderId], references: [id])
   
   // No longer direct recipient on message, it's on the conversation
-  // recipientId String
-  // recipient   User     @relation("ReceivedMessages", fields: [recipientId], references: [id])
+  recipientId String
+  recipient   User     @relation("ReceivedMessages", fields: [recipientId], references: [id])
   
   conversationId String
   conversation   Conversation @relation(fields: [conversationId], references: [id])
