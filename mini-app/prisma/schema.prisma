@@ -32,8 +32,8 @@ model User {
   
   accounts       Account[]
   sessions       Session[]
-  sentMessages   Message[] @relation("SentMessages")
-  receivedMessages Message[] @relation("ReceivedMessages")
+  sentMessages   Message[] @relation("sentMessages")
+  receivedMessages Message[] @relation("receivedMessages")
   
   conversations  Conversation[] @relation("ConversationParticipants")
   
@@ -85,22 +85,21 @@ enum MessageStatus {
 }
 
 model Message {
-  id          String   @id @default(cuid())
-  content     String
-  txHash      String?  @unique
-  amount      Int?     // Amount in USDC cents for the message that initiated a bundle
-  status      MessageStatus @default(SENT)
+  id               String        @id @default(cuid())
+  content          String
+  conversationId   String
+  conversation     Conversation  @relation(fields: [conversationId], references: [id])
+  senderId         String
+  sender           User          @relation("sentMessages", fields: [senderId], references: [id])
+  recipientId      String
+  recipient        User          @relation("receivedMessages", fields: [recipientId], references: [id])
+  status           MessageStatus @default(SENT)
+  amount           Float?
+  txHash           String?       @unique
+  onChainMessageId String?       @unique
 
-  senderId    String
-  sender      User     @relation("SentMessages", fields: [senderId], references: [id])
-  
-  // No longer direct recipient on message, it's on the conversation
-  recipientId String
-  recipient   User     @relation("ReceivedMessages", fields: [recipientId], references: [id])
-  
-  conversationId String
-  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  @@index([conversationId])
 }

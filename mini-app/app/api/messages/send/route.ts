@@ -2,6 +2,8 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { ethers } from "ethers";
+import { messageEscrowABI, messageEscrowAddress } from "@/lib/contract";
 
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
@@ -12,7 +14,7 @@ export async function POST(req: Request) {
 
   try {
     const body = await req.json();
-    const { content, recipientId, amount, txHash } = body;
+    const { content, recipientId, amount, txHash, onChainMessageId } = body;
 
     if (!content || !recipientId) {
       return NextResponse.json(
@@ -78,6 +80,29 @@ export async function POST(req: Request) {
 
       // If an original paid message exists, it's not replied to, and the current sender is the recipient
       if (originalMessage && originalMessage.status === 'SENT' && originalMessage.senderId !== senderId) {
+          
+          // Call the smart contract to release funds
+          try {
+            const provider = new ethers.JsonRpcProvider(process.env.BASE_SEPOLIA_RPC_URL!);
+            const wallet = new ethers.Wallet(process.env.DEPLOYER_PRIVATE_KEY!, provider);
+            const messageEscrow = new ethers.Contract(messageEscrowAddress, messageEscrowABI, wallet);
+            
+            const onChainIdFromDb = originalMessage.onChainMessageId;
+            if(!onChainIdFromDb) {
+                throw new Error("Cannot release funds, original on-chain messageId is missing.");
+            }
+
+            console.log(`Releasing funds for on-chain messageId: ${onChainIdFromDb}`);
+            const releaseTx = await messageEscrow.releaseFunds(onChainIdFromDb);
+            await releaseTx.wait();
+            console.log("Funds released successfully. Tx:", releaseTx.hash);
+
+          } catch (contractError) {
+              console.error("Smart contract call failed:", contractError);
+              // If the contract call fails, we should not proceed with the DB transaction.
+              throw new Error("Failed to release funds from smart contract.");
+          }
+
           await tx.message.update({
               where: { id: originalMessage.id },
               data: { status: 'REPLIED' }
@@ -89,6 +114,7 @@ export async function POST(req: Request) {
           content,
           amount: conversation.messagesRemaining === 10 ? amount : null, // only set amount on first message of bundle
           txHash: conversation.messagesRemaining === 10 ? txHash : null,
+          onChainMessageId: conversation.messagesRemaining === 10 ? onChainMessageId : null,
           senderId,
           recipientId,
           conversationId: conversation.id,

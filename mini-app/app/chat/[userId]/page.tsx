@@ -7,6 +7,11 @@ import { useSession } from 'next-auth/react';
 import { useParams } from 'next/navigation';
 import { User as PrismaUser, Message as PrismaMessage } from '@prisma/client';
 import CustomAvatar from "@/app/components/CustomAvatar";
+import { useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
+import { messageEscrowABI, messageEscrowAddress, usdcContractAddress } from '@/lib/contract';
+import { parseUnits, bytesToHex, formatUnits } from 'viem';
+import { erc20Abi } from 'viem';
+
 
 type User = PrismaUser & {
   standardCost?: number | null;
@@ -25,7 +30,7 @@ interface Conversation {
   participants: User[];
 }
 
-const PaymentModal = ({ user, onSelect, onClose }: { user: User | null; onSelect: (amount: number) => void; onClose: () => void; }) => {
+const PaymentModal = ({ user, onSelect, onClose, isProcessing }: { user: User | null; onSelect: (amount: number) => void; onClose: () => void; isProcessing: boolean; }) => {
     const standardCost = user?.standardCost || 1;
     const premiumCost = user?.premiumCost || 5;
     
@@ -34,17 +39,17 @@ const PaymentModal = ({ user, onSelect, onClose }: { user: User | null; onSelect
             <div className="bg-black text-white w-full rounded-t-2xl p-4" onClick={(e) => e.stopPropagation()}>
                 <div className="flex justify-between items-center mb-4">
                     <h2 className="text-lg font-bold">Send a message</h2>
-                    <button onClick={onClose}><XMarkIcon className="w-6 h-6" /></button>
+                    <button onClick={onClose} disabled={isProcessing}><XMarkIcon className="w-6 h-6" /></button>
                 </div>
                 <div className="space-y-3">
-                    <div className="bg-neutral-900 p-4 rounded-lg flex justify-between items-center cursor-pointer" onClick={() => onSelect(standardCost)}>
+                    <button className="bg-neutral-900 p-4 rounded-lg flex justify-between items-center cursor-pointer w-full disabled:opacity-50 disabled:cursor-not-allowed" onClick={() => onSelect(standardCost)} disabled={isProcessing}>
                         <span>Standard send</span>
                         <span className="bg-blue-600 text-white px-3 py-1 rounded-full text-sm font-semibold">${standardCost} USD</span>
-                    </div>
-                     <div className="bg-neutral-900 p-4 rounded-lg flex justify-between items-center cursor-pointer" onClick={() => onSelect(premiumCost)}>
+                    </button>
+                     <button className="bg-neutral-900 p-4 rounded-lg flex justify-between items-center cursor-pointer w-full disabled:opacity-50 disabled:cursor-not-allowed" onClick={() => onSelect(premiumCost)} disabled={isProcessing}>
                         <span>Premium send</span>
                         <span className="bg-orange-500 text-white px-3 py-1 rounded-full text-sm font-semibold">${premiumCost} USD</span>
-                    </div>
+                    </button>
                     <div className="bg-neutral-900 p-4 rounded-lg flex justify-between items-center cursor-pointer" onClick={onClose}>
                         <span>None</span>
                     </div>
@@ -68,6 +73,19 @@ export default function ChatPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [sending, setSending] = useState(false);
+  const [optimisticMessageId, setOptimisticMessageId] = useState<string | null>(null);
+  
+  const approvedAmountRef = useRef<bigint | null>(null);
+  const paidMessageContentRef = useRef<string | null>(null);
+
+  const { data: approveHash, writeContract: approve, isPending: isApproving, error: approveError } = useWriteContract();
+  const { data: sendMessageHash, writeContract: sendMessage, isPending: isSendingMessage, error: sendMessageError } = useWriteContract();
+
+  const { isLoading: isConfirmingApproval, isSuccess: isApprovalConfirmed } = 
+    useWaitForTransactionReceipt({ hash: approveHash });
+
+  const { isLoading: isConfirmingMessage, isSuccess: isMessageConfirmed, isError: isMessageError } =
+    useWaitForTransactionReceipt({ hash: sendMessageHash });
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -193,11 +211,161 @@ export default function ChatPage() {
     }
   };
   
-  const handlePaymentSelect = (amount: number | null) => {
-    console.log(`Simulating payment of ${amount} USD`);
-    const mockTxHash = `0x${Math.random().toString(16).slice(2)}`;
-    handleSendMessage({ amount, txHash: mockTxHash });
+  const handlePaymentSelect = (amount: number) => {
+    if (!message.trim()) {
+      alert("Please enter a message first.");
+      return;
+    }
+
+    console.log("1. Amount selected in modal:", amount);
+    paidMessageContentRef.current = message;
+    
+    const amountInWei = parseUnits(amount.toString(), 18);
+    console.log("2. Amount converted to wei for approval:", amountInWei.toString());
+    approvedAmountRef.current = amountInWei;
+    
+    // Optimistically add message to UI
+    const tempId = `temp-${Date.now()}`;
+    setOptimisticMessageId(tempId);
+    const newMessage: MessageWithSender = {
+      id: tempId,
+      content: message,
+      senderId: loggedInUserId!,
+      conversationId: conversation?.id ?? '',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      status: 'SENT',
+      amount: amount,
+      txHash: null,
+      recipientId: userId,
+      sender: session?.user as User,
+    };
+
+    setConversation(prev => {
+      if (!prev) return null;
+      return { ...prev, messages: [...prev.messages, newMessage] };
+    });
+
+    setMessage('');
+    setShowPaymentModal(false);
+
+    // Start the approval transaction
+    approve({
+      address: usdcContractAddress,
+      abi: erc20Abi,
+      functionName: 'approve',
+      args: [messageEscrowAddress, amountInWei]
+    });
   };
+
+  useEffect(() => {
+    if (isApprovalConfirmed && approvedAmountRef.current && otherUser?.walletAddress && approveHash) {
+      console.log("3. Amount from ref before sending message:", approvedAmountRef.current.toString());
+      const messageId = bytesToHex(crypto.getRandomValues(new Uint8Array(32)));
+      
+      // Store the on-chain ID to be used after confirmation
+      paidMessageContentRef.current = JSON.stringify({ message: paidMessageContentRef.current, onChainMessageId: messageId });
+      
+      sendMessage({
+        address: messageEscrowAddress,
+        abi: messageEscrowABI,
+        functionName: 'sendMessage',
+        args: [
+          otherUser.walletAddress as `0x${string}`,
+          messageId,
+          approvedAmountRef.current,
+          BigInt(3600),
+        ]
+      });
+    }
+  }, [isApprovalConfirmed, sendMessage, otherUser?.walletAddress, approveHash]);
+
+  const syncPaidMessage = useCallback(async (details: { content: string, amount: number, txHash: string, onChainMessageId: string }) => {
+    try {
+        const payload = {
+            content: details.content,
+            recipientId: userId,
+            amount: details.amount,
+            txHash: details.txHash,
+            onChainMessageId: details.onChainMessageId,
+        };
+
+        const response = await fetch('/api/messages/send', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        const responseData = await response.json();
+
+        if (!response.ok) {
+            throw new Error(responseData.error || 'Failed to sync paid message');
+        }
+
+        // Success! Update the UI
+        setConversation(prev => {
+            if (!prev) return null;
+            const newMessages = prev.messages.map(m =>
+                m.id === optimisticMessageId ? responseData.newMessage : m
+            );
+            return {
+                ...prev,
+                messages: newMessages,
+                messagesRemaining: responseData.updatedConversation.messagesRemaining
+            };
+        });
+        
+    } catch (error) {
+        console.error("Syncing paid message failed:", error);
+        alert("Your payment was successful, but we failed to save the message. Please contact support.");
+        // On API failure, remove the optimistic message
+        setConversation(prev => {
+            if (!prev || !optimisticMessageId) return prev;
+            return {
+                ...prev,
+                messages: prev.messages.filter(m => m.id !== optimisticMessageId)
+            };
+        });
+    } finally {
+        setOptimisticMessageId(null);
+    }
+  }, [userId, optimisticMessageId]);
+
+  useEffect(() => {
+    if (isMessageConfirmed && sendMessageHash && approvedAmountRef.current) {
+      if (paidMessageContentRef.current && optimisticMessageId) {
+        const { message, onChainMessageId } = JSON.parse(paidMessageContentRef.current);
+        syncPaidMessage({
+            content: message,
+            amount: parseFloat(formatUnits(approvedAmountRef.current, 18)),
+            txHash: sendMessageHash,
+            onChainMessageId: onChainMessageId
+        });
+        paidMessageContentRef.current = null;
+      }
+      approvedAmountRef.current = null;
+    }
+  }, [isMessageConfirmed, sendMessageHash, optimisticMessageId, syncPaidMessage]);
+
+
+  useEffect(() => {
+    const transactionFailed = approveError || sendMessageError || (sendMessageHash && isMessageError) || (approveHash && !isApprovalConfirmed && !isConfirmingApproval);
+
+    if (transactionFailed && (approveError || sendMessageError || isMessageError)) {
+      alert(`Transaction failed: ${approveError?.message || sendMessageError?.message || 'The message transaction failed.'}`);
+      
+      // Remove optimistic message on failure
+      if (optimisticMessageId) {
+        setConversation(prev => {
+          if (!prev) return null;
+          return { ...prev, messages: prev.messages.filter(m => m.id !== optimisticMessageId) };
+        });
+      }
+      
+      approvedAmountRef.current = null;
+      setOptimisticMessageId(null);
+    }
+  }, [approveError, sendMessageError, isMessageError, optimisticMessageId, sendMessageHash, approveHash, isApprovalConfirmed, isConfirmingApproval]);
 
 
   if (isLoading) {
@@ -273,7 +441,18 @@ export default function ChatPage() {
         </div>
       </footer>
       
-      {showPaymentModal && <PaymentModal user={otherUser} onSelect={handlePaymentSelect} onClose={() => setShowPaymentModal(false)} />}
+      {showPaymentModal && <PaymentModal user={otherUser} onSelect={handlePaymentSelect} onClose={() => setShowPaymentModal(false)} isProcessing={isApproving || isConfirmingApproval || isSendingMessage || isConfirmingMessage} />}
+      
+      {(isApproving || isSendingMessage || isConfirmingApproval || isConfirmingMessage) && (
+        <div className="fixed inset-0 bg-black/60 flex flex-col items-center justify-center z-50">
+          <div className="text-white text-lg font-bold">
+            {isApproving && "Please approve the transaction in your wallet..."}
+            {isConfirmingApproval && "Waiting for approval confirmation..."}
+            {isSendingMessage && "Please sign the message transaction..."}
+            {isConfirmingMessage && "Waiting for message confirmation..."}
+          </div>
+        </div>
+      )}
     </div>
   );
 } 

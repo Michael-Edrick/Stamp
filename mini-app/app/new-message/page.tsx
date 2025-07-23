@@ -4,12 +4,12 @@ import { useSession } from "next-auth/react";
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAccount, useWriteContract } from "wagmi";
-import { messageEscrowAddress, messageEscrowAbi } from "@/lib/contract";
+import { messageEscrowAddress, messageEscrowAbi, usdcContractAddress } from "@/lib/contract";
 import { parseEther, keccak256, toBytes } from "viem";
 import Link from "next/link";
 import CustomAvatar from "@/app/components/CustomAvatar";
 
-const usdcAddress = "0x6051912FC68729aa994989C8B23666AFfC890204" as const;
+const usdcAddress = usdcContractAddress;
 const erc20Abi = [{ "constant": false, "inputs": [{ "name": "spender", "type": "address" }, { "name": "value", "type": "uint256" }], "name": "approve", "outputs": [{ "name": "", "type": "bool" }], "type": "function" }] as const;
 
 function NewMessageForm() {
