@@ -85,8 +85,16 @@ export async function POST(req: Request) {
           // The current user is the recipient of the original paid message. They are authorized to claim the funds.
           // Call the smart contract to release funds.
           try {
-            const provider = new ethers.JsonRpcProvider(process.env.BASE_SEPOLIA_RPC_URL!);
-            const wallet = new ethers.Wallet(process.env.DEPLOYER_PRIVATE_KEY!, provider);
+            const baseSepoliaRpcUrl = process.env.BASE_SEPOLIA_RPC_URL;
+            if (!baseSepoliaRpcUrl) {
+              throw new Error("Environment variable BASE_SEPOLIA_RPC_URL is not set.");
+            }
+            const provider = new ethers.JsonRpcProvider(baseSepoliaRpcUrl);
+            const deployerPrivateKey = process.env.DEPLOYER_PRIVATE_KEY;
+            if (!deployerPrivateKey) {
+                throw new Error("DEPLOYER_PRIVATE_KEY environment variable is not set.");
+            }
+            const wallet = new ethers.Wallet(deployerPrivateKey, provider);
             const messageEscrow = new ethers.Contract(messageEscrowAddress, messageEscrowABI, wallet);
             
             const onChainIdFromDb = originalMessage.onChainMessageId;

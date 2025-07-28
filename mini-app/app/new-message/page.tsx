@@ -4,7 +4,7 @@ import { useSession } from "next-auth/react";
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAccount, useWriteContract } from "wagmi";
-import { messageEscrowAddress, messageEscrowAbi, usdcContractAddress } from "@/lib/contract";
+import { messageEscrowAddress, messageEscrowABI, usdcContractAddress } from "@/lib/contract";
 import { parseEther, keccak256, toBytes } from "viem";
 import Link from "next/link";
 import CustomAvatar from "@/app/components/CustomAvatar";
