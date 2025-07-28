@@ -79,6 +79,7 @@ model Session {
 }
 
 enum MessageStatus {
+  PENDING_PAYMENT
   SENT
   REPLIED
   REFUNDED

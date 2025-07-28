@@ -78,10 +78,12 @@ export async function POST(req: Request) {
         }
       });
 
-      // If an original paid message exists, it's not replied to, and the current sender is the recipient
-      if (originalMessage && originalMessage.status === 'SENT' && originalMessage.senderId !== senderId) {
+      // Security Check: If this is a reply, see if it's for a paid message that can be claimed.
+      // We check if an original paid message exists in this conversation that hasn't been replied to yet.
+      if (originalMessage && originalMessage.status === 'SENT' && originalMessage.recipientId === senderId) {
           
-          // Call the smart contract to release funds
+          // The current user is the recipient of the original paid message. They are authorized to claim the funds.
+          // Call the smart contract to release funds.
           try {
             const provider = new ethers.JsonRpcProvider(process.env.BASE_SEPOLIA_RPC_URL!);
             const wallet = new ethers.Wallet(process.env.DEPLOYER_PRIVATE_KEY!, provider);
