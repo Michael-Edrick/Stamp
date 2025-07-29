@@ -29,6 +29,8 @@ model User {
   tags           String[]  @default([])
   standardCost   Int?      @default(1)
   premiumCost    Int?      @default(5)
+  isAdmin        Boolean   @default(false)
+  isBanned       Boolean   @default(false)
   
   accounts       Account[]
   sessions       Session[]
