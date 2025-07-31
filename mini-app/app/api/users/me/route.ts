@@ -41,6 +41,9 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { name, username, bio, image, instagram, x_social, standardCost, premiumCost, tags } = body;
 
+    // Ensure tags are handled as an array
+    const tagsArray = typeof tags === 'string' ? tags.split(',').map(tag => tag.trim()).filter(Boolean) : tags;
+
     const updatedUser = await prisma.user.update({
       where: { id: session.user.id },
       data: {
@@ -52,7 +55,7 @@ export async function POST(req: Request) {
         x_social,
         standardCost,
         premiumCost,
-        tags
+        tags: tagsArray
       },
     });
 
