@@ -1,0 +1,18 @@
+{
+  "frame": {
+    "version": "1",
+    "name": "StampMe",
+    "subtitle": "Direct access through paid messages.",
+    "description": "StampMe allows you to initiate conversations with influential people by paying for the first message bundle, powered by Base and Farcaster.",
+    "iconUrl": "https://stamp-me.vercel.app/icon.png",
+    "homeUrl": "https://stamp-me.vercel.app",
+    "splashImageUrl": "https://stamp-me.vercel.app/splash.png",
+    "heroImageUrl": "https://stamp-me.vercel.app/hero.png",
+    "screenshotUrls": [
+      "https://stamp-me.vercel.app/screenshot.png"
+    ],
+    "primaryCategory": "social",
+    "tags": ["web3", "messaging", "creator-economy", "onchain"],
+    "noindex": true
+  }
+}
