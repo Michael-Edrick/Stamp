@@ -87,7 +87,7 @@ function NewMessageForm() {
       const messageId = keccak256(toBytes(`${address}-${recipient}-${content}-${Date.now()}`));
       const sendMessageTx = await writeContractAsync({
         address: messageEscrowAddress,
-        abi: messageEscrowAbi,
+        abi: messageEscrowABI,
         functionName: 'sendMessage',
         args: [recipient as `0x${string}`, messageId, parseEther(amount), BigInt(7 * 24 * 60 * 60)]
       });
