@@ -31,17 +31,17 @@ export const viewport: Viewport = {
 export async function generateMetadata(): Promise<Metadata> {
   const URL = process.env.NEXT_PUBLIC_URL || 'http://localhost:3000';
   return {
-    title: process.env.NEXT_PUBLIC_ONCHAINKIT_PROJECT_NAME || 'ReachMe',
+    title: process.env.NEXT_PUBLIC_ONCHAINKIT_PROJECT_NAME || 'StampMe',
     description: "A simple app to reach anyone.",
     other: {
       "fc:frame": JSON.stringify({
         version: "next",
         imageUrl: `${URL}/hero.png`,
         button: {
-          title: `Launch ${process.env.NEXT_PUBLIC_ONCHAINKIT_PROJECT_NAME || 'ReachMe'}`,
+          title: `Launch ${process.env.NEXT_PUBLIC_ONCHAINKIT_PROJECT_NAME || 'StampMe'}`,
           action: {
             type: "launch_frame",
-            name: process.env.NEXT_PUBLIC_ONCHAINKIT_PROJECT_NAME || 'ReachMe',
+            name: process.env.NEXT_PUBLIC_ONCHAINKIT_PROJECT_NAME || 'StampMe',
             url: URL,
             splashImageUrl: `${URL}/splash.png`,
             splashBackgroundColor: "#000000",

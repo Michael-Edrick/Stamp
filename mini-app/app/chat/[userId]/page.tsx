@@ -146,6 +146,7 @@ export default function ChatPage() {
       status: 'SENT',
       amount: paymentDetails?.amount || null,
       txHash: paymentDetails?.txHash || null,
+      onChainMessageId: null,
       recipientId: userId,
       sender: session?.user as User,
     };

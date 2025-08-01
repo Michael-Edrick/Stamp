@@ -6,6 +6,7 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 contract MessageEscrow is ReentrancyGuard {
     IERC20 public usdc;
+    address public owner;
 
     struct Message {
         address sender;
@@ -24,6 +25,7 @@ contract MessageEscrow is ReentrancyGuard {
 
     constructor(address _usdcAddress) {
         usdc = IERC20(_usdcAddress);
+        owner = msg.sender;
     }
 
     function sendMessage(
@@ -47,7 +49,7 @@ contract MessageEscrow is ReentrancyGuard {
     function releaseFunds(bytes32 messageId) external nonReentrant {
         Message storage msgData = messages[messageId];
         
-        require(msg.sender == msgData.recipient, "Only the recipient can release funds");
+        require(msg.sender == owner, "Only the owner can release funds");
         require(!msgData.responded, "Message has already been responded to");
         require(!msgData.refunded, "Message has already been refunded");
 
