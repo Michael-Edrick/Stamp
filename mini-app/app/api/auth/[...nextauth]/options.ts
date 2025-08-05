@@ -47,13 +47,20 @@ export const authOptions: NextAuthOptions = {
                 },
               });
             }
+
+            // Check if user is banned
+            if (user.isBanned) {
+              console.log(`Banned user ${user.walletAddress} attempted to login`);
+              return null;
+            }
+
             return {
-              id: user.id, // Return the CUID, not the address
+              id: user.id,
             };
           }
           return null;
         } catch (e) {
-          console.error(e);
+          console.error("Authentication error:", e);
           return null;
         }
       },
