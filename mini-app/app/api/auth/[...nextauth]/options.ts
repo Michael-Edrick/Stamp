@@ -106,10 +106,9 @@ export const authOptions: NextAuthOptions = {
     // This callback is called whenever a JWT is created or updated.
     async jwt({ token, user }) {
       if (user) {
-        // When a user successfully signs in, the 'user' object from 'authorize' is passed here.
         token.sub = user.id;
         if (user.fid) {
-            token.fid = user.fid;
+          token.fid = user.fid;
         }
       }
       return token;
@@ -119,7 +118,7 @@ export const authOptions: NextAuthOptions = {
       if (session.user) {
         session.user.id = token.sub as string;
         if (token.fid) {
-            session.user.fid = token.fid as string;
+          session.user.fid = token.fid as string;
         }
       }
       return session;

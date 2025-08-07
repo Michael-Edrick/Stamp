@@ -3,11 +3,12 @@ import { DefaultSession } from "next-auth";
 
 declare module "next-auth" {
   /**
-   * Extends the built-in session.user object to include the user's CUID.
+   * Extends the built-in session.user object to include the user's CUID and fid.
    */
   interface Session {
     user: {
       id: string;
+      fid?: string | null;
     } & DefaultSession["user"];
   }
 
@@ -16,5 +17,6 @@ declare module "next-auth" {
    */
   interface User {
     id: string;
+    fid?: string | null;
   }
 } 
