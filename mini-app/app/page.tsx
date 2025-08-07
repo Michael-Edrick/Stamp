@@ -9,6 +9,7 @@ import { UserCircleIcon, PaperAirplaneIcon, MagnifyingGlassIcon, ChatBubbleOvalL
 import { User as PrismaUser } from '@prisma/client';
 import CustomAvatar from '@/app/components/CustomAvatar';
 
+import { useMiniKit } from '@coinbase/onchainkit/minikit';
 import SearchModal from '@/app/components/SearchModal';
 
 type Profile = Partial<PrismaUser> & {
@@ -131,7 +132,14 @@ export default function HomePage() {
   const [realUsers, setRealUsers] = useState<Profile[]>([]);
   const [isClient, setIsClient] = useState(false);
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
-    const hasAttemptedSignIn = useRef(false);
+      const hasAttemptedSignIn = useRef(false);
+  const { setFrameReady, isFrameReady } = useMiniKit();
+
+  useEffect(() => {
+    if (!isFrameReady) {
+      setFrameReady(true);
+    }
+  }, [isFrameReady, setFrameReady]);
 
   
 
