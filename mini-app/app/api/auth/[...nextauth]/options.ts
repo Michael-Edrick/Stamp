@@ -77,6 +77,12 @@ export const authOptions: NextAuthOptions = {
               },
             });
 
+            // Check if user is banned
+            if (user.isBanned) {
+              console.log(`Banned user ${user.walletAddress} attempted to login`);
+              return null;
+            }
+
             return {
               id: user.id,
               name: user.name,

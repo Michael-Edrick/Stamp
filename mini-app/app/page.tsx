@@ -180,15 +180,7 @@ export default function HomePage() {
     }
   }, [address, chainId, signMessageAsync]);
 
-  useEffect(() => {
-    if (isConnected && sessionStatus === "unauthenticated" && !hasAttemptedSignIn.current) {
-      hasAttemptedSignIn.current = true;
-      handleSignIn();
-    }
-    if (!isConnected) {
-      hasAttemptedSignIn.current = false;
-    }
-  }, [isConnected, sessionStatus, address, chainId, handleSignIn]);
+
 
   const fetchUsers = async () => {
     try {
