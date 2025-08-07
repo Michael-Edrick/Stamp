@@ -10,6 +10,7 @@ import { User as PrismaUser } from '@prisma/client';
 import CustomAvatar from '@/app/components/CustomAvatar';
 
 import { useMiniKit } from '@coinbase/onchainkit/minikit';
+import { baseSepolia } from 'wagmi/chains';
 import SearchModal from '@/app/components/SearchModal';
 
 type Profile = Partial<PrismaUser> & {
@@ -151,6 +152,11 @@ export default function HomePage() {
   const handleSignIn = useCallback(async () => {
     if (!address || !chainId) {
       console.error("Wallet not fully connected, cannot sign in.");
+      hasAttemptedSignIn.current = false;
+      return;
+    }
+    if (chainId !== baseSepolia.id) {
+      alert(`Please switch to the ${baseSepolia.name} network to sign in.`);
       hasAttemptedSignIn.current = false;
       return;
     }
