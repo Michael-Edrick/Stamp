@@ -4,16 +4,9 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { NeynarAPIClient } from "@neynar/nodejs-sdk";
 import prisma from "@/lib/prisma";
 
-const NEYNAR_API_KEY = process.env.NEYNAR_API_KEY;
-
-if (!NEYNAR_API_KEY) {
-  throw new Error("NEYNAR_API_KEY is not set");
-}
-
-const client = new NeynarAPIClient({ apiKey: NEYNAR_API_KEY });
-
 // Helper function to fetch user data from Neynar
 async function getFarcasterUser(address: string) {
+    const NEYNAR_API_KEY = process.env.NEYNAR_API_KEY;
     if (!NEYNAR_API_KEY) {
         console.error("NEYNAR_API_KEY is not set.");
         return null;
@@ -36,6 +29,14 @@ async function getFarcasterUser(address: string) {
 }
 
 export async function GET(req: NextRequest) {
+  const NEYNAR_API_KEY = process.env.NEYNAR_API_KEY;
+  
+  if (!NEYNAR_API_KEY) {
+    return NextResponse.json({ error: 'NEYNAR_API_KEY is not configured' }, { status: 500 });
+  }
+
+  const client = new NeynarAPIClient({ apiKey: NEYNAR_API_KEY });
+
   const session = await getServerSession(authOptions);
 
   if (!session?.user?.id) {

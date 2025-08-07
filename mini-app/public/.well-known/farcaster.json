@@ -1,18 +1,25 @@
 {
   "frame": {
-    "version": "1",
     "name": "StampMe",
-    "subtitle": "Direct access through paid messages.",
-    "description": "StampMe allows you to initiate conversations with influential people by paying for the first message bundle, powered by Base and Farcaster.",
+    "version": "1",
     "iconUrl": "https://stamp-me.vercel.app/icon.png",
     "homeUrl": "https://stamp-me.vercel.app",
+    "imageUrl": "https://stamp-me.vercel.app/image.png",
     "splashImageUrl": "https://stamp-me.vercel.app/splash.png",
-    "heroImageUrl": "https://stamp-me.vercel.app/hero.png",
-    "screenshotUrls": [
-      "https://stamp-me.vercel.app/screenshot.png"
-    ],
+    "splashBackgroundColor": "#6200EA",
+    "webhookUrl": "https://stamp-me.vercel.app/api/webhook",
+    "subtitle": "Direct access through paid messages.",
+    "description": "StampMe allows you to initiate conversations with influential people by paying for the first message bundle, powered by Base and Farcaster.",
     "primaryCategory": "social",
-    "tags": ["web3", "messaging", "creator-economy", "onchain"],
-    "noindex": true
+    "tags": [
+      "social",
+      "messaging",
+      "community"
+    ]
+  },
+  "accountAssociation": {
+    "header": "eyJmaWQiOjExMDc3ODksInR5cGUiOiJjdXN0b2R5Iiwia2V5IjoiMHhhZTA1OWNiN2EyMjIwMDMwNjI3NDY1MjBmMjJmMDM1MkE3MkI1NTYwIn0",
+    "payload": "eyJkb21haW4iOiJzdGFtcC1tZS52ZXJjZWwuYXBwIn0",
+    "signature": "MHhmYjA1Y2NkZDM2NTZhYjAzY2E2ZGY5ZDVlMmU4NjU2MjE5ZjkzY2YzMDNiNGQxMmRkOWJiMWE4OGYzZTc2MGQ1MjNhOGI2MWIwZWQzNmUwMDU5OGJlODMwZmMyMzI3MjJiYjJmYzM1NjM5MjkwODdiMmFmY2FjODQxMmIxYTI3MjFj"
   }
 }
