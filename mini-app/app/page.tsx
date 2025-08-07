@@ -8,7 +8,7 @@ import Link from 'next/link';
 import { UserCircleIcon, PaperAirplaneIcon, MagnifyingGlassIcon, ChatBubbleOvalLeftEllipsisIcon, PlusIcon } from '@heroicons/react/24/solid';
 import { User as PrismaUser } from '@prisma/client';
 import CustomAvatar from '@/app/components/CustomAvatar';
-import { useOnchainKit } from '@coinbase/onchainkit';
+import { useMiniApp } from '@coinbase/onchainkit/miniapp';
 import SearchModal from '@/app/components/SearchModal';
 
 type Profile = Partial<PrismaUser> & {
@@ -132,12 +132,12 @@ export default function HomePage() {
   const [isClient, setIsClient] = useState(false);
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
     const hasAttemptedSignIn = useRef(false);
-  const { sdk } = useOnchainKit();
+  const { sdk } = useMiniApp();
 
   useEffect(() => {
     // Signal to the mini app container that the app is ready
-    if (sdk?.actions) {
-      sdk.actions.ready();
+    if (sdk) {
+      sdk.ready();
     }
   }, [sdk]);
 
