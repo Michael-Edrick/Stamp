@@ -128,7 +128,7 @@ const UserCard = ({ user }: { user: Profile }) => {
 export default function HomePage() {
   const { address, isConnected, chainId } = useAccount();
   const { signMessageAsync } = useSignMessage();
-  const { data: session, status: sessionStatus } = useSession();
+    const { data: session, status: sessionStatus, update: updateSession } = useSession();
   const { disconnect } = useDisconnect();
   const [realUsers, setRealUsers] = useState<Profile[]>([]);
   const [isClient, setIsClient] = useState(false);
@@ -144,10 +144,22 @@ export default function HomePage() {
 
   
 
+  const fetchUsers = useCallback(async () => {
+    try {
+      const response = await fetch('/api/users');
+      if (!response.ok) throw new Error('Failed to fetch users');
+      const users: Profile[] = await response.json();
+      console.log("Fetched users:", users); // Added for debugging
+      setRealUsers(users);
+    } catch (error) {
+      console.error("Error fetching users:", error);
+    }
+  }, []);
+
   useEffect(() => {
     setIsClient(true);
     fetchUsers();
-  }, []);
+  }, [fetchUsers]);
 
   const handleSignIn = useCallback(async () => {
     if (!address || !chainId) {
@@ -172,27 +184,20 @@ export default function HomePage() {
             chainId: chainId,
             nonce: nonce,
         });
-        const signature = await signMessageAsync({ message: message.prepareMessage() });
-        await signIn("credentials", { message: JSON.stringify(message), redirect: false, signature });
+                const signature = await signMessageAsync({ message: message.prepareMessage() });
+        const result = await signIn("credentials", { message: JSON.stringify(message), redirect: false, signature });
+
+        if (result?.ok) {
+            await updateSession(); // Force session update
+            await fetchUsers(); // Re-fetch users to update the list
+        } else {
+            throw new Error("Sign-in failed after signature.");
+        }
     } catch (error) {
         console.error("Sign-in error", error);
         hasAttemptedSignIn.current = false;
     }
-  }, [address, chainId, signMessageAsync]);
-
-
-
-  const fetchUsers = async () => {
-    try {
-      const response = await fetch('/api/users');
-      if (!response.ok) throw new Error('Failed to fetch users');
-      const users: Profile[] = await response.json();
-      console.log("Fetched users:", users); // Added for debugging
-      setRealUsers(users);
-    } catch (error) {
-      console.error("Error fetching users:", error);
-    }
-  };
+  }, [address, chainId, signMessageAsync, updateSession, fetchUsers]);
 
   const handleSignOut = () => {
     disconnect();
@@ -208,7 +213,7 @@ export default function HomePage() {
                 {sessionStatus === "authenticated" ? (
                     <button onClick={handleSignOut} className="bg-red-500 text-white px-3 py-1.5 rounded-lg text-sm font-semibold">Sign Out</button>
                 ) : (
-                    <CustomConnectButton />
+                    <CustomConnectButton onSignIn={handleSignIn} />
                 )}
               </>)}
           </div>
@@ -231,10 +236,33 @@ export default function HomePage() {
   );
 }
 
-const CustomConnectButton = () => {
+const CustomConnectButton = ({ onSignIn }: { onSignIn: () => void }) => {
   const { connect } = useConnect();
+  const { isConnected } = useAccount();
+  const [isConnecting, setIsConnecting] = useState(false);
+
+  useEffect(() => {
+    // This effect triggers the sign-in process ONLY after a connection
+    // has been initiated by a button click.
+    if (isConnected && isConnecting) {
+      onSignIn();
+      setIsConnecting(false); // Reset state after sign-in is triggered
+    }
+  }, [isConnected, isConnecting, onSignIn]);
+
+  const handleConnect = () => {
+    setIsConnecting(true);
+    connect({ 
+      connector: injected(),
+      // Handle cases where the user rejects the connection in their wallet.
+      onError: () => {
+        setIsConnecting(false);
+      }
+    });
+  };
+
   return (
-    <button onClick={() => connect({ connector: injected() })} className="bg-blue-600 text-white px-3 py-1.5 rounded-lg text-sm font-semibold">
+    <button onClick={handleConnect} className="bg-blue-600 text-white px-3 py-1.5 rounded-lg text-sm font-semibold">
       Sign In
     </button>
   );
