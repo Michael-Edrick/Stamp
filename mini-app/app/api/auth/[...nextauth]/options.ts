@@ -57,27 +57,31 @@ export const authOptions: NextAuthOptions = {
             // Data to be saved or updated in the database
             const userData = {
               walletAddress: siwe.address,
+              fid: farcasterUser?.fid?.toString(),
               name: farcasterUser?.display_name || farcasterUser?.username,
               image: farcasterUser?.pfp_url,
             };
 
-            // Use Prisma's upsert to find an existing user or create/update them
             const user = await prisma.user.upsert({
               where: { walletAddress: siwe.address },
-              update: { ...userData },
-              create: { ...userData },
+              update: {
+                fid: farcasterUser?.fid?.toString(),
+                name: farcasterUser?.display_name || farcasterUser?.username,
+                image: farcasterUser?.pfp_url,
+              },
+              create: {
+                walletAddress: siwe.address,
+                fid: farcasterUser?.fid?.toString(),
+                name: farcasterUser?.display_name || farcasterUser?.username || `${siwe.address.slice(0, 6)}...${siwe.address.slice(-4)}`,
+                image: farcasterUser?.pfp_url,
+              },
             });
-
-            // Check if user is banned
-            if (user.isBanned) {
-              console.log(`Banned user ${user.walletAddress} attempted to login`);
-              return null;
-            }
 
             return {
               id: user.id,
               name: user.name,
-              image: user.image
+              image: user.image,
+              fid: user.fid,
             };
           }
           return null;
@@ -98,6 +102,9 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         // When a user successfully signs in, the 'user' object from 'authorize' is passed here.
         token.sub = user.id;
+        if (user.fid) {
+            token.fid = user.fid;
+        }
       }
       return token;
     },
@@ -105,6 +112,9 @@ export const authOptions: NextAuthOptions = {
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.sub as string;
+        if (token.fid) {
+            session.user.fid = token.fid as string;
+        }
       }
       return session;
     },
