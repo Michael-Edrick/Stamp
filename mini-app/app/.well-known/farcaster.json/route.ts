@@ -16,9 +16,9 @@ export async function GET() {
 
   return Response.json({
     accountAssociation: {
-      header: "eyJmaWQiOjExMDc3ODksInR5cGUiOiJjdXN0b2R5Iiwia2V5IjoiMHhhZTA1OWNiN2EyMjIwMDMwNjI3NDY1MjBmMjJmMDM1MkE3MkI1NTYwIn0",
-      payload: "eyJkb21haW4iOiJkcmFnb253ci1taW5pa2l0LnZlcmNlbC5hcHAifQ",
-      signature: "MHgyZTdkMDkwMDVkMTlhM2VjN2U4NTEwMWE1N2YyZjA5ODEyY2UxNjQwM2Q0NzA1YzVlNTU3MDQwNDY2N2I4Y2Q5N2Q5Nzc4MDdkZjdiYTViOTVlM2VlNmNmMWI3OWUxZTM5NWNmZmRkODE4NGIzMTE4Zjc4YjEzOGFlYTkxZDk4MjFj",
+      header: "eyJmaWQiOjExMDc3ODksInR5cGUiOiJhdXRoIiwia2V5IjoiMHgzNDZCMERjY0M3YjZCNmVkN0IzRTQ3NENiNjc0Mjk3NkY4NEQxMjk1In0",
+      payload: "eyJkb21haW4iOiJzdGFtcC1tZS52ZXJjZWwuYXBwIn0",
+      signature: "TCxSA7kk16cAaU3F1RLo/mTgeyf5PLx6ROF/HlCj0wZDdDA0TISgR4NI2EJEqHdvLx1Nhl3yrUDhaBgkqNSapRw=",
     },
     frame: withValidProperties({
       version: "1",
