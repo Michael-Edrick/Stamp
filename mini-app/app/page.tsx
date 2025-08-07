@@ -137,7 +137,7 @@ export default function HomePage() {
 
   useEffect(() => {
     if (!isFrameReady) {
-      setFrameReady(true);
+      setFrameReady();
     }
   }, [isFrameReady, setFrameReady]);
 
