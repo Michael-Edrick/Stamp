@@ -2,7 +2,6 @@ import { Inter, Roboto, Chivo_Mono } from "next/font/google";
 import "./globals.css";
 import "./theme.css";
 import "@coinbase/onchainkit/styles.css";
-import type { Metadata, Viewport } from "next";
 import { Providers } from "./providers";
 import { Toaster } from 'sonner';
 
@@ -23,34 +22,11 @@ const chivo_mono = Chivo_Mono({
   variable: '--font-chivo-mono',
 });
 
-export const viewport: Viewport = {
-  width: "device-width",
-  initialScale: 1,
-};
-
-export async function generateMetadata(): Promise<Metadata> {
-  const URL = process.env.NEXT_PUBLIC_URL || 'http://localhost:3000';
-  return {
-    title: process.env.NEXT_PUBLIC_ONCHAINKIT_PROJECT_NAME || 'StampMe',
-    description: "A simple app to reach anyone.",
-    other: {
-      "fc:frame": JSON.stringify({
-        version: "next",
-        imageUrl: `${URL}/hero.png`,
-        button: {
-          title: `Launch ${process.env.NEXT_PUBLIC_ONCHAINKIT_PROJECT_NAME || 'StampMe'}`,
-          action: {
-            type: "launch_frame",
-            name: process.env.NEXT_PUBLIC_ONCHAINKIT_PROJECT_NAME || 'StampMe',
-            url: URL,
-            splashImageUrl: `${URL}/splash.png`,
-            splashBackgroundColor: "#000000",
-          },
-        },
-      }),
-    },
-  };
-}
+const appUrl = process.env.NEXT_PUBLIC_URL || 'http://localhost:3000';
+const appName = process.env.NEXT_PUBLIC_ONCHAINKIT_PROJECT_NAME || 'StampMe';
+const heroUrl = `${appUrl}/hero.png`;
+// The post_url should point to the root, which our rewrite will catch for POSTs.
+const postUrl = appUrl;
 
 export default function RootLayout({
   children,
@@ -59,6 +35,21 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
+      <head>
+        <meta charSet="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>{appName}</title>
+        <meta name="description" content="A simple app to reach anyone." />
+
+        {/* Farcaster Frame Tags for Mini App */}
+        <meta property="fc:frame" content="vNext" />
+        <meta property="fc:frame:image" content={heroUrl} />
+        <meta property="fc:frame:button:1" content={`Launch ${appName}`} />
+        <meta property="fc:frame:button:1:action" content="post" />
+        {/* On post, the Farcaster client will POST to this URL.
+            Our next.config.mjs rewrite will send this to our API handler. */}
+        <meta property="fc:frame:post_url" content={postUrl} /> 
+      </head>
       <body className={`${inter.variable} ${roboto.variable} ${chivo_mono.variable} font-sans bg-black`}>
         <Providers>
           {children}

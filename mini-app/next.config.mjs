@@ -1,5 +1,20 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  async rewrites() {
+    return [
+      {
+        source: '/',
+        has: [
+          {
+            type: 'header',
+            key: 'Next-Action',
+            value: 'post',
+          },
+        ],
+        destination: '/api/farcaster-signin', // Your new API route
+      },
+    ]
+  },
   images: {
     remotePatterns: [
       {

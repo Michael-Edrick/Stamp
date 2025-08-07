@@ -4,22 +4,41 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import { SiweMessage } from "siwe";
 import prisma from "@/lib/prisma";
 
+const NEYNAR_API_KEY = process.env.NEYNAR_API_KEY;
+
+// Helper function to fetch user data from Neynar
+async function getFarcasterUser(address: string) {
+    if (!NEYNAR_API_KEY) {
+        console.error("NEYNAR_API_KEY is not set.");
+        return null;
+    }
+    // Note: The endpoint is for a single address, but Neynar's API uses 'bulk-by-address' for this.
+    const url = `https://api.neynar.com/v2/farcaster/user/bulk-by-address?addresses=${address}`;
+    try {
+        const response = await fetch(url, {
+            headers: { 'accept': 'application/json', 'api_key': NEYNAR_API_KEY }
+        });
+        if (!response.ok) {
+            console.error(`Neynar API failed with status: ${response.status}`);
+            return null;
+        }
+        const data = await response.json();
+        // The endpoint returns a map where the key is the address
+        return data.users[address]?.[0] || null;
+    } catch (error) {
+        console.error("Error fetching from Neynar API:", error);
+        return null;
+    }
+}
+
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
   providers: [
     CredentialsProvider({
       name: "Ethereum",
       credentials: {
-        message: {
-          label: "Message",
-          type: "text",
-          placeholder: "0x0",
-        },
-        signature: {
-          label: "Signature",
-          type: "text",
-          placeholder: "0x0",
-        },
+        message: { label: "Message", type: "text" },
+        signature: { label: "Signature", type: "text" },
       },
       async authorize(credentials) {
         try {
@@ -29,26 +48,33 @@ export const authOptions: NextAuthOptions = {
           const result = await siwe.verify({
             signature: credentials?.signature || "",
             domain: nextAuthUrl.host,
-            nonce: siwe.nonce, // The nonce is part of the signed message
+            nonce: siwe.nonce,
           });
 
           if (result.success) {
-            // Find user by wallet address
-            let user = await prisma.user.findUnique({
+            const farcasterUser = await getFarcasterUser(siwe.address);
+            
+            // Data to be saved or updated in the database
+            const userData = {
+              walletAddress: siwe.address,
+              fid: farcasterUser?.fid?.toString(), // Ensure fid is a string
+              username: farcasterUser?.username,
+              displayName: farcasterUser?.display_name,
+              pfpUrl: farcasterUser?.pfp_url,
+            };
+
+            // Use Prisma's upsert to find an existing user or create/update them
+            const user = await prisma.user.upsert({
               where: { walletAddress: siwe.address },
+              update: { ...userData },
+              create: { ...userData },
             });
 
-            // If user doesn't exist, create a new one
-            if (!user) {
-              user = await prisma.user.create({
-                data: {
-                  walletAddress: siwe.address,
-                  // You can add default values for username etc. here if you want
-                },
-              });
-            }
             return {
-              id: user.id, // Return the CUID, not the address
+              id: user.id,
+              fid: user.fid,
+              name: user.displayName,
+              image: user.pfpUrl
             };
           }
           return null;
@@ -64,11 +90,22 @@ export const authOptions: NextAuthOptions = {
   },
   secret: process.env.NEXTAUTH_SECRET,
   callbacks: {
+    // This callback is called whenever a JWT is created or updated.
+    async jwt({ token, user }) {
+      if (user) {
+        // When a user successfully signs in, the 'user' object from 'authorize' is passed here.
+        token.sub = user.id;
+        token.fid = user.fid;
+      }
+      return token;
+    },
+    // This callback is called whenever a session is checked.
     async session({ session, token }) {
-      if (session.user && token.sub) {
-        session.user.id = token.sub;
+      if (session.user) {
+        session.user.id = token.sub as string;
+        session.user.fid = token.fid as string;
       }
       return session;
     },
   },
-}; 
+};

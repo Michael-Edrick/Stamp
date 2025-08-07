@@ -1,64 +1,43 @@
-# ReachMe - Pay-per-Bundle Messaging Feature
+# StampMe - A Farcaster "Pay-per-Bundle" Messaging App
 
-### Final Requirement
-Implement a "pay-per-bundle" messaging system where users pay to initiate a conversation that includes a bundle of 10 messages. The system should be integrated into a seamless, modern chat interface and deployed as a Farcaster mini-app.
+## Background and Motivation
 
-### Background and Motivation
-The initial concept was a one-time payment to unlock a conversation. This has been refined into a more sustainable "pay-per-bundle" model. A single payment grants a sender a bundle of 10 messages (replies from either user decrement the count). This encourages more meaningful, recurring interactions. The user experience has been shifted from a separate "new message" page to a dynamic, all-in-one chat page with a conditional payment modal, based on detailed designs. We have successfully implemented and tested the core application logic with a simulated payment flow and deployed it to Vercel. We are now ready to integrate real on-chain payments and deploy to Farcaster.
+The goal is to build a "pay-per-bundle" messaging application, deployable as a Farcaster mini-app. Users can buy message bundles to contact other users, with payments handled by a real smart contract on the Base Sepolia testnet. We've completed the initial setup, core chat functionality, and smart contract integration. The next phase is to enhance the Farcaster-specific user experience and finalize features before deployment.
 
-### Key Challenges and Analysis (Phase 1 - Completed)
-1.  **Data Modeling:** Required introducing a `Conversation` model to link participants and track the `messagesRemaining` in a bundle. The `Message` model was updated to link to a `Conversation`.
-2.  **API Logic:** The `/api/messages/send` endpoint was completely refactored to be the central point of logic, responsible for checking the message counter, requiring payment when a bundle is empty, and decrementing the counter. A new endpoint to fetch conversation history was also created.
-3.  **Frontend UX:** The primary challenge was building a single, dynamic chat page that manages loading states, conversation history, and the conditional rendering of a payment modal without navigating the user away from the conversation.
+## Key Challenges and Analysis
 
-### Key Challenges and Analysis (Phase 2 - Smart Contract Integration)
-1.  **Smart Contract Interaction:** The frontend needs to be able to read data from and write data to the `MessageEscrow` smart contract. This involves using a library like `viem` or `ethers.js` to call contract functions.
-2.  **Testnet Configuration:** We need to deploy the smart contract to a public testnet (e.g., Base Sepolia) and configure the application to interact with it. This includes managing contract addresses and ABIs.
-3.  **Transaction Lifecycle Management:** The frontend must handle the entire lifecycle of a blockchain transaction: prompting the user to sign, displaying a loading state while the transaction is pending, and then confirming the success or failure of the transaction.
+1.  **Farcaster Authentication:** The standard "Connect Wallet" flow is not ideal for Mini Apps. We need a seamless auto-sign-in experience for users coming from Farcaster clients like Warpcast. This involves handling and validating a signed payload from the client.
+2.  **User Discovery:** To make the app useful, users need to be able to find and message others. The best-in-class experience is to let them search and message people they already follow on Farcaster.
+3.  **Local Testing:** Simulating the Farcaster client environment for testing auto-sign-in locally requires specific tools like `ngrok` and a Frame Debugger.
+4.  **Messaging Unregistered Users (Future Task):** A key challenge identified is how to handle a user trying to message someone from their Farcaster following list who has not yet registered on our app. The best solution ("Ghost Profile" approach) is to create a placeholder user record on-the-fly, allowing the first message to be sent. This creates a seamless experience for the sender and a strong onboarding incentive for the recipient. This will be addressed after the current tasks are complete.
 
----
+## High-level Task Breakdown
 
-### High-level Task Breakdown (Phase 1 - Completed)
-1.  ~~**Task 1: Update the Database Schema** - Add `Conversation` model and refactor `Message` model.~~
-2.  ~~**Task 2: Create and Refactor Backend APIs** - Build new conversation history endpoint and refactor the send message API for bundle logic.~~
-3.  ~~**Task 3: Build the Static Chat Page UI** - Create the new chat page UI with mock data based on designs.~~
-4.  ~~**Task 4: Implement Dynamic Chat Logic and Payment Modal** - Make the chat page dynamic, fetching real data and implementing the payment modal flow.~~
-5.  ~~**Task 5: Connect Homepage to Chat Page** - Link the user cards on the homepage to the new chat pages.~~
-6.  ~~**Task 6: End-to-End Testing & Bug Fixing** - Perform a full test of the user journey, including fixing the search modal, chat UI, and missing profile tags.~~
+The project will proceed in the following order:
 
-### High-level Task Breakdown (Phase 2 - Smart Contract Integration)
-1.  **Task 7: Prepare Frontend for Smart Contract Interaction** - Add the contract ABI and address to the project, and set up a client for interacting with the blockchain.
-2.  **Task 8: Implement `deposit` Function Call** - Replace the simulated payment flow with a real call to the `deposit` function on the `MessageEscrow` contract.
-3.  **Task 9: Handle Transaction Lifecycle in UI** - Update the UI to show pending, success, and error states for the deposit transaction.
-4.  **Task 10: Backend Verification (Stretch Goal)** - Implement a mechanism on the backend to verify the transaction hash before storing the message.
-
----
+1.  **Implement Farcaster Auto-Sign-In:** Create a seamless login experience for users opening the app from a Farcaster client.
+2.  **Finish the Search Modal:** Allow users to search and message people from their Farcaster following list.
+3.  **Deploy to Farcaster:** Deploy the application and configure its manifest to be a fully functional Mini App.
 
 ## Project Status Board
 
-### Phase 1: Core App & Simulated Payments
-- [x] Task 1: Update the Database Schema
-- [x] Task 2: Create and Refactor Backend APIs
-- [x] Task 3: Build the Static Chat Page UI
-- [x] Task 4: Implement Dynamic Chat Logic and Payment Modal
-- [x] Task 5: Connect Homepage to Chat Page
-- [x] Task 6: End-to-End Testing & Bug Fixing
+- [x] **Task 1: Implement Farcaster Auto-Sign-In** `completed`
+- [ ] **Task 2: Finish the Search Modal** `in_progress`
+- [ ] **Task 3: Deploy to Farcaster** `pending`
 
-### Phase 2: Smart Contract Integration
-- [x] Task 7: Prepare Frontend for Smart Contract Interaction
-- [x] Task 8: Implement `deposit` Function Call
-- [x] Task 9: Handle Transaction Lifecycle in UI
-- [ ] Task 10: Backend Verification (Stretch Goal)
-
-
-## Current Status / Progress Tracking
-- Phase 1 is complete. The application is functional with a simulated payment flow.
-- We are now beginning Phase 2: Smart Contract Integration.
-- **Task 7 is complete.** We have added the contract ABI and address to the frontend.
-- **Task 8 & 9 are complete.** The frontend now initiates a real, two-step transaction (`approve` and `sendMessage`) and provides UI feedback for the transaction lifecycle.
+### Completed
+- [x] **Initial Setup & Core Chat**
+- [x] **Smart Contract Payment Integration**
+- [x] **Fixing Various UI/UX & Database Bugs**
 
 ## Executor's Feedback or Assistance Requests
-- Awaiting permission to begin with Task 10, or to move on to deploying as a mini-app.
+
+*No feedback or requests at this time. Starting work on Task 2.*
 
 ## Lessons
-- **Windows File Locking:** The `
+
+*   When a git push fails due to non-fast-forward errors, commit local changes, then `git pull` to merge, and then `git push` again. Avoid `git reset`.
+*   The `&&` operator does not work for chaining commands in Windows PowerShell. Run commands sequentially.
+*   The Farcaster Mini App spec requires handling a `POST` request to the app's main URL for authentication. This will likely involve a rewrite rule in `next.config.mjs` to direct POST requests to a specific API route, while GET requests are handled by the main page.
+*   The MockUSDC token was deployed with 18 decimals, not 6. All `parseUnits` and `formatUnits` calls must reflect this.
+*   Environment variables (`.env`) are critical and must be consistent across all environments: local development (`mini-app/.env`), smart contract deployment (`smart-contract/.env`), and Vercel. Required variables include `DATABASE_URL`, `NEYNAR_API_KEY`, `DEPLOYER_PRIVATE_KEY`, and `BASE_SEPOLIA_RPC_URL`.
