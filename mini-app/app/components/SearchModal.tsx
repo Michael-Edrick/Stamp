@@ -2,11 +2,18 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { NeynarUser } from '@neynar/nodejs-sdk/dist/neynar-api/v2';
 import CustomAvatar from './CustomAvatar'; // Assuming CustomAvatar is also in components
 
+// Define a simple type for the user profile
+interface UserProfile {
+  fid: string;
+  username: string;
+  display_name: string;
+  pfp_url?: string;
+}
+
 const SearchModal = ({ onClose }: { onClose: () => void }) => {
-    const [following, setFollowing] = useState<NeynarUser[]>([]);
+    const [following, setFollowing] = useState<UserProfile[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const tags = ['BASE', 'LBS', 'WEB 3', 'LUCID', 'SOLANA', 'ETH'];
@@ -69,7 +76,7 @@ const SearchModal = ({ onClose }: { onClose: () => void }) => {
     );
 };
 
-const ModalProfileCard = ({ profile }: { profile: NeynarUser }) => (
+const ModalProfileCard = ({ profile }: { profile: UserProfile }) => (
     <div className="flex items-center justify-between bg-gray-900 rounded-xl p-3">
       <div className="flex items-center">
         <CustomAvatar profile={profile} className="w-10 h-10 rounded-full mr-3" />

@@ -57,10 +57,8 @@ export const authOptions: NextAuthOptions = {
             // Data to be saved or updated in the database
             const userData = {
               walletAddress: siwe.address,
-              fid: farcasterUser?.fid?.toString(), // Ensure fid is a string
-              username: farcasterUser?.username,
-              displayName: farcasterUser?.display_name,
-              pfpUrl: farcasterUser?.pfp_url,
+              name: farcasterUser?.display_name || farcasterUser?.username,
+              image: farcasterUser?.pfp_url,
             };
 
             // Use Prisma's upsert to find an existing user or create/update them
@@ -70,16 +68,21 @@ export const authOptions: NextAuthOptions = {
               create: { ...userData },
             });
 
+            // Check if user is banned
+            if (user.isBanned) {
+              console.log(`Banned user ${user.walletAddress} attempted to login`);
+              return null;
+            }
+
             return {
               id: user.id,
-              fid: user.fid,
-              name: user.displayName,
-              image: user.pfpUrl
+              name: user.name,
+              image: user.image
             };
           }
           return null;
         } catch (e) {
-          console.error(e);
+          console.error("Authentication error:", e);
           return null;
         }
       },
@@ -95,7 +98,6 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         // When a user successfully signs in, the 'user' object from 'authorize' is passed here.
         token.sub = user.id;
-        token.fid = user.fid;
       }
       return token;
     },
@@ -103,7 +105,6 @@ export const authOptions: NextAuthOptions = {
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.sub as string;
-        session.user.fid = token.fid as string;
       }
       return session;
     },

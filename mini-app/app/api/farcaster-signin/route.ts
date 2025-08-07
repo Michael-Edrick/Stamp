@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
         throw new Error("NEYNAR_API_KEY is not set");
     }
 
-    const client = new NeynarAPIClient(process.env.NEYNAR_API_KEY);
+    const client = new NeynarAPIClient({ apiKey: process.env.NEYNAR_API_KEY });
 
     const {
         valid,
@@ -65,10 +65,9 @@ export async function POST(req: NextRequest) {
             
     const userData = {
         walletAddress: custodyAddress,
-        fid: farcasterUser?.fid?.toString(),
+        name: farcasterUser?.display_name || farcasterUser?.username,
         username: farcasterUser?.username,
-        displayName: farcasterUser?.display_name,
-        pfpUrl: farcasterUser?.pfp_url,
+        image: farcasterUser?.pfp_url,
     };
 
     const user = await prisma.user.upsert({
@@ -80,9 +79,8 @@ export async function POST(req: NextRequest) {
     const sessionToken = await encode({
         token: {
             sub: user.id,
-            fid: user.fid,
-            name: user.displayName,
-            image: user.pfpUrl,
+            name: user.name,
+            image: user.image,
         },
         secret: process.env.NEXTAUTH_SECRET!,
         maxAge: 30 * 24 * 60 * 60, // 30 days
