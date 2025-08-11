@@ -32,7 +32,7 @@ All major tasks for this phase are now complete.
 
 ## Executor's Feedback or Assistance Requests
 
-All planned tasks are complete. Awaiting new instructions for the next set of fixes.
+All planned tasks are complete. Awaiting new instructions for the next set of fixes or features.
 
 ## Lessons
 
@@ -42,3 +42,4 @@ All planned tasks are complete. Awaiting new instructions for the next set of fi
 *   The MockUSDC token was deployed with 18 decimals, not 6. All `parseUnits` and `formatUnits` calls must reflect this.
 *   Environment variables (`.env`) are critical and must be consistent across all environments.
 *   **OnchainKit for Mini Apps:** To interact with the Farcaster Mini App container (e.g., to dismiss the splash screen), the app must be wrapped in a `<MiniKitProvider>` from `@coinbase/onchainkit/minikit`. The `useMiniKit` hook can then be used to access the SDK, and `setFrameReady()` should be called (with no arguments) to signal the app has loaded. This is distinct from the general `@coinbase/onchainkit` package.
+*   **React Hook Dependencies:** In React, when using hooks like `useCallback` or `useEffect`, ensure that any functions or variables used inside the hook are defined *before* the hook that depends on them. This prevents `ReferenceError: Cannot access '...' before initialization` errors.

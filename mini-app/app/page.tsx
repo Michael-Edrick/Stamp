@@ -254,7 +254,8 @@ const CustomConnectButton = ({ onSignIn }: { onSignIn: () => void }) => {
     setIsConnecting(true);
     connect({ 
       connector: injected(),
-      // Handle cases where the user rejects the connection in their wallet.
+    },
+    {
       onError: () => {
         setIsConnecting(false);
       }
