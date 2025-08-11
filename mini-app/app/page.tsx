@@ -161,17 +161,27 @@ export default function HomePage() {
     fetchUsers();
   }, [fetchUsers]);
 
+  useEffect(() => {
+    if (isConnected && sessionStatus === 'unauthenticated' && !hasAttemptedSignIn.current) {
+        console.log("Wallet connected automatically, attempting SIWE.");
+        hasAttemptedSignIn.current = true;
+        handleSignIn();
+    }
+  }, [isConnected, sessionStatus, handleSignIn]);
+
   const handleSignIn = useCallback(async () => {
     if (!address || !chainId) {
       console.error("Wallet not fully connected, cannot sign in.");
-      hasAttemptedSignIn.current = false;
+      hasAttemptedSignIn.current = false; // Reset on failure
       return;
     }
-    if (chainId !== baseSepolia.id) {
-      alert(`Please switch to the ${baseSepolia.name} network to sign in.`);
-      hasAttemptedSignIn.current = false;
-      return;
-    }
+    // This check is now only for manual sign-in flows, not the primary Farcaster path.
+    // The network switch will be handled at the point of transaction.
+    // if (chainId !== baseSepolia.id) {
+    //   alert(`Please switch to the ${baseSepolia.name} network to sign in.`);
+    //   hasAttemptedSignIn.current = false;
+    //   return;
+    // }
     try {
         const nonceRes = await fetch('/api/auth/nonce');
         const { nonce } = await nonceRes.json();
@@ -237,28 +247,14 @@ export default function HomePage() {
 }
 
 const CustomConnectButton = ({ onSignIn }: { onSignIn: () => void }) => {
-  const { connect } = useConnect();
-  const { isConnected } = useAccount();
-  const [isConnecting, setIsConnecting] = useState(false);
-
-  useEffect(() => {
-    // This effect triggers the sign-in process ONLY after a connection
-    // has been initiated by a button click.
-    if (isConnected && isConnecting) {
-      onSignIn();
-      setIsConnecting(false); // Reset state after sign-in is triggered
-    }
-  }, [isConnected, isConnecting, onSignIn]);
-
+  const { connect, connectors } = useConnect();
+  
   const handleConnect = () => {
-    setIsConnecting(true);
+    // We explicitly use the injected connector here for manual sign-in,
+    // assuming the miniAppConnector has already been attempted.
+    const injectedConnector = connectors.find(c => c.id === 'injected');
     connect({ 
-      connector: injected(),
-    },
-    {
-      onError: () => {
-        setIsConnecting(false);
-      }
+      connector: injectedConnector || connectors[0], // Fallback to the first connector
     });
   };
 

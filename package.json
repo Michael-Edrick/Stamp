@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "@farcaster/miniapp-wagmi-connector": "^1.0.0",
     "@neynar/nodejs-sdk": "^3.32.0"
   }
 }
