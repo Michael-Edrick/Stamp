@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
             trustedData: { messageBytes },
         } = await req.json();
 
-        const client = new NeynarAPIClient(process.env.NEYNAR_API_KEY!);
+        const client = new NeynarAPIClient({ apiKey: process.env.NEYNAR_API_KEY! });
 
         const { valid, action } = await client.validateFrameAction(messageBytes);
 
