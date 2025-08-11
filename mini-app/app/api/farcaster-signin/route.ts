@@ -1,112 +1,71 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { NeynarAPIClient } from "@neynar/nodejs-sdk";
-import prisma from "@/lib/prisma";
-import { encode } from 'next-auth/jwt';
-
-// Helper function to fetch user data from Neynar
-async function getFarcasterUser(address: string) {
-    const NEYNAR_API_KEY = process.env.NEYNAR_API_KEY;
-    if (!NEYNAR_API_KEY) {
-        console.error("NEYNAR_API_KEY is not set.");
-        return null;
-    }
-    const url = `https://api.neynar.com/v2/farcaster/user/bulk-by-address?addresses=${address}`;
-    try {
-        const response = await fetch(url, {
-            headers: { 'accept': 'application/json', 'api_key': NEYNAR_API_KEY }
-        });
-        if (!response.ok) {
-            console.error(`Neynar API failed with status: ${response.status}`);
-            return null;
-        }
-        const data = await response.json();
-        return data.users[address]?.[0] || null;
-    } catch (error) {
-        console.error("Error fetching from Neynar API:", error);
-        return null;
-    }
-}
-
+import { User } from 'next-auth';
+import { SignJWT } from 'jose';
+import { getJwtSecretKey } from '@/app/api/auth/[...nextauth]/options';
+import prisma from '@/lib/prisma';
 
 export async function POST(req: NextRequest) {
-  try {
-    console.log("POST request received on /api/farcaster-signin");
-    const body = await req.json();
+    try {
+        const {
+            trustedData: { messageBytes },
+        } = await req.json();
 
-    const {
-        trustedData: { messageBytes },
-    } = body;
+        const client = new NeynarAPIClient(process.env.NEYNAR_API_KEY!);
 
-    if (!process.env.NEYNAR_API_KEY) {
-        throw new Error("NEYNAR_API_KEY is not set");
+        const { valid, action } = await client.validateFrameAction(messageBytes);
+
+        if (!valid || !action) {
+            return NextResponse.json({ error: 'Invalid frame action' }, { status: 400 });
+        }
+
+        const custodyAddress = action.interactor.custody_address;
+        const neynarUserResponse = await client.fetchBulkUsers({ fids: [action.interactor.fid] });
+        const neynarUser = neynarUserResponse.users[0];
+        
+        if (!custodyAddress) {
+            return NextResponse.json({ error: 'No custody address found for user' }, { status: 400 });
+        }
+
+        const user = await prisma.user.upsert({
+            where: { custodyAddress: custodyAddress },
+            update: {
+                fid: neynarUser.fid.toString(),
+                username: neynarUser.username,
+                displayName: neynarUser.display_name,
+                pfpUrl: neynarUser.pfp_url,
+            },
+            create: {
+                custodyAddress: custodyAddress,
+                fid: neynarUser.fid.toString(),
+                username: neynarUser.username,
+                displayName: neynarUser.display_name,
+                pfpUrl: neynarUser.pfp_url,
+            }
+        });
+
+        const token = await new SignJWT({
+            id: user.id,
+            fid: user.fid,
+        })
+        .setProtectedHeader({ alg: 'HS256' })
+        .setIssuedAt()
+        .setExpirationTime('1d')
+        .sign(getJwtSecretKey());
+
+        const response = NextResponse.redirect(process.env.NEXT_PUBLIC_URL!, { status: 302 });
+        
+        response.cookies.set('next-auth.session-token', token, {
+            path: '/',
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+        });
+
+        return response;
+
+    } catch (error) {
+        console.error('Farcaster sign-in error:', error);
+        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
-
-    const client = new NeynarAPIClient({ apiKey: process.env.NEYNAR_API_KEY });
-
-    const {
-        valid,
-        action,
-    } = await client.validateFrameAction(messageBytes);
-    
-    if (!valid) {
-        console.error("Invalid frame action");
-        return new NextResponse("Invalid Frame Action", { status: 400 });
-    }
-
-    const custodyAddress = action.interactor.custody_address;
-    if (!custodyAddress) {
-        console.error("Could not get custody address from frame action");
-        return new NextResponse("Could not get custody address", { status: 400 });
-    }
-
-    console.log("Validated Farcaster user, address:", custodyAddress);
-
-    const farcasterUser = await getFarcasterUser(custodyAddress);
-            
-    const userData = {
-        walletAddress: custodyAddress,
-        name: farcasterUser?.display_name || farcasterUser?.username,
-        username: farcasterUser?.username,
-        image: farcasterUser?.pfp_url,
-    };
-
-    const user = await prisma.user.upsert({
-        where: { walletAddress: custodyAddress },
-        update: { ...userData },
-        create: { ...userData },
-    });
-
-    const sessionToken = await encode({
-        token: {
-            sub: user.id,
-            name: user.name,
-            image: user.image,
-        },
-        secret: process.env.NEXTAUTH_SECRET!,
-        maxAge: 30 * 24 * 60 * 60, // 30 days
-    });
-
-    const homeUrl = new URL("/", req.url);
-    const response = NextResponse.redirect(homeUrl, { status: 302 });
-    
-    // Set the session cookie
-    response.cookies.set({
-        name: process.env.NODE_ENV === 'production' 
-            ? '__Secure-next-auth.session-token' 
-            : 'next-auth.session-token',
-        value: sessionToken,
-        httpOnly: true,
-        path: '/',
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        maxAge: 30 * 24 * 60 * 60, // 30 days
-    });
-    
-    return response;
-
-  } catch (error) {
-    console.error("Error in POST handler:", error);
-    const homeUrl = new URL("/", req.url);
-    return NextResponse.redirect(homeUrl, { status: 302 });
-  }
 }

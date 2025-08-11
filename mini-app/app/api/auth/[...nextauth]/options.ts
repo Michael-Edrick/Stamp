@@ -4,6 +4,14 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import { SiweMessage } from "siwe";
 import prisma from "@/lib/prisma";
 
+export function getJwtSecretKey(): Uint8Array {
+  const secret = process.env.NEXTAUTH_SECRET;
+  if (!secret) {
+    throw new Error("NEXTAUTH_SECRET is not set");
+  }
+  return new TextEncoder().encode(secret);
+}
+
 const NEYNAR_API_KEY = process.env.NEYNAR_API_KEY;
 
 // Helper function to fetch user data from Neynar

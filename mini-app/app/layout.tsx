@@ -25,8 +25,8 @@ const chivo_mono = Chivo_Mono({
 const appUrl = process.env.NEXT_PUBLIC_URL || 'http://localhost:3000';
 const appName = process.env.NEXT_PUBLIC_ONCHAINKIT_PROJECT_NAME || 'StampMe';
 const heroUrl = `${appUrl}/hero.png`;
-// The post_url should point to the root, which our rewrite will catch for POSTs.
-const postUrl = appUrl;
+// The post_url should point to our dedicated Farcaster sign-in API route.
+const postUrl = `${appUrl}/api/farcaster-signin`;
 
 export default function RootLayout({
   children,
