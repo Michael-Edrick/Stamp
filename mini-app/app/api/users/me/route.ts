@@ -1,46 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 
-console.log("API route file for /api/users/me loaded.");
-
 export async function GET(req: NextRequest) {
-  console.log("GET /api/users/me handler started.");
   const { searchParams } = new URL(req.url);
   const walletAddress = searchParams.get('walletAddress');
-
-  console.log(`Received walletAddress: ${walletAddress}`);
 
   if (!walletAddress) {
     return NextResponse.json({ error: 'walletAddress is required' }, { status: 400 });
   }
 
   try {
-    console.log("Attempting to find user by walletAddress...");
-    const user = await prisma.user.findUnique({
+    const user = await prisma.user.findFirst({
       where: {
-        walletAddress: walletAddress.toLowerCase(),
-      },
+        OR: [
+          { walletAddress: { equals: walletAddress, mode: 'insensitive' } },
+          { custodyAddress: { equals: walletAddress, mode: 'insensitive' } },
+        ]
+      }
     });
-    console.log("Finished find user by walletAddress. User found:", !!user);
-
 
     if (!user) {
-      console.log("User not found by walletAddress. Attempting to find by custodyAddress...");
-      const userByCustody = await prisma.user.findUnique({
-        where: {
-          custodyAddress: walletAddress.toLowerCase(),
-        }
-      });
-      console.log("Finished find user by custodyAddress. User found:", !!userByCustody);
-
-      if (!userByCustody) {
-        console.log("User not found by either address. Returning 404.");
-        return NextResponse.json({ error: 'User not found' }, { status: 404 });
-      }
-      console.log("User found by custodyAddress. Returning user data.");
-      return NextResponse.json(userByCustody);
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
-    console.log("User found by walletAddress. Returning user data.");
+    
     return NextResponse.json(user);
   } catch (error) {
     console.error('Error in GET /api/users/me:', error);
@@ -63,7 +45,7 @@ export async function POST(req: NextRequest) {
     }
 
     const updatedUser = await prisma.user.update({
-      where: { walletAddress: walletAddress.toLowerCase() },
+      where: { walletAddress: walletAddress },
       data: updateData,
     });
 
