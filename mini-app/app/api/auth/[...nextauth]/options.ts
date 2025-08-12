@@ -1,7 +1,5 @@
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import type { NextAuthOptions } from "next-auth";
-import CredentialsProvider from "next-auth/providers/credentials";
-import { SiweMessage } from "siwe";
 import prisma from "@/lib/prisma";
 
 export function getJwtSecretKey(): Uint8Array {
@@ -42,69 +40,9 @@ async function getFarcasterUser(address: string) {
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
   providers: [
-    CredentialsProvider({
-      name: "Ethereum",
-      credentials: {
-        message: { label: "Message", type: "text" },
-        signature: { label: "Signature", type: "text" },
-      },
-      async authorize(credentials) {
-        try {
-          const siwe = new SiweMessage(JSON.parse(credentials?.message || "{}"));
-          const nextAuthUrl = new URL(process.env.NEXTAUTH_URL || "http://localhost:3000");
-
-          const result = await siwe.verify({
-            signature: credentials?.signature || "",
-            domain: nextAuthUrl.host,
-            nonce: siwe.nonce,
-          });
-
-          if (result.success) {
-            const farcasterUser = await getFarcasterUser(siwe.address);
-            
-            // Data to be saved or updated in the database
-            const userData = {
-              walletAddress: siwe.address,
-              fid: farcasterUser?.fid?.toString(),
-              name: farcasterUser?.display_name || farcasterUser?.username,
-              image: farcasterUser?.pfp_url,
-            };
-
-            const user = await prisma.user.upsert({
-              where: { walletAddress: siwe.address },
-              update: {
-                fid: farcasterUser?.fid?.toString(),
-                name: farcasterUser?.display_name || farcasterUser?.username,
-                image: farcasterUser?.pfp_url,
-              },
-              create: {
-                walletAddress: siwe.address,
-                fid: farcasterUser?.fid?.toString(),
-                name: farcasterUser?.display_name || farcasterUser?.username || `${siwe.address.slice(0, 6)}...${siwe.address.slice(-4)}`,
-                image: farcasterUser?.pfp_url,
-              },
-            });
-
-            // Check if user is banned
-            if (user.isBanned) {
-              console.log(`Banned user ${user.walletAddress} attempted to login`);
-              return null;
-            }
-
-            return {
-              id: user.id,
-              name: user.name,
-              image: user.image,
-              fid: user.fid,
-            };
-          }
-          return null;
-        } catch (e) {
-          console.error("Authentication error:", e);
-          return null;
-        }
-      },
-    }),
+    // CredentialsProvider has been removed as we are no longer using SIWE for login.
+    // Farcaster frame authentication is handled by the /api/farcaster-signin route,
+    // and manual wallet connection does not require a backend session.
   ],
   session: {
     strategy: "jwt",

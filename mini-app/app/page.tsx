@@ -1,13 +1,10 @@
 "use client";
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { useAccount, useSignMessage, useConnect, useDisconnect } from "wagmi";
-import { SiweMessage } from "siwe";
-import { signIn, signOut, useSession } from "next-auth/react";
+import { useState, useEffect, useCallback } from 'react';
+import { useAccount } from "wagmi";
 import Link from 'next/link';
 import { UserCircleIcon, PaperAirplaneIcon, MagnifyingGlassIcon, ChatBubbleOvalLeftEllipsisIcon, PlusIcon } from '@heroicons/react/24/solid';
 import { User as PrismaUser } from '@prisma/client';
 import CustomAvatar from '@/app/components/CustomAvatar';
-
 import { useMiniKit } from '@coinbase/onchainkit/minikit';
 import { ConnectWallet } from '@coinbase/onchainkit/wallet';
 import SearchModal from '@/app/components/SearchModal';
@@ -126,13 +123,9 @@ const UserCard = ({ user }: { user: Profile }) => {
 
 export default function HomePage() {
   const { address, isConnected, chainId } = useAccount();
-  const { signMessageAsync } = useSignMessage();
-    const { data: session, status: sessionStatus, update: updateSession } = useSession();
-  const { disconnect } = useDisconnect();
   const [realUsers, setRealUsers] = useState<Profile[]>([]);
   const [isClient, setIsClient] = useState(false);
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
-      const hasAttemptedSignIn = useRef(false);
   const { setFrameReady, isFrameReady } = useMiniKit();
 
   useEffect(() => {
@@ -141,14 +134,12 @@ export default function HomePage() {
     }
   }, [isFrameReady, setFrameReady]);
 
-  
-
   const fetchUsers = useCallback(async () => {
     try {
       const response = await fetch('/api/users');
       if (!response.ok) throw new Error('Failed to fetch users');
       const users: Profile[] = await response.json();
-      console.log("Fetched users:", users); // Added for debugging
+      console.log("Fetched users:", users);
       setRealUsers(users);
     } catch (error) {
       console.error("Error fetching users:", error);
@@ -160,83 +151,21 @@ export default function HomePage() {
     fetchUsers();
   }, [fetchUsers]);
 
-  const handleSignIn = useCallback(async () => {
-    if (!address || !chainId) {
-      console.error("Wallet not fully connected, cannot sign in.");
-      hasAttemptedSignIn.current = false; // Reset on failure
-      return;
-    }
-    // This check is now only for manual sign-in flows, not the primary Farcaster path.
-    // The network switch will be handled at the point of transaction.
-    // if (chainId !== baseSepolia.id) {
-    //   alert(`Please switch to the ${baseSepolia.name} network to sign in.`);
-    //   hasAttemptedSignIn.current = false;
-    //   return;
-    // }
-    try {
-        const nonceRes = await fetch('/api/auth/nonce');
-        const { nonce } = await nonceRes.json();
-        const message = new SiweMessage({
-            domain: window.location.host,
-            address: address,
-            statement: "Sign in with Ethereum to the app.",
-            uri: window.location.origin,
-            version: "1",
-            chainId: chainId,
-            nonce: nonce,
-        });
-                const signature = await signMessageAsync({ message: message.prepareMessage() });
-        const result = await signIn("credentials", { message: JSON.stringify(message), redirect: false, signature });
-
-        if (result?.ok) {
-            await updateSession(); // Force session update
-            await fetchUsers(); // Re-fetch users to update the list
-        } else {
-            throw new Error("Sign-in failed after signature.");
-        }
-    } catch (error) {
-        console.error("Sign-in error", error);
-        hasAttemptedSignIn.current = false;
-    }
-  }, [address, chainId, signMessageAsync, updateSession, fetchUsers]);
-
-  useEffect(() => {
-    if (isConnected && sessionStatus === 'unauthenticated' && !hasAttemptedSignIn.current) {
-        console.log("Wallet connected automatically, attempting SIWE.");
-        hasAttemptedSignIn.current = true;
-        handleSignIn();
-    }
-  }, [isConnected, sessionStatus, handleSignIn]);
-
-  const handleSignOut = () => {
-    disconnect();
-    signOut();
-  }
-
   return (
     <div className="min-h-screen bg-[#F0F2F5] font-sans">
        <header className="fixed top-0 left-0 right-0 z-10 w-full max-w-md mx-auto flex justify-between items-center p-4 bg-[#F0F2F5]">
           <h1 className="text-xl font-bold text-gray-900">StampMe</h1>
           <div>
-              {isClient && (<>
-                {sessionStatus === "authenticated" ? (
-                    <button onClick={handleSignOut} className="bg-red-500 text-white px-3 py-1.5 rounded-lg text-sm font-semibold">Sign Out</button>
-                ) : (
-                    <ConnectWallet />
-                )}
-              </>)}
+              {isClient && <ConnectWallet />}
           </div>
       </header>
       <div className="w-full max-w-md mx-auto pt-20 pb-24 px-4">
-        {/* {dummyUsers.map(user => (
-          <UserCard key={user.id} user={user} />
-        ))} */}
         {realUsers.map((user) => (
             <UserCard key={user.id} user={user} />
         ))}
       </div>
        <BottomNav 
-        currentUser={session?.user as Profile} 
+        currentUser={null} // Passing null as we no longer have session-based user
         isClient={isClient}
         onSearchClick={() => setIsSearchModalOpen(true)}
        />
@@ -245,7 +174,7 @@ export default function HomePage() {
   );
 }
 
-const BottomNav = ({ currentUser, isClient, onSearchClick }: { currentUser?: Profile, isClient: boolean, onSearchClick: () => void }) => {
+const BottomNav = ({ currentUser, isClient, onSearchClick }: { currentUser?: Profile | null, isClient: boolean, onSearchClick: () => void }) => {
     const navButtonBase = "w-12 h-12 rounded-full flex items-center justify-center transition-transform duration-200 hover:scale-110";
 
     return (
