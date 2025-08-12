@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
 
     // Ensure tags are handled as an array
     if (updateData.tags && typeof updateData.tags === 'string') {
-      updateData.tags = updateData.tags.split(',').map(tag => tag.trim()).filter(Boolean);
+      updateData.tags = updateData.tags.split(',').map((tag: string) => tag.trim()).filter(Boolean);
     }
 
     const updatedUser = await prisma.user.update({
