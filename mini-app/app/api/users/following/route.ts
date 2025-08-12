@@ -53,6 +53,10 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
+    if (!user.walletAddress) {
+      return NextResponse.json({ error: 'User has no wallet address' }, { status: 400 });
+    }
+
     // Get Farcaster user data to get FID
     const farcasterUser = await getFarcasterUser(user.walletAddress);
     
