@@ -1,7 +1,6 @@
 "use client";
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAccount, useSignMessage, useConnect, useDisconnect } from "wagmi";
-import { injected } from 'wagmi/connectors'
 import { SiweMessage } from "siwe";
 import { signIn, signOut, useSession } from "next-auth/react";
 import Link from 'next/link';
@@ -10,7 +9,7 @@ import { User as PrismaUser } from '@prisma/client';
 import CustomAvatar from '@/app/components/CustomAvatar';
 
 import { useMiniKit } from '@coinbase/onchainkit/minikit';
-import { baseSepolia } from 'wagmi/chains';
+import { ConnectWallet } from '@coinbase/onchainkit/wallet';
 import SearchModal from '@/app/components/SearchModal';
 
 type Profile = Partial<PrismaUser> & {
@@ -223,7 +222,7 @@ export default function HomePage() {
                 {sessionStatus === "authenticated" ? (
                     <button onClick={handleSignOut} className="bg-red-500 text-white px-3 py-1.5 rounded-lg text-sm font-semibold">Sign Out</button>
                 ) : (
-                    <CustomConnectButton onSignIn={handleSignIn} />
+                    <ConnectWallet />
                 )}
               </>)}
           </div>
@@ -245,25 +244,6 @@ export default function HomePage() {
     </div>
   );
 }
-
-const CustomConnectButton = ({ onSignIn }: { onSignIn: () => void }) => {
-  const { connect, connectors } = useConnect();
-  
-  const handleConnect = () => {
-    // We explicitly use the injected connector here for manual sign-in,
-    // assuming the miniAppConnector has already been attempted.
-    const injectedConnector = connectors.find(c => c.id === 'injected');
-    connect({ 
-      connector: injectedConnector || connectors[0], // Fallback to the first connector
-    });
-  };
-
-  return (
-    <button onClick={handleConnect} className="bg-blue-600 text-white px-3 py-1.5 rounded-lg text-sm font-semibold">
-      Sign In
-    </button>
-  );
-};
 
 const BottomNav = ({ currentUser, isClient, onSearchClick }: { currentUser?: Profile, isClient: boolean, onSearchClick: () => void }) => {
     const navButtonBase = "w-12 h-12 rounded-full flex items-center justify-center transition-transform duration-200 hover:scale-110";
