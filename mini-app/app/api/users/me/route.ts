@@ -1,32 +1,39 @@
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/app/api/auth/[...nextauth]/options";
-import { NextResponse } from "next/server";
-import prisma from "@/lib/prisma";
-import { Prisma } from "@prisma/client";
+import { NextRequest, NextResponse } from 'next/server';
+import prisma from '@/lib/prisma';
 
-export async function GET() {
-  const session = await getServerSession(authOptions);
+export async function GET(req: NextRequest) {
+  const { searchParams } = new URL(req.url);
+  const walletAddress = searchParams.get('walletAddress');
 
-  if (!session || !session.user || !session.user.id) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  if (!walletAddress) {
+    return NextResponse.json({ error: 'walletAddress is required' }, { status: 400 });
   }
 
   try {
     const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
+      where: {
+        walletAddress: walletAddress.toLowerCase(),
+      },
     });
 
     if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
+      // It's possible a user connects who was created via Farcaster but hasn't used SIWE.
+      // We can also check by custodyAddress.
+      const userByCustody = await prisma.user.findUnique({
+        where: {
+          custodyAddress: walletAddress.toLowerCase(),
+        }
+      });
+      if (!userByCustody) {
+        return NextResponse.json({ error: 'User not found' }, { status: 404 });
+      }
+      return NextResponse.json(userByCustody);
     }
 
-    return NextResponse.json(user, { status: 200 });
+    return NextResponse.json(user);
   } catch (error) {
-    console.error("Error fetching user profile:", error);
-    return NextResponse.json(
-      { error: "An error occurred while fetching the profile." },
-      { status: 500 }
-    );
+    console.error('Error fetching user by wallet address:', error);
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
 

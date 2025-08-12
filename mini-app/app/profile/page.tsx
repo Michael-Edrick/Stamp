@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
-import { useSession } from 'next-auth/react';
+import { useAccount } from 'wagmi';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeftIcon, UserCircleIcon, PaperAirplaneIcon } from '@heroicons/react/24/solid';
@@ -76,7 +76,7 @@ const SocialLink = ({ platform, handle }: { platform: 'Instagram' | 'X', handle:
 // --- Main Profile Page Component ---
 
 export default function ProfilePage() {
-  const { data: session, status } = useSession();
+  const { address, isConnected } = useAccount();
   const router = useRouter();
   const [profile, setProfile] = useState<Partial<User>>({});
   const [initialProfile, setInitialProfile] = useState<Partial<User>>({});
@@ -85,9 +85,9 @@ export default function ProfilePage() {
   const [error, setError] = useState('');
 
   const fetchProfile = useCallback(() => {
-    if (session) {
+    if (address) {
       setLoading(true);
-      fetch('/api/users/me')
+      fetch(`/api/users/me?walletAddress=${address}`)
         .then(res => res.ok ? res.json() : Promise.reject('Failed to fetch profile'))
         .then(data => {
           setProfile(data);
@@ -96,12 +96,16 @@ export default function ProfilePage() {
         .catch(console.error)
         .finally(() => setLoading(false));
     }
-  }, [session]);
+  }, [address]);
 
   useEffect(() => {
-    if (status === 'unauthenticated') router.push('/');
-    if (status === 'authenticated') fetchProfile();
-  }, [status, router, fetchProfile]);
+    if (!isConnected) {
+      // If wallet disconnects, send them back to the homepage
+      router.push('/');
+    } else {
+      fetchProfile();
+    }
+  }, [isConnected, router, fetchProfile]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;

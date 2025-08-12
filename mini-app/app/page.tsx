@@ -165,7 +165,6 @@ export default function HomePage() {
         ))}
       </div>
        <BottomNav 
-        currentUser={null} // Passing null as we no longer have session-based user
         isClient={isClient}
         onSearchClick={() => setIsSearchModalOpen(true)}
        />
@@ -174,7 +173,33 @@ export default function HomePage() {
   );
 }
 
-const BottomNav = ({ currentUser, isClient, onSearchClick }: { currentUser?: Profile | null, isClient: boolean, onSearchClick: () => void }) => {
+const BottomNav = ({ isClient, onSearchClick }: { isClient: boolean, onSearchClick: () => void }) => {
+    const { address } = useAccount();
+    const [currentUser, setCurrentUser] = useState<Profile | null>(null);
+
+    useEffect(() => {
+        const fetchUser = async () => {
+            if (address) {
+                try {
+                    const response = await fetch(`/api/users/me?walletAddress=${address}`);
+                    if (response.ok) {
+                        const user = await response.json();
+                        setCurrentUser(user);
+                    } else {
+                        setCurrentUser(null);
+                    }
+                } catch (error) {
+                    console.error("Failed to fetch current user", error);
+                    setCurrentUser(null);
+                }
+            } else {
+                setCurrentUser(null);
+            }
+        };
+
+        fetchUser();
+    }, [address]);
+
     const navButtonBase = "w-12 h-12 rounded-full flex items-center justify-center transition-transform duration-200 hover:scale-110";
 
     return (
@@ -189,7 +214,11 @@ const BottomNav = ({ currentUser, isClient, onSearchClick }: { currentUser?: Pro
                 <button className={`${navButtonBase} bg-blue-600 cursor-not-allowed`} disabled>
                     <PlusIcon className="w-7 h-7 text-white"/>
                 </button>
-                <Link href="/profile" className="w-12 h-12 rounded-full transition-transform duration-200 hover:scale-110 flex items-center justify-center">
+                <Link 
+                  href={currentUser ? `/profile` : '#'} 
+                  className={`w-12 h-12 rounded-full transition-transform duration-200 hover:scale-110 flex items-center justify-center ${!currentUser ? 'pointer-events-none' : ''}`}
+                  aria-disabled={!currentUser}
+                >
                   {isClient && currentUser ? (
                     <CustomAvatar profile={currentUser} className="w-full h-full rounded-full" />
                   ) : (
