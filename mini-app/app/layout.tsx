@@ -25,6 +25,7 @@ const chivo_mono = Chivo_Mono({
 const appUrl = process.env.NEXT_PUBLIC_URL || 'http://localhost:3000';
 const appName = process.env.NEXT_PUBLIC_ONCHAINKIT_PROJECT_NAME || 'StampMe';
 const heroUrl = `${appUrl}/hero.png`;
+const postUrl = `${appUrl}/api/farcaster-signin`;
 
 export default function RootLayout({
   children,
@@ -44,7 +45,7 @@ export default function RootLayout({
         <meta property="fc:frame:image" content={heroUrl} />
         <meta property="fc:frame:button:1" content={`Launch ${appName}`} />
         <meta property="fc:frame:button:1:action" content="post" />
-        <meta property="fc:frame:post_url" content={appUrl} /> 
+        <meta property="fc:frame:post_url" content={postUrl} /> 
       </head>
       <body className={`${inter.variable} ${roboto.variable} ${chivo_mono.variable} font-sans bg-black`}>
         <Providers>
