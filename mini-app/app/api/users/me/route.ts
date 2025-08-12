@@ -1,9 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 
+console.log("API route file for /api/users/me loaded.");
+
 export async function GET(req: NextRequest) {
+  console.log("GET /api/users/me handler started.");
   const { searchParams } = new URL(req.url);
   const walletAddress = searchParams.get('walletAddress');
+
+  console.log(`Received walletAddress: ${walletAddress}`);
 
   if (!walletAddress) {
     return NextResponse.json({ error: 'walletAddress is required' }, { status: 400 });
