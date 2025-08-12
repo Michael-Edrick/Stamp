@@ -37,44 +37,35 @@ export async function GET(req: NextRequest) {
   }
 }
 
-export async function POST(req: Request) {
-  const session = await getServerSession(authOptions);
-
-  if (!session || !session.user || !session.user.id) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-  }
-
+export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { name, username, bio, image, instagram, x_social, standardCost, premiumCost, tags } = body;
+    const { walletAddress, ...updateData } = body;
+
+    if (!walletAddress) {
+      return NextResponse.json({ error: "walletAddress is required for updates" }, { status: 400 });
+    }
 
     // Ensure tags are handled as an array
-    const tagsArray = typeof tags === 'string' ? tags.split(',').map(tag => tag.trim()).filter(Boolean) : tags;
+    if (updateData.tags && typeof updateData.tags === 'string') {
+      updateData.tags = updateData.tags.split(',').map(tag => tag.trim()).filter(Boolean);
+    }
 
     const updatedUser = await prisma.user.update({
-      where: { id: session.user.id },
-      data: {
-        name,
-        username,
-        bio,
-        image,
-        instagram,
-        x_social,
-        standardCost,
-        premiumCost,
-        tags: tagsArray
-      },
+      where: { walletAddress: walletAddress.toLowerCase() },
+      data: updateData,
     });
 
     return NextResponse.json(updatedUser, { status: 200 });
   } catch (error: unknown) {
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002' && (error.meta?.target as string[])?.includes('username')) {
+    console.error("Error updating user profile:", error);
+     if (error instanceof Error && 'code' in error && error.code === 'P2002' && error.message.includes('username')) {
         return NextResponse.json({ error: "Username is already taken" }, { status: 409 });
     }
-    console.error("Error updating user profile:", error);
     return NextResponse.json(
       { error: "An error occurred while updating the profile." },
       { status: 500 }
     );
   }
+} 
 } 

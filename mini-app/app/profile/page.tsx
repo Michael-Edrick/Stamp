@@ -135,13 +135,17 @@ export default function ProfilePage() {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!address) {
+      setError("Wallet is not connected.");
+      return;
+    }
     setSaving(true);
     setError('');
     try {
       const response = await fetch('/api/users/me', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(profile),
+        body: JSON.stringify({ ...profile, walletAddress: address }),
       });
       if (!response.ok) throw new Error((await response.json()).error || 'Failed to save');
       // Update initial state to match saved state
