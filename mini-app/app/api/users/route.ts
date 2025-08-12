@@ -4,30 +4,18 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../auth/[...nextauth]/options';
 
 export async function GET() {
-  const session = await getServerSession(authOptions);
-  const loggedInUserId = session?.user?.id;
-
   try {
     const users = await prisma.user.findMany({
-      where: {
-        id: {
-          not: loggedInUserId,
-        },
-      },
-      select: {
-        id: true,
-        name: true,
-        username: true,
-        image: true,
-        bio: true,
-        tags: true,
-        x_social: true,
-        instagram: true,
-      },
       orderBy: {
         createdAt: 'desc',
       },
     });
+
+    console.log("Fetched users for homepage. Logging addresses:");
+    users.forEach(user => {
+      console.log(`User: ${user.username}, Wallet: ${user.walletAddress}, Custody: ${user.custodyAddress}`);
+    });
+
     return NextResponse.json(users);
   } catch (error) {
     console.error("Failed to fetch users:", error);
