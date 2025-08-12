@@ -15,29 +15,35 @@ export async function GET(req: NextRequest) {
   }
 
   try {
+    console.log("Attempting to find user by walletAddress...");
     const user = await prisma.user.findUnique({
       where: {
         walletAddress: walletAddress.toLowerCase(),
       },
     });
+    console.log("Finished find user by walletAddress. User found:", !!user);
+
 
     if (!user) {
-      // It's possible a user connects who was created via Farcaster but hasn't used SIWE.
-      // We can also check by custodyAddress.
+      console.log("User not found by walletAddress. Attempting to find by custodyAddress...");
       const userByCustody = await prisma.user.findUnique({
         where: {
           custodyAddress: walletAddress.toLowerCase(),
         }
       });
+      console.log("Finished find user by custodyAddress. User found:", !!userByCustody);
+
       if (!userByCustody) {
+        console.log("User not found by either address. Returning 404.");
         return NextResponse.json({ error: 'User not found' }, { status: 404 });
       }
+      console.log("User found by custodyAddress. Returning user data.");
       return NextResponse.json(userByCustody);
     }
-
+    console.log("User found by walletAddress. Returning user data.");
     return NextResponse.json(user);
   } catch (error) {
-    console.error('Error fetching user by wallet address:', error);
+    console.error('Error in GET /api/users/me:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
