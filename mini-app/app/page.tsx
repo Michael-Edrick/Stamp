@@ -161,14 +161,6 @@ export default function HomePage() {
     fetchUsers();
   }, [fetchUsers]);
 
-  useEffect(() => {
-    if (isConnected && sessionStatus === 'unauthenticated' && !hasAttemptedSignIn.current) {
-        console.log("Wallet connected automatically, attempting SIWE.");
-        hasAttemptedSignIn.current = true;
-        handleSignIn();
-    }
-  }, [isConnected, sessionStatus, handleSignIn]);
-
   const handleSignIn = useCallback(async () => {
     if (!address || !chainId) {
       console.error("Wallet not fully connected, cannot sign in.");
@@ -208,6 +200,14 @@ export default function HomePage() {
         hasAttemptedSignIn.current = false;
     }
   }, [address, chainId, signMessageAsync, updateSession, fetchUsers]);
+
+  useEffect(() => {
+    if (isConnected && sessionStatus === 'unauthenticated' && !hasAttemptedSignIn.current) {
+        console.log("Wallet connected automatically, attempting SIWE.");
+        hasAttemptedSignIn.current = true;
+        handleSignIn();
+    }
+  }, [isConnected, sessionStatus, handleSignIn]);
 
   const handleSignOut = () => {
     disconnect();
