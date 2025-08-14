@@ -1,32 +1,33 @@
 "use client";
 
-import { useSession } from "next-auth/react";
-import { useState, useEffect } from "react";
+import { useAccount } from "wagmi";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from 'next/link';
 import CustomAvatar from "@/app/components/CustomAvatar";
 import { User, Message, Conversation as PrismaConversation } from "@prisma/client";
 import { ArrowLeftIcon } from "@heroicons/react/24/solid";
+import useSWR from "swr";
 
 interface ConversationWithDetails extends PrismaConversation {
   participants: Partial<User>[];
   messages: (Message & { sender: Partial<User> })[];
+  currentUserWalletAddress?: string; // Add this to pass the current user's address
 }
 
 export default function InboxPage() {
-  const { data: session, status } = useSession();
+  const { address, isConnected, isConnecting } = useAccount();
   const router = useRouter();
   const [conversations, setConversations] = useState<ConversationWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    if (status === "unauthenticated") {
-      router.push("/");
-    }
-    if (status === "authenticated") {
+  const fetcher = (url: string) => fetch(url).then((res) => res.json());
+
+  const fetchInbox = useCallback(() => {
+    if (address) {
       setLoading(true);
-      fetch("/api/messages/inbox")
+      fetch(`/api/messages/inbox?walletAddress=${address}`)
         .then((res) => {
           if (!res.ok) {
             throw new Error("Failed to fetch inbox");
@@ -42,9 +43,23 @@ export default function InboxPage() {
           setLoading(false);
         });
     }
-  }, [status, router]);
+  }, [address]);
 
-  if (status === "loading" || loading) {
+  useEffect(() => {
+    // Wait for connection status to be stable before acting
+    if (!isConnected && !isConnecting) {
+      router.push("/");
+    } else if (isConnected) {
+      fetchInbox();
+    }
+  }, [isConnected, isConnecting, router, fetchInbox]);
+
+  const { data: currentUser, isLoading: isLoadingCurrentUser } = useSWR(
+    address ? `/api/users/me?walletAddress=${address}` : null,
+    fetcher
+  );
+
+  if (isConnecting || loading || isLoadingCurrentUser) {
     return <div className="min-h-screen bg-[#F0F2F5] flex items-center justify-center">Loading...</div>;
   }
 
@@ -63,7 +78,7 @@ export default function InboxPage() {
           {conversations.length > 0 ? (
             conversations.map((convo: ConversationWithDetails) => {
               const lastMessage = convo.messages[0];
-              const otherParticipant = convo.participants.find(p => p.id !== session?.user?.id);
+              const otherParticipant = convo.participants.find(p => p.id !== currentUser?.id);
               if (!lastMessage || !otherParticipant) return null;
 
               return (
@@ -75,7 +90,7 @@ export default function InboxPage() {
                       <span className="text-xs text-gray-500">{new Date(lastMessage.createdAt).toLocaleDateString()}</span>
                     </div>
                     <p className="text-gray-600 mt-1 truncate">
-                      <span className="font-semibold text-gray-800">{lastMessage.senderId === session?.user?.id ? "You: " : ""}</span>
+                      <span className="font-semibold text-gray-800">{lastMessage.senderId === currentUser?.id ? "You: " : ""}</span>
                       {lastMessage.content}
                     </p>
                   </div>

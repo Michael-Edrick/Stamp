@@ -1,21 +1,35 @@
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/app/api/auth/[...nextauth]/options";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 
-export async function GET() {
-  const session = await getServerSession(authOptions);
+export async function GET(req: NextRequest) {
+  const { searchParams } = new URL(req.url);
+  const walletAddress = searchParams.get('walletAddress');
 
-  if (!session || !session.user || !session.user.id) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  if (!walletAddress) {
+    return NextResponse.json({ error: "walletAddress is required" }, { status: 400 });
   }
 
   try {
+    // First, find the user by their wallet address to get their ID
+    const user = await prisma.user.findFirst({
+        where: {
+            OR: [
+                { walletAddress: { equals: walletAddress, mode: 'insensitive' } },
+                { custodyAddress: { equals: walletAddress, mode: 'insensitive' } },
+            ]
+        },
+        select: { id: true }
+    });
+
+    if (!user) {
+        return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
     const conversations = await prisma.conversation.findMany({
       where: {
         participants: {
           some: {
-            id: session.user.id,
+            id: user.id,
           },
         },
       },
