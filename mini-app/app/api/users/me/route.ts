@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
+import { NeynarAPIClient } from '@neynar/nodejs-sdk';
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -10,7 +11,7 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const user = await prisma.user.findFirst({
+    let user = await prisma.user.findFirst({
       where: {
         OR: [
           { walletAddress: { equals: walletAddress, mode: 'insensitive' } },
@@ -20,7 +21,33 @@ export async function GET(req: NextRequest) {
     });
 
     if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+      // User not found, create a new one
+      try {
+        const neynarClient = new NeynarAPIClient(process.env.NEYNAR_API_KEY as string);
+        const farcasterUser = await neynarClient.lookupUserByVerification(walletAddress);
+        
+        const newUser = {
+          walletAddress: walletAddress.toLowerCase(),
+          custodyAddress: farcasterUser.user.custodyAddress.toLowerCase(),
+          fid: farcasterUser.user.fid.toString(),
+          username: farcasterUser.user.username,
+          displayName: farcasterUser.user.displayName,
+          pfpUrl: farcasterUser.user.pfpUrl,
+        };
+        
+        user = await prisma.user.create({ data: newUser });
+
+      } catch (error) {
+         console.error("Failed to create user from Farcaster profile, creating a basic profile.", error);
+         // If Neynar lookup fails (e.g., wallet not associated with Farcaster), create a basic user
+         user = await prisma.user.create({
+            data: {
+                walletAddress: walletAddress.toLowerCase(),
+                // Add default values for other fields if needed, e.g., username
+                username: `user_${Date.now()}` 
+            }
+         });
+      }
     }
     
     return NextResponse.json(user);
