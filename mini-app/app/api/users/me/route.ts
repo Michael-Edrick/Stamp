@@ -35,9 +35,9 @@ export async function GET(req: NextRequest) {
         const newUser = {
           walletAddress: walletAddress.toLowerCase(),
           username: farcasterUser.username,
-          displayName: farcasterUser.display_name,
-          pfpUrl: farcasterUser.pfp_url,
-          fid: farcasterUser.fid,
+          displayName: farcasterUser.display_name || '',
+          pfpUrl: farcasterUser.pfp_url || '',
+          fid: farcasterUser.fid.toString(),
         };
 
         const createdUser = await prisma.user.create({
