@@ -33,16 +33,19 @@ export async function GET(req: NextRequest) {
       try {
         const neynarClient = new NeynarAPIClient({ apiKey: process.env.NEYNAR_API_KEY as string });
         const result = await neynarClient.fetchBulkUsersByEthOrSolAddress({ addresses: [walletAddress] });
-        
-        // Log the entire result object for debugging
+
+        // Log the entire result object for debugging, as you suggested
         console.log("Full Neynar API response:", JSON.stringify(result, null, 2));
 
-        if (!result || !result.data) {
+        // Explicitly type the response data, preserving your fix
+        const farcasterUserData = result.data as unknown as Record<string, FarcasterUser[]>;
+        
+        if (!farcasterUserData) {
           throw new Error("Received null or invalid data from Neynar API.");
         }
 
         // Safely access the user list from the response object
-        const farcasterUserList = Object.values(result.data)[0];
+        const farcasterUserList = Object.values(farcasterUserData)[0];
 
         if (!farcasterUserList || farcasterUserList.length === 0) {
           throw new Error(`Farcaster user not found for wallet: ${walletAddress}`);
