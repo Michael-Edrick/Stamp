@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
-import { NeynarAPIClient } from '@neynar/nodejs-sdk';
+import { NeynarAPIClient, BulkUsersByAddressResponse } from '@neynar/nodejs-sdk';
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -26,7 +26,8 @@ export async function GET(req: NextRequest) {
         const neynarClient = new NeynarAPIClient({ apiKey: process.env.NEYNAR_API_KEY as string });
         const result = await neynarClient.fetchBulkUsersByEthOrSolAddress({ addresses: [walletAddress] });
         
-        const farcasterUserList = result.data[walletAddress];
+        const data = result.data as BulkUsersByAddressResponse;
+        const farcasterUserList = data[walletAddress];
 
         if (!farcasterUserList || farcasterUserList.length === 0) {
           throw new Error(`Farcaster user not found for wallet: ${walletAddress}`);
