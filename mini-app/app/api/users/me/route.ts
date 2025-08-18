@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
       // User not found, create a new one
       try {
         const neynarClient = new NeynarAPIClient({ apiKey: process.env.NEYNAR_API_KEY as string });
-        const farcasterUsers = await neynarClient.fetchBulkUsersByEthOrSolAddress([walletAddress]);
+        const farcasterUsers = await neynarClient.fetchBulkUsersByEthOrSolAddress({ addresses: [walletAddress] });
         
         if (!farcasterUsers.users.length) {
           return NextResponse.json({ message: "Farcaster user not found" }, { status: 404 });
