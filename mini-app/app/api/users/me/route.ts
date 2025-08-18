@@ -24,18 +24,26 @@ export async function GET(req: NextRequest) {
       // User not found, create a new one
       try {
         const neynarClient = new NeynarAPIClient({ apiKey: process.env.NEYNAR_API_KEY as string });
-        const farcasterUser = await neynarClient.lookupUserByVerification(walletAddress);
+        const farcasterUsers = await neynarClient.user.fetchBulkUsersByEthOrSolAddress([walletAddress]);
+        
+        if (!farcasterUsers.users.length) {
+          return NextResponse.json({ message: "Farcaster user not found" }, { status: 404 });
+        }
+        
+        const farcasterUser = farcasterUsers.users[0];
         
         const newUser = {
           walletAddress: walletAddress.toLowerCase(),
-          custodyAddress: farcasterUser.user.custodyAddress.toLowerCase(),
-          fid: farcasterUser.user.fid.toString(),
-          username: farcasterUser.user.username,
-          displayName: farcasterUser.user.displayName,
-          pfpUrl: farcasterUser.user.pfpUrl,
+          username: farcasterUser.username,
+          displayName: farcasterUser.displayName,
+          pfpUrl: farcasterUser.pfpUrl,
+          fid: farcasterUser.fid,
         };
-        
-        user = await prisma.user.create({ data: newUser });
+
+        const createdUser = await prisma.user.create({
+          data: newUser,
+        });
+        user = createdUser;
 
       } catch (error) {
          console.error("Failed to create user from Farcaster profile, creating a basic profile.", error);
