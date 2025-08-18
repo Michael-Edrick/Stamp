@@ -1,0 +1,15 @@
+[33mfa3255f[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m fix bug
+[33m5da6bf8[m fix bug
+[33m09e6bb1[m fix bug
+[33m9bf627b[m fix bug
+[33m1e67cbb[m fix bug
+[33md012324[m fix bug
+[33m0ecf435[m fix auto sign in
+[33m60d0605[m fix auto sign in
+[33m4c8cba5[m add auto sign in
+[33med64958[m fix bug
+[33m8a18f67[m feat: Add isAdmin and isBanned fields to user schema
+[33md909844[m feat: Add isAdmin and isBanned fields to user schema
+[33m71416c1[m feat: Add isAdmin and isBanned fields to user schema
+[33m34ad78a[m fix: Add network check before sign-in
+[33mad1a490[m fix: Add network check before sign-in
