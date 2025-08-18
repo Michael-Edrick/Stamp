@@ -35,7 +35,7 @@ export async function GET(req: NextRequest) {
         const result = await neynarClient.fetchBulkUsersByEthOrSolAddress({ addresses: [walletAddress] });
         
         // Explicitly type the response data
-        const farcasterUserData = result.data as Record<string, FarcasterUser[]>;
+        const farcasterUserData = result.data as unknown as Record<string, FarcasterUser[]>;
         
         // Safely access the user list from the response object
         const farcasterUserList = Object.values(farcasterUserData)[0];
