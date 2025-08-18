@@ -37,8 +37,8 @@ export async function GET(req: NextRequest) {
         // Log the entire result object for debugging, as you suggested
         console.log("Full Neynar API response:", JSON.stringify(result, null, 2));
 
-        // Explicitly type the response data, preserving your fix
-        const farcasterUserData = result.data as unknown as Record<string, FarcasterUser[]>;
+        // Apply the type assertion directly to the result, not result.data
+        const farcasterUserData = result as unknown as Record<string, FarcasterUser[]>;
         
         if (!farcasterUserData) {
           throw new Error("Received null or invalid data from Neynar API.");
