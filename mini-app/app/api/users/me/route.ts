@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
     if (!user) {
       // User not found, create a new one
       try {
-        const neynarClient = new NeynarAPIClient(process.env.NEYNAR_API_KEY as string);
+        const neynarClient = new NeynarAPIClient({ apiKey: process.env.NEYNAR_API_KEY as string });
         const farcasterUsers = await neynarClient.fetchBulkUsersByEthOrSolAddress([walletAddress]);
         
         if (!farcasterUsers.users.length) {
