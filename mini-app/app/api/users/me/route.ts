@@ -26,13 +26,13 @@ export async function GET(req: NextRequest) {
         const neynarClient = new NeynarAPIClient({ apiKey: process.env.NEYNAR_API_KEY as string });
         const result = await neynarClient.fetchBulkUsersByEthOrSolAddress({ addresses: [walletAddress] });
         
-        const farcasterUsers = Object.values(result.data)[0];
+        const farcasterUserList = result.data[walletAddress];
 
-        if (!farcasterUsers || farcasterUsers.length === 0) {
-          return NextResponse.json({ message: "Farcaster user not found" }, { status: 404 });
+        if (!farcasterUserList || farcasterUserList.length === 0) {
+          throw new Error(`Farcaster user not found for wallet: ${walletAddress}`);
         }
         
-        const farcasterUser = farcasterUsers[0];
+        const farcasterUser = farcasterUserList[0];
         
         const newUser = {
           walletAddress: walletAddress.toLowerCase(),
