@@ -60,15 +60,11 @@ export async function GET(req: NextRequest) {
         user = createdUser;
 
       } catch (error) {
-         console.error("Failed to create user from Farcaster profile, creating a basic profile.", error);
-         // If Neynar lookup fails (e.g., wallet not associated with Farcaster), create a basic user
-         user = await prisma.user.create({
-            data: {
-                walletAddress: walletAddress.toLowerCase(),
-                // Add default values for other fields if needed, e.g., username
-                username: `user_${Date.now()}` 
-            }
-         });
+        console.error("Failed to create user from Farcaster profile. Full error:", error);
+        return NextResponse.json(
+          { message: "Failed to create user from Farcaster profile.", error: error instanceof Error ? error.message : String(error) },
+          { status: 500 }
+        );
       }
     }
     
