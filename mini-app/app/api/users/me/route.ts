@@ -26,7 +26,9 @@ export async function GET(req: NextRequest) {
         const neynarClient = new NeynarAPIClient({ apiKey: process.env.NEYNAR_API_KEY as string });
         const result = await neynarClient.fetchBulkUsersByEthOrSolAddress({ addresses: [walletAddress] });
         
-        const farcasterUserList = result.data[walletAddress];
+        // Safely access the user list from the response object
+        const firstKey = Object.keys(result.data)[0];
+        const farcasterUserList = result.data[firstKey];
 
         if (!farcasterUserList || farcasterUserList.length === 0) {
           throw new Error(`Farcaster user not found for wallet: ${walletAddress}`);
