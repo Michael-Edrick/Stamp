@@ -35,8 +35,8 @@ export async function GET(req: NextRequest) {
         const newUser = {
           walletAddress: walletAddress.toLowerCase(),
           username: farcasterUser.username,
-          displayName: farcasterUser.displayName,
-          pfpUrl: farcasterUser.pfpUrl,
+          displayName: farcasterUser.display_name,
+          pfpUrl: farcasterUser.pfp_url,
           fid: farcasterUser.fid,
         };
 
