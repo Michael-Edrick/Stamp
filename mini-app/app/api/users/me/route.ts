@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { NeynarAPIClient } from '@neynar/nodejs-sdk';
-import { BulkUsersByAddressResponse } from '@neynar/nodejs-sdk/build/types';
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
