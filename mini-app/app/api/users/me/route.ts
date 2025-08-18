@@ -2,6 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { NeynarAPIClient } from '@neynar/nodejs-sdk';
 
+// Define the shape of the Farcaster user object we need, as you suggested.
+type FarcasterUser = {
+  fid: number;
+  username: string;
+  display_name?: string;
+  pfp_url?: string;
+};
+
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const walletAddress = searchParams.get('walletAddress');
@@ -26,9 +34,11 @@ export async function GET(req: NextRequest) {
         const neynarClient = new NeynarAPIClient({ apiKey: process.env.NEYNAR_API_KEY as string });
         const result = await neynarClient.fetchBulkUsersByEthOrSolAddress({ addresses: [walletAddress] });
         
+        // Explicitly type the response data
+        const farcasterUserData = result.data as Record<string, FarcasterUser[]>;
+        
         // Safely access the user list from the response object
-        const firstKey = Object.keys(result.data)[0];
-        const farcasterUserList = result.data[firstKey];
+        const farcasterUserList = Object.values(farcasterUserData)[0];
 
         if (!farcasterUserList || farcasterUserList.length === 0) {
           throw new Error(`Farcaster user not found for wallet: ${walletAddress}`);
