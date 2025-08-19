@@ -17,8 +17,6 @@ model User {
   id             String    @id @default(cuid())
   walletAddress  String?   @unique
   custodyAddress String?   @unique
-  pfpUrl         String?
-  displayName    String?
   fid            String?   @unique
   name           String?
   email          String?   @unique

@@ -32,15 +32,15 @@ export async function POST(req: NextRequest) {
             update: {
                 fid: neynarUser.fid.toString(),
                 username: neynarUser.username,
-                displayName: neynarUser.display_name,
-                pfpUrl: neynarUser.pfp_url,
+                name: neynarUser.display_name,
+                image: neynarUser.pfp_url,
             },
             create: {
                 custodyAddress: custodyAddress,
                 fid: neynarUser.fid.toString(),
                 username: neynarUser.username,
-                displayName: neynarUser.display_name,
-                pfpUrl: neynarUser.pfp_url,
+                name: neynarUser.display_name,
+                image: neynarUser.pfp_url,
                 // Ensure walletAddress is also set on creation if possible, or handle cases where it might be null
                 walletAddress: custodyAddress, 
             }
