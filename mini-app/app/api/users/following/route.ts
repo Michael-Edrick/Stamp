@@ -42,8 +42,12 @@ export async function GET(req: NextRequest) {
     // Using a limit of 50 for now to keep the response size reasonable
     const result = await neynarClient.fetchUserFollowing({ fid, limit: 50 });
 
+    // The response contains a list of objects, each with a 'user' property.
+    // We need to extract this nested user object.
+    const followingList = result.users.map((u: any) => u.user);
+
     // 3. Return the list of followed users
-    return NextResponse.json(result.users);
+    return NextResponse.json(followingList);
 
   } catch (error) {
     console.error('Error in GET /api/users/following:', error);
