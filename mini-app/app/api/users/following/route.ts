@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
     }
 
     // 2. Use the FID to fetch the user's following list from Neynar
-    const neynarClient = new NeynarAPIClient(NEYNAR_API_KEY);
+    const neynarClient = new NeynarAPIClient({apiKey: NEYNAR_API_KEY});
     
     // The FID from our database is a string, but the SDK expects a number.
     const fid = parseInt(user.fid, 10);
