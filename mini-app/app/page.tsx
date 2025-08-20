@@ -8,8 +8,14 @@ import CustomAvatar from '@/app/components/CustomAvatar';
 import { useMiniKit } from '@coinbase/onchainkit/minikit';
 import { ConnectWallet } from '@coinbase/onchainkit/wallet';
 import SearchModal from '@/app/components/SearchModal';
-import { User as NeynarUser } from '@neynar/nodejs-sdk/build/api/models/user';
 
+// Local type definition to avoid import issues with the SDK
+type NeynarUser = {
+  fid: number;
+  username: string;
+  display_name: string;
+  pfp_url: string;
+};
 
 type Profile = Partial<PrismaUser> & {
   avatar?: string;
@@ -25,10 +31,18 @@ const UserCard = ({ user }: { user: NeynarUser }) => {
   return (
     <div className="bg-white rounded-2xl p-3 flex items-center justify-between shadow-sm border border-gray-200">
       <div className="flex items-center">
-        <CustomAvatar profile={{...user, image: user.pfp_url}} className="w-10 h-10 rounded-full mr-3" />
+        <CustomAvatar 
+          profile={{
+            name: user?.display_name,
+            username: user?.username,
+            image: user?.pfp_url, // Map pfp_url to image
+            fid: user?.fid?.toString() // Convert fid to string
+          }} 
+          className="w-10 h-10 rounded-full mr-3" 
+        />
         <div>
-          <p className="font-bold text-gray-900">{user.display_name || 'Unnamed'}</p>
-          <p className="text-sm text-gray-500">@{user.username || 'user'}</p>
+          <p className="font-bold text-gray-900">{user?.display_name || 'Unnamed'}</p>
+          <p className="text-sm text-gray-500">@{user?.username || 'user'}</p>
         </div>
       </div>
       <Link href={`/chat/${user?.fid}`} onClick={(e) => e.stopPropagation()}>
