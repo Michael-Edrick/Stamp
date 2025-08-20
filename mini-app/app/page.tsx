@@ -2,128 +2,81 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAccount } from "wagmi";
 import Link from 'next/link';
-import { UserCircleIcon, PaperAirplaneIcon, MagnifyingGlassIcon, ChatBubbleOvalLeftEllipsisIcon, PlusIcon } from '@heroicons/react/24/solid';
-import { User as PrismaUser } from '@prisma/client';
+import { UserCircleIcon, PaperAirplaneIcon, MagnifyingGlassIcon, ChatBubbleOvalLeftEllipsisIcon, PlusIcon, ChevronRightIcon } from '@heroicons/react/24/solid';
+import { User as PrismaUser, Conversation as PrismaConversation, Message as PrismaMessage } from '@prisma/client';
 import CustomAvatar from '@/app/components/CustomAvatar';
 import { useMiniKit } from '@coinbase/onchainkit/minikit';
 import { ConnectWallet } from '@coinbase/onchainkit/wallet';
 import SearchModal from '@/app/components/SearchModal';
 
+// Local type definition to avoid import issues with the SDK
+type NeynarUser = {
+  fid: number;
+  username: string;
+  display_name: string;
+  pfp_url: string;
+};
+
 type Profile = Partial<PrismaUser> & {
   avatar?: string;
-  tags?: string[];
-  x_social?: string;
-  instagram?: string;
 };
 
+interface ConversationWithDetails extends PrismaConversation {
+  participants: Partial<PrismaUser>[];
+  messages: (PrismaMessage & { sender: Partial<PrismaUser> })[];
+}
 
-/*
-const dummyUsers: Profile[] = [
-  {
-    id: '1',
-    name: 'Clemens Scherf',
-    username: 'Clemens',
-    avatar: 'https://i.pravatar.cc/150?u=clemens',
-    bio: 'Founder of the London Blockchain Society, UK country lead at Base. Interested in entrepreneurship and emerging technology.',
-    tags: ['BASE', 'LBS', 'WEB 3', 'LUCID', 'BLOCKCHAIN', 'MINI APPS', 'ICEBREAK'],
-  },
-  {
-    id: '2',
-    name: 'Jane Doe',
-    username: 'janedoe',
-    avatar: 'https://i.pravatar.cc/150?u=jane',
-    bio: 'Web3 enthusiast and digital artist. Exploring the frontiers of decentralized technology and creativity.',
-    tags: ['ART', 'NFT', 'DECENTRALIZATION', 'ETH', 'CREATOR'],
-  },
-  {
-    id: '3',
-    name: 'John Smith',
-    username: 'johnsmith',
-    avatar: 'https://i.pravatar.cc/150?u=john',
-    bio: 'Building the future of finance with DeFi. Full-stack developer and open-source contributor.',
-    tags: ['DEFI', 'SOLIDITY', 'DEVELOPER', 'FINTECH'],
-  },
-];
-*/
 
-const SocialLink = ({ platform, handle }: { platform: 'Instagram' | 'X', handle: string }) => {
-    const Icon = () => platform === 'Instagram'
-        ? <svg className="w-5 h-5" viewBox="0 0 24 24"><path fill="currentColor" d="M7.8,2H16.2C19.4,2 22,4.6 22,7.8V16.2A5.2,5.2 0 0,1 16.2,21.4H7.8C4.6,21.4 2,18.8 2,15.6V7.8A5.2,5.2 0 0,1 7.8,2M7.6,4A3.6,3.6 0 0,0 4,7.6V16.4C4,18.39 5.61,20 7.6,20H16.4A3.6,3.6 0 0,0 20,16.4V7.6C20,5.61 18.39,4 16.4,4H7.6M17.25,5.5A1.25,1.25 0 0,1 18.5,6.75A1.25,1.25 0 0,1 17.25,8A1.25,1.25 0 0,1 16,6.75A1.25,1.25 0 0,1 17.25,5.5M12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9Z" /></svg>
-        : <svg className="w-5 h-5" viewBox="0 0 24 24"><path fill="currentColor" d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" /></svg>;
-
-    return (
-         <div className="flex items-center justify-between text-sm py-2">
-          <div className="flex items-center text-gray-800">
-            <Icon />
-            <span className="ml-2">@{handle}</span>
-          </div>
-          <span className="text-blue-500 text-xs font-bold">verified</span>
+const UserCard = ({ user }: { user: NeynarUser }) => {
+  return (
+    <div className="bg-white rounded-2xl p-3 flex items-center justify-between shadow-sm border border-gray-200">
+      <div className="flex items-center">
+        <CustomAvatar profile={{...user, fid: user.fid.toString(), image: user.pfp_url, name: user.display_name}} className="w-10 h-10 rounded-full mr-3" />
+        <div>
+          <p className="font-bold text-gray-900">{user.display_name}</p>
+          <p className="text-sm text-gray-500">@{user.username}</p>
         </div>
-    );
+      </div>
+      <Link href={`/chat/${user.fid}`} onClick={(e) => e.stopPropagation()}>
+        <PaperAirplaneIcon className="w-6 h-6 text-blue-500 -rotate-45 cursor-pointer hover:scale-110 transition-transform" />
+      </Link>
+    </div>
+  );
 };
 
-const Tag = ({ text, color }: { text: string, color: string }) => (
-  <div className={`text-xs text-white font-semibold px-2.5 py-1 rounded-full`} style={{ backgroundColor: color }}>
-    {text}
-  </div>
-);
+const ConversationCard = ({ conversation, currentUserId }: { conversation: ConversationWithDetails, currentUserId: string }) => {
+  const otherParticipant = conversation.participants.find(p => p.id !== currentUserId);
+  const lastMessage = conversation.messages[0];
 
-const UserCard = ({ user }: { user: Profile }) => {
-  const [isExpanded, setIsExpanded] = useState(false);
-  const tagColors = ['#4A90E2', '#F5A623', '#9013FE', '#4CAF50', '#2196F3', '#FF5722', '#607D8B'];
-  
-  // Use user's tags if they exist and are not empty, otherwise use a default set for display
-  const userTags = user.tags && user.tags.length > 0 ? user.tags : [];
-  const displayedTags = isExpanded ? userTags : userTags.slice(0, 4);
+  if (!otherParticipant) return null;
 
   return (
-    <div 
-      className="bg-white rounded-3xl p-4 shadow-md mb-4 border border-gray-200 transition-all duration-300 ease-in-out cursor-pointer"
-      onClick={() => setIsExpanded(!isExpanded)}
-    >
-      <div className="flex items-start justify-between">
-        <div className="flex items-center">
-            <CustomAvatar profile={user} className="w-10 h-10 rounded-full mr-3" />
-            <div>
-                <p className="font-bold text-gray-900">{user.name}</p>
-                <p className="text-sm text-gray-500">@{user.username}</p>
-            </div>
+    <Link href={`/chat/${otherParticipant.id}`} className="block bg-white p-4 rounded-2xl flex items-start space-x-4 shadow-sm border border-gray-200 hover:bg-gray-50 transition-colors">
+      <CustomAvatar profile={otherParticipant} className="w-10 h-10 rounded-full mt-1" />
+      <div className="flex-1 overflow-hidden">
+        <div className="flex justify-between items-center">
+          <span className="font-bold text-gray-900">{otherParticipant.name || "Anonymous"}</span>
+          {lastMessage && (
+            <span className="text-xs text-gray-500">{new Date(lastMessage.createdAt).toLocaleDateString()}</span>
+          )}
         </div>
-        <Link href={`/chat/${user.id}`} onClick={(e) => e.stopPropagation()}>
-            <PaperAirplaneIcon className="w-6 h-6 text-blue-500 -rotate-45 cursor-pointer hover:scale-110 transition-transform" />
-        </Link>
-      </div>
-
-      {isExpanded && (
-        <div className="mt-4 pt-4 border-t border-gray-100">
-          <p className="text-gray-700 text-sm mb-4">{user.bio || 'No bio provided.'}</p>
-          {user.x_social &&
-            <SocialLink platform="X" handle={user.x_social} />
-          }
-          {user.instagram &&
-            <SocialLink platform="Instagram" handle={user.instagram} />
-          }
-        </div>
-      )}
-
-      <div className="mt-4 flex flex-wrap items-center gap-2">
-        {displayedTags.map((tag: string, index: number) => (
-          <Tag key={tag} text={tag} color={tagColors[index % tagColors.length]} />
-        ))}
-        {!isExpanded && userTags.length > 4 && (
-          <div className="text-xs font-bold text-gray-500">
-            +{userTags.length - 4}
-          </div>
+        {lastMessage && (
+          <p className="text-gray-600 mt-1 truncate">
+            <span className="font-semibold text-gray-800">{lastMessage.senderId === currentUserId ? "You: " : ""}</span>
+            {lastMessage.content}
+          </p>
         )}
       </div>
-    </div>
+    </Link>
   );
 };
 
 
 export default function HomePage() {
-  const { address, isConnected, chainId } = useAccount();
-  const [realUsers, setRealUsers] = useState<Profile[]>([]);
+  const { address, isConnected } = useAccount();
+  const [conversations, setConversations] = useState<ConversationWithDetails[]>([]);
+  const [following, setFollowing] = useState<NeynarUser[]>([]);
+  const [currentUser, setCurrentUser] = useState<Profile | null>(null);
   const [isClient, setIsClient] = useState(false);
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
   const { setFrameReady, isFrameReady } = useMiniKit();
@@ -134,22 +87,49 @@ export default function HomePage() {
     }
   }, [isFrameReady, setFrameReady]);
 
-  const fetchUsers = useCallback(async () => {
-    try {
-      const response = await fetch('/api/users');
-      if (!response.ok) throw new Error('Failed to fetch users');
-      const users: Profile[] = await response.json();
-      console.log("Fetched users:", users);
-      setRealUsers(users);
+  const fetchData = useCallback(async () => {
+    if (!address) return;
+
+    // Fetch current user
+     try {
+        const response = await fetch(`/api/users/me?walletAddress=${address}`);
+        if (response.ok) {
+            const user = await response.json();
+            setCurrentUser(user);
+        }
     } catch (error) {
-      console.error("Error fetching users:", error);
+        console.error("Failed to fetch current user", error);
     }
-  }, []);
+    
+    // Fetch conversations
+    try {
+      const convoResponse = await fetch(`/api/messages/inbox?walletAddress=${address}`);
+      if (convoResponse.ok) {
+        const data: ConversationWithDetails[] = await convoResponse.json();
+        setConversations(data);
+      }
+    } catch (error) {
+      console.error("Error fetching conversations:", error);
+    }
+
+    // Fetch following list
+    try {
+      const followingResponse = await fetch(`/api/users/following?walletAddress=${address}`);
+      if (followingResponse.ok) {
+        const data: NeynarUser[] = await followingResponse.json();
+        setFollowing(data);
+      }
+    } catch (error) {
+      console.error("Error fetching following list:", error);
+    }
+  }, [address]);
 
   useEffect(() => {
     setIsClient(true);
-    fetchUsers();
-  }, [fetchUsers]);
+    if (isConnected) {
+      fetchData();
+    }
+  }, [isConnected, fetchData]);
 
   return (
     <div className="min-h-screen bg-[#F0F2F5] font-sans">
@@ -159,10 +139,39 @@ export default function HomePage() {
               {isClient && <ConnectWallet />}
           </div>
       </header>
-      <div className="w-full max-w-md mx-auto pt-20 pb-24 px-4">
-        {realUsers.map((user) => (
-            <UserCard key={user.id} user={user} />
-        ))}
+      <div className="w-full max-w-md mx-auto pt-20 pb-24 px-4 space-y-8">
+        
+        {/* Your Chats Section */}
+        <div>
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-lg font-bold text-gray-800">Your chats</h2>
+            <Link href="/inbox" className="flex items-center text-blue-600 font-semibold text-sm">
+              Chat <ChevronRightIcon className="w-4 h-4 ml-1" />
+            </Link>
+          </div>
+          <div className="space-y-3">
+            {conversations.slice(0, 2).map((convo) => (
+              currentUser?.id && <ConversationCard key={convo.id} conversation={convo} currentUserId={currentUser.id} />
+            ))}
+            {conversations.length === 0 && (
+              <p className="text-center text-gray-500 py-4">No recent chats.</p>
+            )}
+          </div>
+        </div>
+
+        {/* Following Section */}
+        <div>
+          <h2 className="text-lg font-bold text-gray-800 mb-4">Following</h2>
+          <div className="space-y-3">
+            {following.slice(0, 2).map((user) => (
+              <UserCard key={user.fid} user={user} />
+            ))}
+             {following.length === 0 && (
+              <p className="text-center text-gray-500 py-4">You are not following anyone.</p>
+            )}
+          </div>
+        </div>
+
       </div>
        <BottomNav 
         isClient={isClient}
