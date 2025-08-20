@@ -77,6 +77,8 @@ export default function HomePage() {
   const [conversations, setConversations] = useState<ConversationWithDetails[]>([]);
   const [following, setFollowing] = useState<NeynarUser[]>([]);
   const [currentUser, setCurrentUser] = useState<Profile | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [isClient, setIsClient] = useState(false);
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
   const { setFrameReady, isFrameReady } = useMiniKit();
@@ -89,58 +91,97 @@ export default function HomePage() {
 
   const fetchData = useCallback(async () => {
     if (!address) return;
-
-    // Fetch current user
-     try {
-        const response = await fetch(`/api/users/me?walletAddress=${address}`);
-        if (response.ok) {
-            const user = await response.json();
-            setCurrentUser(user);
-        }
-    } catch (error) {
-        console.error("Failed to fetch current user", error);
-    }
     
-    // Fetch conversations
-    try {
-      const convoResponse = await fetch(`/api/messages/inbox?walletAddress=${address}`);
-      if (convoResponse.ok) {
-        const data: ConversationWithDetails[] = await convoResponse.json();
-        setConversations(data);
-      }
-    } catch (error) {
-      console.error("Error fetching conversations:", error);
-    }
+    setLoading(true);
+    setError(null);
 
-    // Fetch following list
     try {
-      const followingResponse = await fetch(`/api/users/following?walletAddress=${address}`);
-      if (followingResponse.ok) {
-        const data: NeynarUser[] = await followingResponse.json();
-        setFollowing(data);
+      // Fetch all data concurrently
+      const [userResponse, convoResponse, followingResponse] = await Promise.all([
+        fetch(`/api/users/me?walletAddress=${address}`),
+        fetch(`/api/messages/inbox?walletAddress=${address}`),
+        fetch(`/api/users/following?walletAddress=${address}`)
+      ]);
+
+      // Process current user
+      if (userResponse.ok) {
+        const userData = await userResponse.json();
+        setCurrentUser(userData);
+      } else {
+        // If we can't get the main user, it's a critical error
+        throw new Error('Failed to fetch user profile.');
       }
-    } catch (error) {
-      console.error("Error fetching following list:", error);
+
+      // Process conversations
+      if (convoResponse.ok) {
+        const convoData = await convoResponse.json();
+        // Validate that the response is an array before setting state
+        if (Array.isArray(convoData)) {
+          setConversations(convoData);
+        } else {
+          console.warn("Inbox API did not return an array:", convoData);
+          setConversations([]); // Default to empty array on unexpected format
+        }
+      } else {
+        console.warn("Failed to fetch inbox, status:", convoResponse.status);
+        setConversations([]); // Default to empty array on error
+      }
+
+      // Process following list
+      if (followingResponse.ok) {
+        const followingData = await followingResponse.json();
+        // Validate that the response is an array before setting state
+        if (Array.isArray(followingData)) {
+          setFollowing(followingData);
+        } else {
+          console.warn("Following API did not return an array:", followingData);
+          setFollowing([]); // Default to empty array on unexpected format
+        }
+      } else {
+        console.warn("Failed to fetch following list, status:", followingResponse.status);
+        setFollowing([]); // Default to empty array on error
+      }
+
+    } catch (err) {
+      console.error("Error fetching homepage data:", err);
+      setError(err instanceof Error ? err.message : "An unknown error occurred.");
+    } finally {
+      setLoading(false);
     }
   }, [address]);
 
   useEffect(() => {
     setIsClient(true);
-    if (isConnected) {
+    if (isConnected && address) {
       fetchData();
+    } else if (!isConnected) {
+      // Clear data when disconnected
+      setLoading(true);
+      setCurrentUser(null);
+      setConversations([]);
+      setFollowing([]);
     }
-  }, [isConnected, fetchData]);
+  }, [isConnected, address, fetchData]);
+  
+  const renderContent = () => {
+    if (!isConnected) {
+      return (
+        <div className="text-center text-gray-500 py-10">
+          <p>Please connect your wallet to see your dashboard.</p>
+        </div>
+      );
+    }
+    
+    if (loading) {
+      return <div className="text-center text-gray-500 py-10">Loading...</div>;
+    }
 
-  return (
-    <div className="min-h-screen bg-[#F0F2F5] font-sans">
-       <header className="fixed top-0 left-0 right-0 z-10 w-full max-w-md mx-auto flex justify-between items-center p-4 bg-[#F0F2F5]">
-          <h1 className="text-xl font-bold text-gray-900">StampMe</h1>
-          <div>
-              {isClient && <ConnectWallet />}
-          </div>
-      </header>
-      <div className="w-full max-w-md mx-auto pt-20 pb-24 px-4 space-y-8">
-        
+    if (error) {
+      return <div className="text-center text-red-500 py-10">Error: {error}</div>;
+    }
+
+    return (
+      <div className="space-y-8">
         {/* Your Chats Section */}
         <div>
           <div className="flex justify-between items-center mb-4">
@@ -150,10 +191,11 @@ export default function HomePage() {
             </Link>
           </div>
           <div className="space-y-3">
-            {conversations.slice(0, 2).map((convo) => (
-              currentUser?.id && <ConversationCard key={convo.id} conversation={convo} currentUserId={currentUser.id} />
-            ))}
-            {conversations.length === 0 && (
+            {conversations.length > 0 ? (
+              conversations.slice(0, 2).map((convo) => (
+                currentUser?.id && <ConversationCard key={convo.id} conversation={convo} currentUserId={currentUser.id} />
+              ))
+            ) : (
               <p className="text-center text-gray-500 py-4">No recent chats.</p>
             )}
           </div>
@@ -163,15 +205,29 @@ export default function HomePage() {
         <div>
           <h2 className="text-lg font-bold text-gray-800 mb-4">Following</h2>
           <div className="space-y-3">
-            {following.slice(0, 2).map((user) => (
-              <UserCard key={user.fid} user={user} />
-            ))}
-             {following.length === 0 && (
-              <p className="text-center text-gray-500 py-4">You are not following anyone.</p>
+            {following.length > 0 ? (
+              following.slice(0, 2).map((user) => (
+                <UserCard key={user.fid} user={user} />
+              ))
+            ) : (
+              <p className="text-center text-gray-500 py-4">Not following anyone yet.</p>
             )}
           </div>
         </div>
+      </div>
+    );
+  };
 
+  return (
+    <div className="min-h-screen bg-[#F0F2F5] font-sans">
+       <header className="fixed top-0 left-0 right-0 z-10 w-full max-w-md mx-auto flex justify-between items-center p-4 bg-[#F0F2F5]">
+          <h1 className="text-xl font-bold text-gray-900">StampMe</h1>
+          <div>
+              {isClient && <ConnectWallet />}
+          </div>
+      </header>
+      <div className="w-full max-w-md mx-auto pt-20 pb-24 px-4">
+        {renderContent()}
       </div>
        <BottomNav 
         isClient={isClient}
