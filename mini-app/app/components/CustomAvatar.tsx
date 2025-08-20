@@ -7,6 +7,7 @@ import { User } from '@prisma/client';
 // This flexible Profile type can handle data from both our database and dummy objects.
 type Profile = Partial<User> & {
   avatar?: string;
+  pfp_url?: string;
 };
 
 interface CustomAvatarProps {
@@ -17,7 +18,7 @@ interface CustomAvatarProps {
 }
 
 const CustomAvatar = ({ profile, className, width = 40, height = 40 }: CustomAvatarProps) => {
-  const imageUrl = profile?.image || profile?.avatar;
+  const imageUrl = profile?.image || profile?.avatar || profile?.pfp_url;
 
   if (imageUrl) {
     return (
