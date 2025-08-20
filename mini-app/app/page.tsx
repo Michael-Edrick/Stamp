@@ -31,13 +31,13 @@ const UserCard = ({ user }: { user: NeynarUser }) => {
   return (
     <div className="bg-white rounded-2xl p-3 flex items-center justify-between shadow-sm border border-gray-200">
       <div className="flex items-center">
-        <CustomAvatar profile={{...user, fid: user.fid.toString(), image: user.pfp_url, name: user.display_name}} className="w-10 h-10 rounded-full mr-3" />
+        <CustomAvatar profile={{...user, fid: user?.fid?.toString(), image: user?.pfp_url, name: user?.display_name}} className="w-10 h-10 rounded-full mr-3" />
         <div>
-          <p className="font-bold text-gray-900">{user.display_name}</p>
-          <p className="text-sm text-gray-500">@{user.username}</p>
+          <p className="font-bold text-gray-900">{user?.display_name || 'Unnamed'}</p>
+          <p className="text-sm text-gray-500">@{user?.username || 'user'}</p>
         </div>
       </div>
-      <Link href={`/chat/${user.fid}`} onClick={(e) => e.stopPropagation()}>
+      <Link href={`/chat/${user?.fid}`} onClick={(e) => e.stopPropagation()}>
         <PaperAirplaneIcon className="w-6 h-6 text-blue-500 -rotate-45 cursor-pointer hover:scale-110 transition-transform" />
       </Link>
     </div>
@@ -51,18 +51,18 @@ const ConversationCard = ({ conversation, currentUserId }: { conversation: Conve
   if (!otherParticipant) return null;
 
   return (
-    <Link href={`/chat/${otherParticipant.id}`} className="block bg-white p-4 rounded-2xl flex items-start space-x-4 shadow-sm border border-gray-200 hover:bg-gray-50 transition-colors">
+    <Link href={`/chat/${otherParticipant?.id}`} className="block bg-white p-4 rounded-2xl flex items-start space-x-4 shadow-sm border border-gray-200 hover:bg-gray-50 transition-colors">
       <CustomAvatar profile={otherParticipant} className="w-10 h-10 rounded-full mt-1" />
       <div className="flex-1 overflow-hidden">
         <div className="flex justify-between items-center">
-          <span className="font-bold text-gray-900">{otherParticipant.name || "Anonymous"}</span>
-          {lastMessage && (
+          <span className="font-bold text-gray-900">{otherParticipant?.name || "Anonymous"}</span>
+          {lastMessage?.createdAt && (
             <span className="text-xs text-gray-500">{new Date(lastMessage.createdAt).toLocaleDateString()}</span>
           )}
         </div>
-        {lastMessage && (
+        {lastMessage?.content && (
           <p className="text-gray-600 mt-1 truncate">
-            <span className="font-semibold text-gray-800">{lastMessage.senderId === currentUserId ? "You: " : ""}</span>
+            <span className="font-semibold text-gray-800">{lastMessage?.senderId === currentUserId ? "You: " : ""}</span>
             {lastMessage.content}
           </p>
         )}
