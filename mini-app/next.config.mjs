@@ -20,9 +20,15 @@ const nextConfig = {
       {
         protocol: 'https',
         hostname: 'i.pravatar.cc',
-        port: '',
-        pathname: '/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'imagedelivery.net',
+      },
+      {
+        protocol: 'https',
+        hostname: 'i.imgur.com',
+      }
     ],
   },
   eslint: {

@@ -1,10 +1,9 @@
 "use client";
 
-import Image from 'next/image';
 import { UserCircleIcon } from '@heroicons/react/24/solid';
 import { User } from '@prisma/client';
 
-// This flexible Profile type can handle data from both our database and dummy objects.
+// This flexible Profile type can handle data from both our database and external APIs.
 type Profile = Partial<User> & {
   avatar?: string;
   pfp_url?: string;
@@ -22,12 +21,14 @@ const CustomAvatar = ({ profile, className, width = 40, height = 40 }: CustomAva
 
   if (imageUrl) {
     return (
-      <Image
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
         src={imageUrl}
         alt={profile?.name || 'User avatar'}
         className={className}
         width={width}
         height={height}
+        style={{ objectFit: 'cover' }} // Ensures the image covers the area without distortion
       />
     );
   }
