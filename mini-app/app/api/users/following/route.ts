@@ -40,7 +40,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Using a limit of 50 for now to keep the response size reasonable
-    const result = await neynarClient.fetchUserFollowing(fid, { limit: 50 });
+    const result = await neynarClient.fetchUserFollowing({ fid, limit: 50 });
 
     // 3. Return the list of followed users
     return NextResponse.json(result.users);
