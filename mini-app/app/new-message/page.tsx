@@ -1,6 +1,5 @@
 "use client";
 
-import { useSession } from "next-auth/react";
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAccount, useWriteContract } from "wagmi";
@@ -13,10 +12,9 @@ const usdcAddress = usdcContractAddress;
 const erc20Abi = [{ "constant": false, "inputs": [{ "name": "spender", "type": "address" }, { "name": "value", "type": "uint256" }], "name": "approve", "outputs": [{ "name": "", "type": "bool" }], "type": "function" }] as const;
 
 function NewMessageForm() {
-  const { status } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { address } = useAccount();
+  const { address, isConnected, isConnecting } = useAccount();
   const { writeContractAsync } = useWriteContract();
 
   const [recipient, setRecipient] = useState("");
@@ -28,8 +26,10 @@ function NewMessageForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [isApproved, setIsApproved] = useState(false);
+  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
+    setIsClient(true);
     const recipientAddress = searchParams.get('recipient');
     const name = searchParams.get('name');
     const pfpUrl = searchParams.get('pfpUrl');
@@ -41,13 +41,14 @@ function NewMessageForm() {
   }, [searchParams]);
 
   useEffect(() => {
-    if (status === "unauthenticated") {
+    // Only run this effect on the client and after the initial connection status is resolved.
+    if (isClient && !isConnected && !isConnecting) {
       router.push("/");
     }
-  }, [status, router]);
+  }, [isConnected, isConnecting, isClient, router]);
 
-  if (status === "loading") {
-    return <div className="text-center p-10 text-white">Loading session...</div>;
+  if (!isClient || isConnecting) {
+    return <div className="text-center p-10 text-white">Loading...</div>;
   }
   
   if (!recipient) {
