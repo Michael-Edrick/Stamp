@@ -21,6 +21,8 @@ function NewMessageForm() {
 
   const [recipient, setRecipient] = useState("");
   const [recipientName, setRecipientName] = useState("");
+  const [recipientPfpUrl, setRecipientPfpUrl] = useState("");
+  const [recipientFid, setRecipientFid] = useState("");
   const [content, setContent] = useState("");
   const [amount, setAmount] = useState("5");
   const [loading, setLoading] = useState(false);
@@ -30,8 +32,12 @@ function NewMessageForm() {
   useEffect(() => {
     const recipientAddress = searchParams.get('recipient');
     const name = searchParams.get('name');
+    const pfpUrl = searchParams.get('pfpUrl');
+    const fid = searchParams.get('fid');
     if (recipientAddress) setRecipient(recipientAddress);
     if (name) setRecipientName(name);
+    if (pfpUrl) setRecipientPfpUrl(pfpUrl);
+    if (fid) setRecipientFid(fid);
   }, [searchParams]);
 
   useEffect(() => {
@@ -95,7 +101,16 @@ function NewMessageForm() {
       await fetch("/api/messages/send", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ recipient, content, messageId, txHash: sendMessageTx, amount: parseFloat(amount) }),
+        body: JSON.stringify({ 
+          content, 
+          recipientWalletAddress: recipient,
+          recipientUsername: recipientName,
+          recipientPfpUrl: recipientPfpUrl,
+          recipientFid: recipientFid,
+          onChainMessageId: messageId, 
+          txHash: sendMessageTx, 
+          amount: parseFloat(amount) 
+        }),
       });
 
       router.push("/sent");
@@ -118,7 +133,7 @@ function NewMessageForm() {
       <main className="flex-1 p-4 flex flex-col">
         <div className="flex items-center mb-6">
           <span className="text-gray-400 mr-2">To:</span>
-          <CustomAvatar profile={{ name: recipientName }} className="w-8 h-8 rounded-full mr-3" />
+          <CustomAvatar profile={{ name: recipientName, image: recipientPfpUrl }} className="w-8 h-8 rounded-full mr-3" />
           <span className="font-semibold">{recipientName}</span>
         </div>
         

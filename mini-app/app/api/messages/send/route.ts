@@ -14,14 +14,45 @@ export async function POST(req: Request) {
 
   try {
     const body = await req.json();
-    const { content, recipientId, amount, txHash, onChainMessageId } = body;
+    const { 
+      content, 
+      recipientWalletAddress, 
+      recipientUsername,
+      recipientPfpUrl,
+      recipientFid,
+      amount, 
+      txHash, 
+      onChainMessageId 
+    } = body;
 
-    if (!content || !recipientId) {
+    if (!content || !recipientWalletAddress) {
       return NextResponse.json(
-        { error: "Missing required fields: content, recipientId" },
+        { error: "Missing required fields: content, recipientWalletAddress" },
         { status: 400 }
       );
     }
+
+    // --- Find or Create Recipient User ---
+    let recipient = await prisma.user.findUnique({
+      where: { walletAddress: recipientWalletAddress },
+    });
+
+    if (!recipient) {
+      // User does not exist, create a placeholder profile for them.
+      recipient = await prisma.user.create({
+        data: {
+          walletAddress: recipientWalletAddress,
+          name: recipientUsername, // Use Farcaster username as initial name
+          username: recipientUsername,
+          image: recipientPfpUrl, // Use Farcaster pfp as initial image
+          fid: recipientFid ? recipientFid.toString() : null,
+          // Add default values for any other required fields
+        },
+      });
+    }
+    const recipientId = recipient.id;
+    // --- End of Find or Create ---
+
 
     // Find or create a conversation
     let conversation = await prisma.conversation.findFirst({

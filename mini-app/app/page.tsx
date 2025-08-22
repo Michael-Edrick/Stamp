@@ -15,6 +15,8 @@ type NeynarUser = {
   username: string;
   display_name: string;
   pfp_url: string;
+  // This is the crucial field for sending messages
+  custody_address?: string; 
 };
 
 type Profile = Partial<PrismaUser> & {
@@ -28,6 +30,17 @@ interface ConversationWithDetails extends PrismaConversation {
 
 
 const UserCard = ({ user }: { user: NeynarUser }) => {
+  // Construct the query parameters for the new message URL
+  const newMessageHref = {
+    pathname: '/new-message',
+    query: { 
+      recipient: user.custody_address, // Use custody_address as the wallet address
+      name: user.display_name,
+      pfpUrl: user.pfp_url,
+      fid: user.fid
+    },
+  };
+
   return (
     <div className="bg-white rounded-2xl p-3 flex items-center justify-between shadow-sm border border-gray-200">
       <div className="flex items-center">
@@ -45,9 +58,12 @@ const UserCard = ({ user }: { user: NeynarUser }) => {
           <p className="text-sm text-gray-500">@{user?.username || 'user'}</p>
         </div>
       </div>
-      <Link href={`/chat/${user?.fid}`} onClick={(e) => e.stopPropagation()}>
-        <PaperAirplaneIcon className="w-6 h-6 text-blue-500 -rotate-45 cursor-pointer hover:scale-110 transition-transform" />
-      </Link>
+      {/* Only render the link if we have a valid address to send to */}
+      {user.custody_address && (
+        <Link href={newMessageHref} onClick={(e) => e.stopPropagation()}>
+          <PaperAirplaneIcon className="w-6 h-6 text-blue-500 -rotate-45 cursor-pointer hover:scale-110 transition-transform" />
+        </Link>
+      )}
     </div>
   );
 };
