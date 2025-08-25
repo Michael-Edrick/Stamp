@@ -72,7 +72,24 @@ export default function ChatPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [containerHeight, setContainerHeight] = useState('100vh');
   
+  useEffect(() => {
+    const setHeight = () => {
+      // Set the height based on the visual viewport for mobile devices
+      setContainerHeight(`${window.innerHeight}px`);
+    };
+
+    // Set the initial height
+    setHeight();
+
+    // Update height on resize (which includes keyboard appearing/disappearing)
+    window.addEventListener('resize', setHeight);
+
+    // Cleanup listener
+    return () => window.removeEventListener('resize', setHeight);
+  }, []);
+
   // This ref will hold the content of the message that requires payment
   const pendingMessageContentRef = useRef<string | null>(null);
   // This ref will hold the on-chain message ID from the backend
@@ -358,7 +375,7 @@ export default function ChatPage() {
   const meUser = conversation?.participants.find(p => p.walletAddress?.toLowerCase() === selfAddress?.toLowerCase());
 
   return (
-    <div className="flex flex-col h-screen bg-gray-100 font-sans">
+    <div style={{ height: containerHeight }} className="flex flex-col bg-gray-100 font-sans">
       <header className="p-3 sticky top-0 z-10 bg-transparent">
         <div className="bg-white p-2 rounded-full shadow-md flex items-center">
             <Link href="/" className="mr-2 p-2">
