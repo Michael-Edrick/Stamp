@@ -13,7 +13,7 @@ export function getJwtSecretKey(): Uint8Array {
 const NEYNAR_API_KEY = process.env.NEYNAR_API_KEY;
 
 // Helper function to fetch user data from Neynar
-async function getFarcasterUser(address: string) {
+export async function getFarcasterUser(address: string) {
     if (!NEYNAR_API_KEY) {
         console.error("NEYNAR_API_KEY is not set.");
         return null;
