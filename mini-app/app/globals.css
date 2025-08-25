@@ -20,21 +20,23 @@ html, body {
   background: var(--background);
   overscroll-behavior: none; /* stops the bounce effect that shows black gaps */
   height: 100%;
+  min-height: 100dvh; /* ✅ ensure always full dynamic viewport height */
 }
 
 body {
-  min-height: 100dvh; /* ensures full viewport height */
   color: var(--foreground);
   font-family: "Geist", sans-serif;
   font-optical-sizing: auto;
   font-weight: 400;
   font-style: normal;
   font-size: 80%;
-  /* don’t use padding-bottom for safe area, instead use env inset via a spacer */
+  display: flex;
+  flex-direction: column;
 }
 
 #root, #__next {
   height: 100%;
+  min-height: 100dvh; /* ✅ match the dynamic viewport */
   display: flex;
   flex-direction: column;
 }

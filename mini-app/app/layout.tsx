@@ -49,8 +49,15 @@ export default function RootLayout({
       </head>
       <body className={`${inter.variable} ${roboto.variable} ${chivo_mono.variable} font-sans bg-black h-full`}>
         <Providers>
-          <main className="min-h-screen flex flex-col bg-[#F0F2F5]">
-            {children}
+          {/* Ensure full height with flex and sticky footer */}
+          <main className="flex flex-col min-h-screen bg-[#F0F2F5]">
+            <div className="flex-1">
+              {children}
+            </div>
+            {/* Bottom nav placeholder — stays at bottom */}
+            <nav className="sticky bottom-0 bg-white border-t border-gray-200">
+              {/* your nav buttons go here */}
+            </nav>
           </main>
           <Toaster />
         </Providers>
