@@ -8,17 +8,16 @@ if (!process.env.NEYNAR_API_KEY) {
 
 const neynarClient = new NeynarAPIClient({ apiKey: process.env.NEYNAR_API_KEY });
 
-// GET /api/users/by-fid/[fid]
-// Fetches a user profile by their Farcaster FID.
-// If the user doesn't exist in the local database, it fetches their
-// data from Neynar, creates a new user ("just-in-time" creation),
-// and returns the new profile.
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { fid: string } }
-): Promise<NextResponse> {
-  const fid = parseInt(params.fid, 10);
+// GET /api/users/by-fid?fid=...
+// Fetches a user profile by their Farcaster FID using a query parameter.
+export async function GET(request: NextRequest) {
+  const fidString = request.nextUrl.searchParams.get('fid');
 
+  if (!fidString) {
+    return NextResponse.json({ error: 'FID query parameter is required' }, { status: 400 });
+  }
+
+  const fid = parseInt(fidString, 10);
   if (isNaN(fid)) {
     return NextResponse.json({ error: 'Invalid FID format' }, { status: 400 });
   }

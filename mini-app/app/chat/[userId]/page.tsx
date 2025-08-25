@@ -101,7 +101,7 @@ export default function ChatPage() {
     setIsLoading(true);
     try {
       // 1. Get recipient user data (creating them if they don't exist)
-      const userResponse = await fetch(`/api/users/by-fid/${recipientFid}`);
+      const userResponse = await fetch(`/api/users/by-fid?fid=${recipientFid}`);
       if (!userResponse.ok) throw new Error('Failed to fetch recipient user data.');
       const recipientData: User = await userResponse.json();
       setRecipientUser(recipientData);
