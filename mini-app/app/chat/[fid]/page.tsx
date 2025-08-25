@@ -75,19 +75,30 @@ export default function ChatPage() {
   const [containerHeight, setContainerHeight] = useState('100vh');
   
   useEffect(() => {
+    const visualViewport = window.visualViewport;
+
     const setHeight = () => {
-      // Set the height based on the visual viewport for mobile devices
-      setContainerHeight(`${window.innerHeight}px`);
+      // Use visualViewport if available, otherwise fallback to innerHeight.
+      // visualViewport.height correctly accounts for the on-screen keyboard.
+      const height = visualViewport ? visualViewport.height : window.innerHeight;
+      setContainerHeight(`${height}px`);
     };
 
-    // Set the initial height
-    setHeight();
-
-    // Update height on resize (which includes keyboard appearing/disappearing)
-    window.addEventListener('resize', setHeight);
-
-    // Cleanup listener
-    return () => window.removeEventListener('resize', setHeight);
+    // Set the initial height and listen for changes.
+    // The 'resize' event on visualViewport is the most reliable way 
+    // to detect changes from the on-screen keyboard on mobile.
+    if (visualViewport) {
+      setHeight(); // Set initial height
+      visualViewport.addEventListener('resize', setHeight);
+      
+      // Cleanup listener
+      return () => visualViewport.removeEventListener('resize', setHeight);
+    } else {
+      // Fallback for older browsers
+      setHeight(); // Set initial height
+      window.addEventListener('resize', setHeight);
+      return () => window.removeEventListener('resize', setHeight);
+    }
   }, []);
 
   // This ref will hold the content of the message that requires payment
