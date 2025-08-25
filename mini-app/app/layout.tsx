@@ -34,7 +34,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html lang="en" className="h-full">
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -48,14 +48,10 @@ export default function RootLayout({
         <meta property="fc:frame:button:1:action" content="post" />
         <meta property="fc:frame:post_url" content={postUrl} /> 
       </head>
-      <body className={`${inter.variable} ${roboto.variable} ${chivo_mono.variable} font-sans`}>
+      <body className={`${inter.variable} ${roboto.variable} ${chivo_mono.variable} font-sans h-full`}>
         <Providers>
           <AppFrame>
-            {(frameHeight) => (
-              <main style={{ height: frameHeight }}>
-                {children}
-              </main>
-            )}
+            {children}
           </AppFrame>
           <Toaster />
         </Providers>
