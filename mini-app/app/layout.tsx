@@ -47,7 +47,7 @@ export default function RootLayout({
         <meta property="fc:frame:button:1:action" content="post" />
         <meta property="fc:frame:post_url" content={postUrl} /> 
       </head>
-      <body className={`${inter.variable} ${roboto.variable} ${chivo_mono.variable} font-sans bg-black`}>
+      <body className={`${inter.variable} ${roboto.variable} ${chivo_mono.variable} font-sans bg-black h-[100dvh]`}>
         <Providers>
           {children}
           <Toaster />
