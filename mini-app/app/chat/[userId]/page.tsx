@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { ChevronLeftIcon, PaperAirplaneIcon, XMarkIcon } from '@heroicons/react/24/solid';
 import Link from 'next/link';
-import { useSession } from 'next-auth/react';
+import { useAccount } from 'wagmi';
 import { useParams } from 'next/navigation';
 import { User as PrismaUser, Message as PrismaMessage } from '@prisma/client';
 import CustomAvatar from "@/app/components/CustomAvatar";
@@ -12,11 +12,11 @@ import { messageEscrowABI, messageEscrowAddress, usdcContractAddress } from '@/l
 import { parseUnits, bytesToHex, formatUnits } from 'viem';
 import { erc20Abi } from 'viem';
 
-
+// We need to use the Prisma-generated User type, but add optional fields
+// that might not be present on every user object we handle.
 type User = PrismaUser & {
   standardCost?: number | null;
   premiumCost?: number | null;
-  tags?: string[];
 };
 
 interface MessageWithSender extends PrismaMessage {
@@ -26,33 +26,33 @@ interface MessageWithSender extends PrismaMessage {
 interface Conversation {
   id: string;
   messages: MessageWithSender[];
-  messagesRemaining: number;
   participants: User[];
 }
 
 const PaymentModal = ({ user, onSelect, onClose, isProcessing }: { user: User | null; onSelect: (amount: number) => void; onClose: () => void; isProcessing: boolean; }) => {
-    const standardCost = user?.standardCost || 1;
-    const premiumCost = user?.premiumCost || 5;
+    // Default values if not provided by the user profile
+    const standardCost = user?.standardCost ? Number(user.standardCost) : 1;
+    const premiumCost = user?.premiumCost ? Number(user.premiumCost) : 5;
     
     return (
         <div className="fixed inset-0 bg-black/50 flex justify-center items-end" onClick={onClose}>
             <div className="bg-black text-white w-full rounded-t-2xl p-4" onClick={(e) => e.stopPropagation()}>
                 <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-lg font-bold">Send a message</h2>
+                    <h2 className="text-lg font-bold">Pay to send message</h2>
                     <button onClick={onClose} disabled={isProcessing}><XMarkIcon className="w-6 h-6" /></button>
                 </div>
+                <p className="text-neutral-400 text-sm mb-4">
+                    This user requires a payment to receive messages from new contacts. Your payment is held in escrow and refunded if they don't reply.
+                </p>
                 <div className="space-y-3">
                     <button className="bg-neutral-900 p-4 rounded-lg flex justify-between items-center cursor-pointer w-full disabled:opacity-50 disabled:cursor-not-allowed" onClick={() => onSelect(standardCost)} disabled={isProcessing}>
-                        <span>Standard send</span>
-                        <span className="bg-blue-600 text-white px-3 py-1 rounded-full text-sm font-semibold">${standardCost} USD</span>
+                        <span>Standard send ({user?.refundWindow} day reply window)</span>
+                        <span className="bg-blue-600 text-white px-3 py-1 rounded-full text-sm font-semibold">${standardCost.toFixed(2)}</span>
                     </button>
                      <button className="bg-neutral-900 p-4 rounded-lg flex justify-between items-center cursor-pointer w-full disabled:opacity-50 disabled:cursor-not-allowed" onClick={() => onSelect(premiumCost)} disabled={isProcessing}>
-                        <span>Premium send</span>
-                        <span className="bg-orange-500 text-white px-3 py-1 rounded-full text-sm font-semibold">${premiumCost} USD</span>
+                        <span>Premium send (priority inbox)</span>
+                        <span className="bg-orange-500 text-white px-3 py-1 rounded-full text-sm font-semibold">${premiumCost.toFixed(2)}</span>
                     </button>
-                    <div className="bg-neutral-900 p-4 rounded-lg flex justify-between items-center cursor-pointer" onClick={onClose}>
-                        <span>None</span>
-                    </div>
                 </div>
             </div>
         </div>
@@ -62,21 +62,24 @@ const PaymentModal = ({ user, onSelect, onClose, isProcessing }: { user: User | 
 
 export default function ChatPage() {
   const params = useParams();
-  const userId = params.userId as string;
+  const fid = params.fid as string; // Changed from userId to fid
 
-  const { data: session } = useSession();
-  const loggedInUserId = (session?.user as User)?.id;
+  const { address: selfAddress, isConnected } = useAccount();
 
   const [conversation, setConversation] = useState<Conversation | null>(null);
-  const [otherUser, setOtherUser] = useState<User | null>(null);
+  const [recipientUser, setRecipientUser] = useState<User | null>(null);
   const [message, setMessage] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [sending, setSending] = useState(false);
-  const [optimisticMessageId, setOptimisticMessageId] = useState<string | null>(null);
+  const [isSending, setIsSending] = useState(false);
   
-  // Ref to hold the on-chain message ID generated by the backend
+  // This ref will hold the content of the message that requires payment
+  const pendingMessageContentRef = useRef<string | null>(null);
+  // This ref will hold the on-chain message ID from the backend
   const onChainMessageIdRef = useRef<string | null>(null);
+  // This ref will hold the database message ID for the pending message
+  const dbMessageIdRef = useRef<string | null>(null);
+
 
   const { data: approveHash, writeContract: approve, isPending: isApproving, error: approveError } = useWriteContract();
   const { data: sendMessageHash, writeContract: sendMessage, isPending: isSendingMessage, error: sendMessageError } = useWriteContract();
@@ -93,197 +96,181 @@ export default function ChatPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  const fetchConversation = useCallback(async () => {
+  // Fetches recipient user and conversation history
+  const loadChatData = useCallback(async (recipientFid: string, currentUserAddress?: `0x${string}`) => {
     setIsLoading(true);
     try {
-      const response = await fetch(`/api/conversations/${userId}`);
-      if (!response.ok) {
+      // 1. Get recipient user data (creating them if they don't exist)
+      const userResponse = await fetch(`/api/users/by-fid/${recipientFid}`);
+      if (!userResponse.ok) throw new Error('Failed to fetch recipient user data.');
+      const recipientData: User = await userResponse.json();
+      setRecipientUser(recipientData);
+
+      // We need the current user's data to correctly identify participants
+      if(!currentUserAddress) {
+          setIsLoading(false);
+          return; // Can't fetch conversation without knowing who "me" is
+      }
+      const meResponse = await fetch(`/api/users/me?walletAddress=${currentUserAddress}`);
+      if(!meResponse.ok) throw new Error("Failed to fetch current user data.");
+      const meData: User = await meResponse.json();
+
+
+      // 2. Fetch the conversation between the current user and the recipient
+      const convoResponse = await fetch(`/api/conversations/${recipientData.id}`);
+       if (convoResponse.ok) {
+        const convoData: Conversation = await convoResponse.json();
+
+        // Ensure participants are correctly ordered/identified
+        const fullParticipants = [meData, recipientData];
+        convoData.participants = fullParticipants;
+
+        setConversation(convoData);
+      } else if (convoResponse.status === 404) {
+        // No conversation exists yet, set up a mock one for the UI
+        setConversation({ 
+            id: `new-${recipientData.id}`, 
+            messages: [], 
+            participants: [meData, recipientData] 
+        });
+      } else {
         throw new Error('Failed to fetch conversation');
       }
-      const data: Conversation = await response.json();
-      setConversation(data);
-      const participant = data.participants.find((p) => p.id === userId);
-      setOtherUser(participant || null);
+
     } catch (error) {
       console.error(error);
-      const mockUser = { id: userId, name: "User", username: "user" } as User;
-      setOtherUser(mockUser);
-      // Ensure mock conversation has an ID to prevent key errors
-      setConversation({ id: `mock-${userId}`, messages: [], messagesRemaining: 0, participants: [mockUser] });
+      // Handle error state in UI
     } finally {
       setIsLoading(false);
     }
-  }, [userId]);
+  }, []);
 
   useEffect(() => {
-    if (loggedInUserId && userId) {
-      fetchConversation();
+    if (isConnected && selfAddress && fid) {
+      loadChatData(fid, selfAddress);
     }
-  }, [loggedInUserId, userId, fetchConversation]);
+  }, [isConnected, selfAddress, fid, loadChatData]);
 
   useEffect(() => {
     scrollToBottom();
   }, [conversation?.messages]);
 
-  const handleSendMessage = async (paymentDetails: { amount: number | null, txHash: string } | null = null) => {
-    if (!message.trim() || sending) return;
-
-    if (!conversation?.messagesRemaining && !paymentDetails) {
-        setShowPaymentModal(true);
-        return;
-    }
+  const handleSendMessage = async () => {
+    if (!message.trim() || isSending || !recipientUser) return;
     
-    setSending(true);
-
-    const tempId = `temp-${Date.now()}`;
-    const newMessage: MessageWithSender = {
-      id: tempId,
-      content: message,
-      senderId: loggedInUserId!,
-      conversationId: conversation?.id ?? '',
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      status: 'SENT',
-      amount: paymentDetails?.amount || null,
-      txHash: paymentDetails?.txHash || null,
-      onChainMessageId: null,
-      recipientId: userId,
-      sender: session?.user as User,
-    };
-
-    setConversation(prev => {
-      if (!prev) return null;
-      return {
-        ...prev,
-        messages: [...prev.messages, newMessage]
-      };
-    });
-    
+    setIsSending(true);
+    const content = message;
     setMessage('');
-    setShowPaymentModal(false);
 
     try {
-        const payload = {
-            content: newMessage.content,
-            recipientId: userId,
-            ...paymentDetails
-        };
+      const response = await fetch('/api/messages/send', {
+        method: 'POST',
+        headers: { 
+            'Content-Type': 'application/json',
+            'x-wallet-address': selfAddress as string,
+        },
+        body: JSON.stringify({ 
+            content, 
+            recipientId: recipientUser.id, // Send the internal DB ID
+            txHash: null, // No transaction yet
+            amount: null 
+        })
+      });
 
-        const response = await fetch('/api/messages/send', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
+      const responseData = await response.json();
 
-        const responseData = await response.json();
-
-        if (!response.ok) {
-            if(responseData.paymentRequired) {
-                setShowPaymentModal(true);
-            }
-            throw new Error(responseData.error || 'Failed to send message');
-        }
-        
-        // Update the temporary message with the real one from the server
+      if (response.ok) {
+        // Message sent successfully without payment
         setConversation(prev => {
-          if (!prev) return null;
-          const newMessages = prev.messages.map(m => m.id === tempId ? responseData.newMessage : m)
-          return {
-            ...prev,
-            messages: newMessages,
-            messagesRemaining: responseData.updatedConversation.messagesRemaining
-          };
+            if (!prev) return null;
+            const newMessages = [...prev.messages, responseData.newMessage];
+            return { ...prev, messages: newMessages };
         });
+      } else if (response.status === 402 && responseData.paymentRequired) {
+        // Payment is required, open the modal
+        pendingMessageContentRef.current = content;
+        onChainMessageIdRef.current = responseData.onChainMessageId;
+        dbMessageIdRef.current = responseData.messageId; // Store the db ID
+        setShowPaymentModal(true);
+      } else {
+        throw new Error(responseData.error || 'Failed to send message');
+      }
 
     } catch (error) {
-        const err = error as Error;
-        console.error("Sending message failed:", err);
-        alert(err.message);
-        // Remove the optimistic message on failure
-        setConversation(prev => {
-          if (!prev) return null;
-          return {
-            ...prev,
-            messages: prev.messages.filter(m => m.id !== tempId)
-          };
-        });
+      console.error("Sending message failed:", error);
+      alert((error as Error).message);
+      setMessage(content); // Restore message on failure
     } finally {
-      setSending(false);
+      setIsSending(false);
     }
   };
   
   const handlePaymentSelect = async (amount: number) => {
-    if (!message.trim()) {
-      alert("Please enter a message first.");
+    if (!pendingMessageContentRef.current) {
+      alert("Error: No pending message to pay for.");
       return;
     }
-
-    const content = message;
-    setMessage(''); // Clear input early for better UX
+    
     setShowPaymentModal(false);
+    
+    // Optimistically add the message to the UI
+    const meUser = conversation?.participants.find(p => p.walletAddress?.toLowerCase() === selfAddress?.toLowerCase());
+    if (!meUser) {
+        alert("Could not identify current user in conversation.");
+        return;
+    }
+
+    const optimisticMessage: MessageWithSender = {
+      id: dbMessageIdRef.current!,
+      content: pendingMessageContentRef.current,
+      senderId: meUser.id,
+      conversationId: conversation?.id ?? '',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      status: 'PENDING_PAYMENT',
+      amount: amount,
+      txHash: null,
+      onChainMessageId: onChainMessageIdRef.current,
+      recipientId: recipientUser!.id,
+      sender: meUser,
+    };
+    
+    setConversation(prev => {
+        if (!prev) return null;
+        // Check if message already exists to avoid duplicates on retry
+        if (prev.messages.some(m => m.id === optimisticMessage.id)) {
+            return prev;
+        }
+        return { ...prev, messages: [...prev.messages, optimisticMessage] };
+    });
 
     try {
-        // Step 1: Call backend to initiate payment and get on-chain ID
-        const initiateResponse = await fetch('/api/messages/initiate', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                content,
-                recipientId: userId,
-                amount,
-            }),
-        });
-
-        const initiateData = await initiateResponse.json();
-        if (!initiateResponse.ok) {
-            throw new Error(initiateData.error || 'Failed to initiate payment.');
-        }
-
-        const { onChainMessageId, messageId } = initiateData;
-        onChainMessageIdRef.current = onChainMessageId;
-        
-        // Optimistically add message to UI
-        setOptimisticMessageId(messageId);
-        const newMessage: MessageWithSender = {
-          id: messageId,
-          content: content,
-          senderId: loggedInUserId!,
-          conversationId: conversation?.id ?? '',
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          status: 'PENDING_PAYMENT',
-          amount: amount,
-          txHash: null,
-          onChainMessageId: onChainMessageId,
-          recipientId: userId,
-          sender: session?.user as User,
-        };
-
-        setConversation(prev => {
-          if (!prev) return null;
-          return { ...prev, messages: [...prev.messages, newMessage] };
-        });
-        
-        // Step 2: Start the blockchain transaction flow
-        const amountInWei = parseUnits(amount.toString(), 18);
+        // Start the blockchain transaction flow
+        const amountInWei = parseUnits(amount.toString(), 18); // Assuming 18 decimals for mock USDC
         approve({
           address: usdcContractAddress,
           abi: erc20Abi,
           functionName: 'approve',
           args: [messageEscrowAddress, amountInWei]
         });
-
     } catch (error) {
-        console.error("Payment initiation failed:", error);
+        console.error("Approval failed to start:", error);
         alert((error as Error).message);
-        setMessage(content); // Restore message on failure
+        // Clean up optimistic message on failure
+        setConversation(prev => {
+            if (!prev) return null;
+            return { ...prev, messages: prev.messages.filter(m => m.id !== dbMessageIdRef.current) };
+        });
     }
   };
 
   useEffect(() => {
-    if (isApprovalConfirmed && onChainMessageIdRef.current && otherUser?.walletAddress && approveHash) {
-      const amountForTx = conversation?.messages.find(m => m.id === optimisticMessageId)?.amount;
-      if (amountForTx == null) { // Use == null to check for both null and undefined
+    // Step 2: Approval successful, now send the message on-chain
+    if (isApprovalConfirmed && onChainMessageIdRef.current && recipientUser?.walletAddress && approveHash) {
+      const messageToUpdate = conversation?.messages.find(m => m.id === dbMessageIdRef.current);
+      const amountForTx = messageToUpdate?.amount;
+
+      if (amountForTx == null) {
         console.error("Could not find amount for transaction, aborting sendMessage.");
         return;
       }
@@ -293,72 +280,82 @@ export default function ChatPage() {
         abi: messageEscrowABI,
         functionName: 'sendMessage',
         args: [
-          otherUser.walletAddress as `0x${string}`,
+          recipientUser.walletAddress as `0x${string}`,
           onChainMessageIdRef.current as `0x${string}`,
           parseUnits(amountForTx.toString(), 18),
-          BigInt(3600),
+          BigInt(3600), // TODO: Make refund window dynamic
         ]
       });
     }
-  }, [isApprovalConfirmed, sendMessage, otherUser?.walletAddress, approveHash, conversation, optimisticMessageId]);
+  }, [isApprovalConfirmed, sendMessage, recipientUser?.walletAddress, approveHash, conversation?.messages]);
 
   useEffect(() => {
-    // This effect is now for confirming the payment with the backend
-    if (isMessageConfirmed && sendMessageHash && optimisticMessageId) {
-        fetch('/api/messages/confirm', {
+    // Step 3: On-chain message sent, now confirm with backend
+    if (isMessageConfirmed && sendMessageHash && dbMessageIdRef.current) {
+        fetch('/api/messages/send', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Content-Type': 'application/json',
+                'x-wallet-address': selfAddress as string,
+            },
             body: JSON.stringify({
-                messageId: optimisticMessageId,
+                messageId: dbMessageIdRef.current, // Use the stored DB message ID
                 txHash: sendMessageHash,
             }),
         }).then(async (res) => {
             if (res.ok) {
-                const { updatedMessage } = await res.json();
+                const { newMessage } = await res.json();
+                // Replace the optimistic message with the confirmed one
                 setConversation(prev => {
                     if (!prev) return null;
                     return {
                         ...prev,
-                        messages: prev.messages.map(m => m.id === optimisticMessageId ? updatedMessage : m)
+                        messages: prev.messages.map(m => m.id === dbMessageIdRef.current ? newMessage : m)
                     };
                 });
             } else {
                 const { error } = await res.json();
-                throw new Error(error || 'Failed to confirm payment.');
+                throw new Error(error || 'Failed to confirm transaction with backend.');
             }
         }).catch(error => {
-            console.error("Payment confirmation failed:", error);
-            alert("Your payment was successful on-chain, but we failed to confirm it in our system. Please contact support.");
+            console.error("Backend confirmation failed:", error);
+            alert("Your payment was successful on-chain, but we failed to update it in our system. Please contact support.");
         }).finally(() => {
-            setOptimisticMessageId(null);
+            // Clear refs for the next transaction
+            dbMessageIdRef.current = null;
             onChainMessageIdRef.current = null;
+            pendingMessageContentRef.current = null;
         });
     }
-  }, [isMessageConfirmed, sendMessageHash, optimisticMessageId]);
+  }, [isMessageConfirmed, sendMessageHash]);
 
   useEffect(() => {
+    // Handle any transaction errors
     const transactionFailed = approveError || sendMessageError || (sendMessageHash && isMessageError);
-
     if (transactionFailed) {
       alert(`Transaction failed: ${approveError?.message || sendMessageError?.message || 'The message transaction failed.'}`);
       
-      if (optimisticMessageId) {
-        // Optionally, you could call an API to delete the pending message from the DB
+      if (dbMessageIdRef.current) {
+        // Remove the optimistic message that failed
         setConversation(prev => {
           if (!prev) return null;
-          return { ...prev, messages: prev.messages.filter(m => m.id !== optimisticMessageId) };
+          return { ...prev, messages: prev.messages.filter(m => m.id !== dbMessageIdRef.current) };
         });
       }
       
+      // Reset state
       onChainMessageIdRef.current = null;
-      setOptimisticMessageId(null);
+      dbMessageIdRef.current = null;
+      pendingMessageContentRef.current = null;
     }
-  }, [approveError, sendMessageError, isMessageError, optimisticMessageId, sendMessageHash]);
+  }, [approveError, sendMessageError, isMessageError, sendMessageHash]);
 
 
   if (isLoading) {
     return <div className="flex h-screen items-center justify-center">Loading conversation...</div>;
   }
+  
+  const meUser = conversation?.participants.find(p => p.walletAddress?.toLowerCase() === selfAddress?.toLowerCase());
 
   return (
     <div className="flex flex-col h-screen bg-gray-100 font-sans">
@@ -367,12 +364,12 @@ export default function ChatPage() {
             <Link href="/" className="mr-2 p-2">
               <ChevronLeftIcon className="w-6 h-6 text-gray-700" />
             </Link>
-            {otherUser && (
+            {recipientUser && (
                 <>
-                    <CustomAvatar profile={otherUser} className="w-10 h-10 rounded-full mr-3" />
+                    <CustomAvatar profile={recipientUser} className="w-10 h-10 rounded-full mr-3" />
                     <div>
-                        <p className="font-bold text-gray-900">{otherUser.name}</p>
-                        <p className="text-sm text-gray-500">@{otherUser.username}</p>
+                        <p className="font-bold text-gray-900">{recipientUser.name}</p>
+                        <p className="text-sm text-gray-500">@{recipientUser.username}</p>
                     </div>
                 </>
             )}
@@ -381,8 +378,8 @@ export default function ChatPage() {
 
       <main className="flex-1 overflow-y-auto p-4 space-y-4 pt-20">
         {conversation?.messages.map((msg) => {
-          const isSender = msg.senderId === loggedInUserId;
-          const senderProfile = conversation.participants.find((p) => p.id === msg.senderId);
+          const isSender = msg.senderId === meUser?.id;
+          const senderProfile = isSender ? meUser : recipientUser;
 
           return (
             <div key={msg.id} className={`flex items-end gap-2 ${isSender ? 'justify-end' : 'justify-start'}`}>
@@ -401,7 +398,7 @@ export default function ChatPage() {
                             <div /> 
                         )}
                         <span className="text-xs font-bold text-white bg-orange-500 px-2 py-1 rounded-full">
-                            +${msg.amount} USD
+                            +${formatUnits(BigInt(msg.amount), 18)} USD
                         </span>
                     </div>
                 )}
@@ -421,15 +418,21 @@ export default function ChatPage() {
               onChange={(e) => setMessage(e.target.value)}
               placeholder="Message"
               className="flex-1 w-full px-4 py-2 bg-gray-100 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500"
-              disabled={sending}
+              disabled={isSending}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleSendMessage();
+                }
+              }}
             />
-            <button onClick={() => handleSendMessage()} className="ml-3 p-2 bg-blue-500 rounded-full text-white" disabled={sending}>
+            <button onClick={handleSendMessage} className="ml-3 p-2 bg-blue-500 rounded-full text-white" disabled={isSending}>
                 <PaperAirplaneIcon className="w-6 h-6" />
             </button>
         </div>
       </footer>
       
-      {showPaymentModal && <PaymentModal user={otherUser} onSelect={handlePaymentSelect} onClose={() => setShowPaymentModal(false)} isProcessing={isApproving || isConfirmingApproval || isSendingMessage || isConfirmingMessage} />}
+      {showPaymentModal && <PaymentModal user={recipientUser} onSelect={handlePaymentSelect} onClose={() => setShowPaymentModal(false)} isProcessing={isApproving || isConfirmingApproval || isSendingMessage || isConfirmingMessage} />}
       
       {(isApproving || isSendingMessage || isConfirmingApproval || isConfirmingMessage) && (
         <div className="fixed inset-0 bg-black/60 flex flex-col items-center justify-center z-50">

@@ -1,165 +1,166 @@
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { ethers } from "ethers";
-import { messageEscrowABI, messageEscrowAddress } from "@/lib/contract";
+import { randomBytes } from 'crypto';
+import { getFrameMessage } from "frames.js";
+import { NextRequest } from "next/server";
+import { getFarcasterUser } from "@/app/api/auth/[...nextauth]/options";
+import { NeynarAPIClient } from "@neynar/nodejs-sdk";
+import {
+  messageEscrowABI,
+  messageEscrowAddress,
+} from "@/lib/contract";
+import { createPublicClient, http, createWalletClient } from "viem";
+import { privateKeyToAccount } from "viem/accounts";
+import { baseSepolia } from "viem/chains";
 
-export async function POST(req: Request) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+const neynarClient = new NeynarAPIClient(process.env.NEYNAR_API_KEY as string);
+
+async function getSender(req: NextRequest) {
+  const body = await req.json();
+
+  if (body.untrustedData) {
+    // Frame request
+    const frameMessage = await getFrameMessage(body);
+    const fid = frameMessage.requesterFid;
+    const farcasterUser = (await neynarClient.fetchBulkUsers([fid])).users[0];
+    const walletAddress = farcasterUser.custody_address;
+    return await getFarcasterUser(walletAddress);
+  } else {
+    // Regular API request
+    const { walletAddress } = body;
+    return await getFarcasterUser(walletAddress);
   }
-  const senderId = session.user.id;
+}
 
+// Function to get or create a conversation between two users
+async function getOrCreateConversation(userId1: string, userId2: string) {
+  let conversation = await prisma.conversation.findFirst({
+    where: {
+      AND: [
+        { participants: { some: { id: userId1 } } },
+        { participants: { some: { id: userId2 } } },
+      ],
+    },
+  });
+
+  if (!conversation) {
+    conversation = await prisma.conversation.create({
+      data: {
+        participants: {
+          connect: [{ id: userId1 }, { id: userId2 }],
+        },
+        messagesRemaining: 0, // Start with 0, require payment to add more
+      },
+    });
+  }
+
+  return conversation;
+}
+
+export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { 
-      content, 
-      recipientWalletAddress, 
-      recipientUsername,
-      recipientPfpUrl,
-      recipientFid,
-      amount, 
-      txHash, 
-      onChainMessageId 
+    const {
+      content,
+      recipientId,
+      amount,
+      txHash,
+      messageId, // This will be present when confirming a transaction
     } = body;
+    const walletAddress = req.headers.get("x-wallet-address");
+    
+    // Use wallet address from header to get sender, ensuring backend identifies the user
+    if (!walletAddress) {
+        return NextResponse.json({ error: "Missing x-wallet-address header" }, { status: 401 });
+    }
+    const sender = await getFarcasterUser(walletAddress);
 
-    if (!content || !recipientWalletAddress) {
+    if (!sender) {
+      return NextResponse.json({ error: "Sender not found" }, { status: 401 });
+    }
+
+    // --- Transaction Confirmation Logic ---
+    if (messageId && txHash) {
+      const existingMessage = await prisma.message.findUnique({
+        where: { id: messageId },
+        include: { conversation: true },
+      });
+
+      if (!existingMessage || existingMessage.senderId !== sender.id) {
+        return NextResponse.json({ error: "Message not found or unauthorized" }, { status: 404 });
+      }
+
+      const updatedMessage = await prisma.message.update({
+        where: { id: messageId },
+        data: {
+          status: "SENT",
+          txHash: txHash,
+        },
+        include: { sender: true },
+      });
+
+      // Grant message bundle on successful payment
+      await prisma.conversation.update({
+          where: { id: existingMessage.conversationId },
+          data: { messagesRemaining: 10 }
+      });
+
+      return NextResponse.json({ newMessage: updatedMessage }, { status: 201 });
+    }
+    // --- End Transaction Confirmation Logic ---
+
+    if (!content || !recipientId) {
       return NextResponse.json(
-        { error: "Missing required fields: content, recipientWalletAddress" },
+        { error: "Missing required fields: content, recipientId" },
         { status: 400 }
       );
     }
+    
+    const conversation = await getOrCreateConversation(sender.id, recipientId);
 
-    // --- Find or Create Recipient User ---
-    let recipient = await prisma.user.findUnique({
-      where: { walletAddress: recipientWalletAddress },
-    });
+    // --- Payment Required Logic ---
+    if (conversation.messagesRemaining <= 0) {
+        // Generate a unique ID for the on-chain message
+        const onChainMessageId = `0x${randomBytes(32).toString("hex")}`;
+        
+        // Create the message in a pending state
+        const pendingMessage = await prisma.message.create({
+            data: {
+                content,
+                senderId: sender.id,
+                recipientId,
+                conversationId: conversation.id,
+                status: 'PENDING_PAYMENT',
+                amount: amount, // Amount will be passed in the next step
+                onChainMessageId: onChainMessageId,
+            }
+        });
 
-    if (!recipient) {
-      // User does not exist, create a placeholder profile for them.
-      recipient = await prisma.user.create({
-        data: {
-          walletAddress: recipientWalletAddress,
-          name: recipientUsername, // Use Farcaster username as initial name
-          username: recipientUsername,
-          image: recipientPfpUrl, // Use Farcaster pfp as initial image
-          fid: recipientFid ? recipientFid.toString() : null,
-          // Add default values for any other required fields
-        },
-      });
-    }
-    const recipientId = recipient.id;
-    // --- End of Find or Create ---
-
-
-    // Find or create a conversation
-    let conversation = await prisma.conversation.findFirst({
-      where: {
-        participants: {
-          every: { id: { in: [senderId, recipientId] } },
-        },
-      },
-    });
-
-    // Check if payment is required
-    if (!conversation || conversation.messagesRemaining <= 0) {
-      if (amount === undefined || !txHash) {
+        // Return a 402 response indicating payment is required
         return NextResponse.json(
-          { 
-            error: "Payment is required to start or continue this conversation.",
-            paymentRequired: true 
-          },
-          { status: 402 } // Payment Required
-        );
-      }
-
-      // Payment is provided, create/reset the conversation
-      if (!conversation) {
-        conversation = await prisma.conversation.create({
-          data: {
-            participants: {
-              connect: [{ id: senderId }, { id: recipientId }],
+            {
+              error: "Payment is required to start this conversation.",
+              paymentRequired: true,
+              onChainMessageId: onChainMessageId,
+              messageId: pendingMessage.id, // Send back the db message ID
             },
-            messagesRemaining: 10, // Start with a fresh bundle
-          },
-        });
-      } else {
-        // Reset the message count for an existing conversation
-        conversation = await prisma.conversation.update({
-          where: { id: conversation.id },
-          data: { messagesRemaining: 10 },
-        });
-      }
+            { status: 402 } // Payment Required
+        );
     }
+    // --- End Payment Required Logic ---
 
-    // At this point, we have a valid conversation with messages remaining.
-    // We use a transaction to ensure all database operations succeed or neither do.
+
+    // --- Standard Message Sending Logic ---
     const result = await prisma.$transaction(async (tx) => {
-      
-      // Check if this is the first reply to a paid message
-      const originalMessage = await tx.message.findFirst({
-        where: {
-            conversationId: conversation.id,
-            amount: { not: null } // Find the message that started the bundle
-        },
-        orderBy: {
-            createdAt: 'asc'
-        }
-      });
-
-      // Security Check: If this is a reply, see if it's for a paid message that can be claimed.
-      // We check if an original paid message exists in this conversation that hasn't been replied to yet.
-      if (originalMessage && originalMessage.status === 'SENT' && originalMessage.recipientId === senderId) {
-          
-          // The current user is the recipient of the original paid message. They are authorized to claim the funds.
-          // Call the smart contract to release funds.
-          try {
-            const baseSepoliaRpcUrl = process.env.BASE_SEPOLIA_RPC_URL;
-            if (!baseSepoliaRpcUrl) {
-              throw new Error("Environment variable BASE_SEPOLIA_RPC_URL is not set.");
-            }
-            const provider = new ethers.JsonRpcProvider(baseSepoliaRpcUrl);
-            const deployerPrivateKey = process.env.DEPLOYER_PRIVATE_KEY;
-            if (!deployerPrivateKey) {
-                throw new Error("DEPLOYER_PRIVATE_KEY environment variable is not set.");
-            }
-            const wallet = new ethers.Wallet(deployerPrivateKey, provider);
-            const messageEscrow = new ethers.Contract(messageEscrowAddress, messageEscrowABI, wallet);
-            
-            const onChainIdFromDb = originalMessage.onChainMessageId;
-            if(!onChainIdFromDb) {
-                throw new Error("Cannot release funds, original on-chain messageId is missing.");
-            }
-
-            console.log(`Releasing funds for on-chain messageId: ${onChainIdFromDb}`);
-            const releaseTx = await messageEscrow.releaseFunds(onChainIdFromDb);
-            await releaseTx.wait();
-            console.log("Funds released successfully. Tx:", releaseTx.hash);
-
-          } catch (contractError) {
-              console.error("Smart contract call failed:", contractError);
-              // If the contract call fails, we should not proceed with the DB transaction.
-              throw new Error("Failed to release funds from smart contract.");
-          }
-
-          await tx.message.update({
-              where: { id: originalMessage.id },
-              data: { status: 'REPLIED' }
-          });
-      }
-
       const newMessage = await tx.message.create({
         data: {
           content,
-          amount: conversation.messagesRemaining === 10 ? amount : null, // only set amount on first message of bundle
-          txHash: conversation.messagesRemaining === 10 ? txHash : null,
-          onChainMessageId: conversation.messagesRemaining === 10 ? onChainMessageId : null,
-          senderId,
+          senderId: sender.id,
           recipientId,
           conversationId: conversation.id,
+          status: 'SENT',
         },
+        include: { sender: true }
       });
 
       const updatedConversation = await tx.conversation.update({

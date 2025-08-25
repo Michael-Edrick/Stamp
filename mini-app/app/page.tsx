@@ -30,16 +30,9 @@ interface ConversationWithDetails extends PrismaConversation {
 
 
 const UserCard = ({ user }: { user: NeynarUser }) => {
-  // Construct the query parameters for the new message URL
-  const newMessageHref = {
-    pathname: '/new-message',
-    query: { 
-      recipient: user.custody_address, // Use custody_address as the wallet address
-      name: user.display_name,
-      pfpUrl: user.pfp_url,
-      fid: user.fid
-    },
-  };
+  // The link now directly goes to the chat page using the user's Farcaster ID (fid).
+  // This works for both existing and new conversations.
+  const href = `/chat/${user.fid}`;
 
   return (
     <div className="bg-white rounded-2xl p-3 flex items-center justify-between shadow-sm border border-gray-200">
@@ -60,7 +53,7 @@ const UserCard = ({ user }: { user: NeynarUser }) => {
       </div>
       {/* Only render the link if we have a valid address to send to */}
       {user.custody_address && (
-        <Link href={newMessageHref} onClick={(e) => e.stopPropagation()}>
+        <Link href={href} onClick={(e) => e.stopPropagation()}>
           <PaperAirplaneIcon className="w-6 h-6 text-blue-500 -rotate-45 cursor-pointer hover:scale-110 transition-transform" />
         </Link>
       )}

@@ -9,30 +9,33 @@ The goal is to build a "pay-per-bundle" messaging application, deployed as a Far
 1.  **Farcaster Authentication:** The standard "Connect Wallet" flow is not ideal for Mini Apps. We need a seamless auto-sign-in experience for users coming from Farcaster clients like Warpcast. This involves handling and validating a signed payload from the client.
 2.  **User Discovery:** To make the app useful, users need to be able to find and message others. The best-in-class experience is to let them search and message people they already follow on Farcaster.
 3.  **Manifest Configuration:** Farcaster requires a manifest file (`.well-known/farcaster.json`) that includes a developer "Account Association" signature to prove ownership of the domain. This required using Farcaster's developer tools to generate a signature.
-4.  **Messaging Unregistered Users (Future Task):** A key challenge identified is how to handle a user trying to message someone from their Farcaster following list who has not yet registered on our app. The best solution ("Ghost Profile" approach) is to create a placeholder user record on-the-fly. This will be addressed in a future session.
+4.  **Messaging Unregistered Users:** A key challenge is handling a user trying to message someone from their Farcaster following list who has not yet used our app. The system must create a "placeholder" user profile on-the-fly, which the recipient can seamlessly claim upon their first visit.
 
 ## High-level Task Breakdown
 
-All major tasks for this phase are now complete.
-
-1.  **Implement Farcaster Auto-Sign-In:** Create a seamless login experience for users opening the app from a Farcaster client.
-2.  **Finish the Search Modal:** Allow users to search and message people from their Farcaster following list.
-3.  **Deploy to Farcaster:** Deploy the application and configure its manifest to be a fully functional Mini App.
+1.  **Refactor Homepage:** Redesign the homepage to show previews of recent chats and the user's Farcaster following list, similar to the Base app.
+2.  **Implement Just-in-Time User Creation:** Modify the messaging flow to allow users to send messages to any Farcaster user, even if they haven't registered on the app yet. This involves creating placeholder profiles for new recipients.
 
 ## Project Status Board
 
-- [x] **Task 1: Implement Farcaster Auto-Sign-In** `completed`
-- [x] **Task 2: Finish the Search Modal** `completed`
-- [x] **Task 3: Deploy to Farcaster** `completed`
+- [x] **Task: Refactor Homepage** `completed`
+  - [x] Fetch and display inbox preview
+  - [x] Fetch and display Farcaster following list
+- [ ] **Task: Implement Just-in-Time User Creation** `in_progress`
+  - [ ] Modify `POST /api/messages/send` to accept a `recipientWalletAddress`.
+  - [ ] Implement "find or create" logic for the recipient user in the backend.
+  - [ ] Modify the new-message UI to send `recipientWalletAddress` instead of an internal ID.
 
 ### Completed
 - [x] **Initial Setup & Core Chat**
 - [x] **Smart Contract Payment Integration**
 - [x] **Fixing Various UI/UX & Database Bugs**
+- [x] **Implement Farcaster Auto-Sign-In**
+- [x] **Deploy to Farcaster**
 
 ## Executor's Feedback or Assistance Requests
 
-All planned tasks are complete. Awaiting new instructions for the next set of fixes or features.
+Ready to begin implementation of the "Just-in-Time User Creation" feature. Starting with the backend `send` endpoint modification.
 
 ## Lessons
 
