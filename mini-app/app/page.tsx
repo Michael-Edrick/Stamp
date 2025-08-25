@@ -236,7 +236,7 @@ export default function HomePage() {
   };
 
   return (
-    <div className="h-full bg-blue-500 font-sans flex flex-col">
+    <div className="h-full bg-[#F0F2F5] font-sans flex flex-col">
        <header className="w-full max-w-md mx-auto flex justify-between items-center p-4 bg-[#F0F2F5]">
           <h1 className="text-xl font-bold text-gray-900">StampMe</h1>
           <div>

@@ -48,14 +48,12 @@ export default function RootLayout({
         <meta property="fc:frame:button:1:action" content="post" />
         <meta property="fc:frame:post_url" content={postUrl} /> 
       </head>
-      <body className={`${inter.variable} ${roboto.variable} ${chivo_mono.variable} font-sans h-full`} style={{ backgroundColor: 'yellow' }}>
+      <body className={`${inter.variable} ${roboto.variable} ${chivo_mono.variable} font-sans h-full`}>
         <Providers>
           <AppFrame>
             {children}
           </AppFrame>
-          <div style={{ backgroundColor: 'purple' }}>
-            <Toaster />
-          </div>
+          <Toaster />
         </Providers>
       </body>
     </html>
