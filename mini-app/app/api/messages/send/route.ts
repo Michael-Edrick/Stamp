@@ -1,36 +1,8 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { randomBytes } from 'crypto';
-import { getFrameMessage } from "frames.js";
 import { NextRequest } from "next/server";
 import { getFarcasterUser } from "@/app/api/auth/[...nextauth]/options";
-import { NeynarAPIClient } from "@neynar/nodejs-sdk";
-import {
-  messageEscrowABI,
-  messageEscrowAddress,
-} from "@/lib/contract";
-import { createPublicClient, http, createWalletClient } from "viem";
-import { privateKeyToAccount } from "viem/accounts";
-import { baseSepolia } from "viem/chains";
-
-const neynarClient = new NeynarAPIClient(process.env.NEYNAR_API_KEY as string);
-
-async function getSender(req: NextRequest) {
-  const body = await req.json();
-
-  if (body.untrustedData) {
-    // Frame request
-    const frameMessage = await getFrameMessage(body);
-    const fid = frameMessage.requesterFid;
-    const farcasterUser = (await neynarClient.fetchBulkUsers([fid])).users[0];
-    const walletAddress = farcasterUser.custody_address;
-    return await getFarcasterUser(walletAddress);
-  } else {
-    // Regular API request
-    const { walletAddress } = body;
-    return await getFarcasterUser(walletAddress);
-  }
-}
 
 // Function to get or create a conversation between two users
 async function getOrCreateConversation(userId1: string, userId2: string) {
