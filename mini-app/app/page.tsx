@@ -236,7 +236,7 @@ export default function HomePage() {
   };
 
   return (
-    <div className="h-full bg-[#F0F2F5] font-sans flex flex-col">
+    <div className="h-full bg-red-500 font-sans flex flex-col">
        <header className="w-full max-w-md mx-auto flex justify-between items-center p-4 bg-[#F0F2F5]">
           <h1 className="text-xl font-bold text-gray-900">StampMe</h1>
           <div>
@@ -247,7 +247,6 @@ export default function HomePage() {
         {renderContent()}
       </main>
        <BottomNav 
-        className="mt-auto"
         isClient={isClient}
         onSearchClick={() => setIsSearchModalOpen(true)}
        />
@@ -256,7 +255,7 @@ export default function HomePage() {
   );
 }
 
-const BottomNav = ({ isClient, onSearchClick, className }: { isClient: boolean, onSearchClick: () => void, className?: string }) => {
+const BottomNav = ({ isClient, onSearchClick }: { isClient: boolean, onSearchClick: () => void }) => {
     const { address } = useAccount();
     const [currentUser, setCurrentUser] = useState<Profile | null>(null);
 
@@ -286,7 +285,7 @@ const BottomNav = ({ isClient, onSearchClick, className }: { isClient: boolean, 
     const navButtonBase = "w-12 h-12 rounded-full flex items-center justify-center transition-transform duration-200 hover:scale-110";
 
     return (
-        <footer className={`w-full flex justify-center items-center p-4 bg-[#F0F2F5] ${className}`}>
+        <footer className="w-full flex justify-center items-center p-4 bg-blue-500">
             <div className="flex items-center justify-center gap-x-4 bg-black rounded-full shadow-lg p-3">
                 <button className={`${navButtonBase} bg-neutral-800`} onClick={onSearchClick}>
                     <MagnifyingGlassIcon className="w-7 h-7 text-white"/>
