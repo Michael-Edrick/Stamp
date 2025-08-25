@@ -236,16 +236,16 @@ export default function HomePage() {
   };
 
   return (
-    <div className="h-full font-sans">
-       <header className="fixed top-0 left-0 right-0 z-10 w-full max-w-md mx-auto flex justify-between items-center p-4 bg-[#F0F2F5]">
+    <div className="h-full font-sans flex flex-col">
+       <header className="w-full max-w-md mx-auto flex justify-between items-center p-4 bg-[#F0F2F5]">
           <h1 className="text-xl font-bold text-gray-900">StampMe</h1>
           <div>
               {isClient && <ConnectWallet />}
           </div>
       </header>
-      <div className="w-full max-w-md mx-auto pt-20 pb-24 px-4">
+      <main className="w-full max-w-md mx-auto px-4 flex-1 overflow-y-auto">
         {renderContent()}
-      </div>
+      </main>
        <BottomNav 
         isClient={isClient}
         onSearchClick={() => setIsSearchModalOpen(true)}
@@ -285,7 +285,7 @@ const BottomNav = ({ isClient, onSearchClick }: { isClient: boolean, onSearchCli
     const navButtonBase = "w-12 h-12 rounded-full flex items-center justify-center transition-transform duration-200 hover:scale-110";
 
     return (
-        <div className="fixed bottom-6 left-0 right-0 w-full flex justify-center items-center">
+        <footer className="w-full flex justify-center items-center p-4 bg-[#F0F2F5]">
             <div className="flex items-center justify-center gap-x-4 bg-black rounded-full shadow-lg p-3">
                 <button className={`${navButtonBase} bg-neutral-800`} onClick={onSearchClick}>
                     <MagnifyingGlassIcon className="w-7 h-7 text-white"/>
@@ -308,6 +308,6 @@ const BottomNav = ({ isClient, onSearchClick }: { isClient: boolean, onSearchCli
                   )}
                 </Link>
             </div>
-        </div>
+        </footer>
     );
 };
