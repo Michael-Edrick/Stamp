@@ -10,10 +10,18 @@ export default function AppFrame({
 }) {
   const { context } = useMiniKit();
   const safeAreaInsets = context?.client?.safeAreaInsets;
-  const top = safeAreaInsets?.top ?? 0;
-  const bottom = safeAreaInsets?.bottom ?? 0;
-  // We subtract an additional pixel to prevent scrollbars from appearing unnecessarily on some devices.
-  const frameHeight = `calc(100vh - ${top}px - ${bottom}px - 1px)`;
+
+  // Do not render the children until the safeAreaInsets are available and non-zero.
+  // This prevents the layout from rendering with the incorrect initial height (100vh)
+  // before the host app has provided the correct dimensions.
+  if (!safeAreaInsets || (safeAreaInsets.top === 0 && safeAreaInsets.bottom === 0)) {
+    // Returning null is the cleanest way to prevent the broken layout from flashing.
+    return null; 
+  }
+
+  const top = safeAreaInsets.top;
+  const bottom = safeAreaInsets.bottom;
+  const frameHeight = `calc(100vh - ${top}px - ${bottom}px)`;
 
   return (
     <main style={{ height: frameHeight }}>
