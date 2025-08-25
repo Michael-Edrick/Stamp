@@ -15,7 +15,7 @@ const neynarClient = new NeynarAPIClient({ apiKey: process.env.NEYNAR_API_KEY })
 // and returns the new profile.
 export async function GET(
   request: NextRequest,
-  { params }: { params: { fid: string } }
+  { params }
 ) {
   const fid = parseInt(params.fid, 10);
 
