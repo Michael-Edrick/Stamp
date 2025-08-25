@@ -24,10 +24,12 @@ html, body {
 
 body {
   color: var(--foreground);
+  background: var(--background);
   font-family: "Geist", sans-serif;
   font-optical-sizing: auto;
   font-weight: 400;
   font-style: normal;
+  font-size: 80%;
 }
 
 /* Optional: prevent scrolling entirely if your app is single screen */

@@ -6,7 +6,7 @@ import React from "react";
 export default function AppFrame({
   children,
 }: {
-  children: React.ReactNode;
+  children: (height: string) => React.ReactNode;
 }) {
   const { context } = useMiniKit();
   const safeAreaInsets = context?.client?.safeAreaInsets;
@@ -14,9 +14,5 @@ export default function AppFrame({
   const bottom = safeAreaInsets?.bottom ?? 0;
   const frameHeight = `calc(100vh - ${top}px - ${bottom}px)`;
 
-  return (
-    <main style={{ height: frameHeight }}>
-      {children}
-    </main>
-  );
+  return <>{children(frameHeight)}</>;
 }

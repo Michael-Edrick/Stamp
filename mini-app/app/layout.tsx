@@ -51,7 +51,11 @@ export default function RootLayout({
       <body className={`${inter.variable} ${roboto.variable} ${chivo_mono.variable} font-sans`}>
         <Providers>
           <AppFrame>
-            {children}
+            {(frameHeight) => (
+              <main style={{ height: frameHeight }}>
+                {children}
+              </main>
+            )}
           </AppFrame>
           <Toaster />
         </Providers>
