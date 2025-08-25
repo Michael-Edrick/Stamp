@@ -12,7 +12,7 @@ const queryClient = new QueryClient();
 
 export function Providers(props: { children: ReactNode }) {
   return (
-    <div className="h-full">
+    <div className="h-full" style={{ backgroundColor: 'red' }}>
       <WagmiProvider config={config}>
         <QueryClientProvider client={queryClient}>
           <SessionProvider>
