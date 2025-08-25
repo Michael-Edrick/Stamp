@@ -58,10 +58,10 @@ export async function GET(request: NextRequest) {
         walletAddress: walletAddress.toLowerCase(), // Use the found wallet address
         // Add default values for other required fields
         email: null,
-        price: "0.01",
-        refundWindow: "1",
-        standardCost: "0.005",
-        premiumCost: "0.05",
+        price: 0.01,
+        refundWindow: 1,
+        standardCost: 0.005,
+        premiumCost: 0.05,
       },
     });
 
