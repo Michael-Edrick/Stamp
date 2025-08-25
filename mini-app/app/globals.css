@@ -15,24 +15,26 @@
 }
 
 html, body {
-  height: 100dvh; /* ensures it uses the dynamic viewport height */
   margin: 0;
   padding: 0;
   background: var(--background);
   overscroll-behavior: none; /* stops the bounce effect that shows black gaps */
+  height: 100%;
 }
 
 body {
+  min-height: 100dvh; /* ensures full viewport height */
   color: var(--foreground);
   font-family: "Geist", sans-serif;
   font-optical-sizing: auto;
   font-weight: 400;
   font-style: normal;
   font-size: 80%;
-  padding-bottom: env(safe-area-inset-bottom); /* handle iOS safe area */
+  /* don’t use padding-bottom for safe area, instead use env inset via a spacer */
 }
 
-/* Optional: prevent scrolling entirely if your app is single screen */
 #root, #__next {
   height: 100%;
+  display: flex;
+  flex-direction: column;
 }

@@ -49,7 +49,7 @@ export default function RootLayout({
       </head>
       <body className={`${inter.variable} ${roboto.variable} ${chivo_mono.variable} font-sans bg-black h-full`}>
         <Providers>
-          <main className="h-[100dvh] bg-[#F0F2F5]">
+          <main className="min-h-screen flex flex-col bg-[#F0F2F5]">
             {children}
           </main>
           <Toaster />
