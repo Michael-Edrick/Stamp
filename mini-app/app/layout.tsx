@@ -4,6 +4,7 @@ import "./theme.css";
 import "@coinbase/onchainkit/styles.css";
 import { Providers } from "./providers";
 import { Toaster } from 'sonner';
+import AppFrame from "./AppFrame";
 
 const inter = Inter({ 
   subsets: ["latin"],
@@ -33,7 +34,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className="h-full">
+    <html lang="en">
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -47,11 +48,11 @@ export default function RootLayout({
         <meta property="fc:frame:button:1:action" content="post" />
         <meta property="fc:frame:post_url" content={postUrl} /> 
       </head>
-      <body className={`${inter.variable} ${roboto.variable} ${chivo_mono.variable} font-sans bg-black h-full`}>
+      <body className={`${inter.variable} ${roboto.variable} ${chivo_mono.variable} font-sans`}>
         <Providers>
-          <main className="h-[100dvh] bg-[#F0F2F5]">
+          <AppFrame>
             {children}
-          </main>
+          </AppFrame>
           <Toaster />
         </Providers>
       </body>

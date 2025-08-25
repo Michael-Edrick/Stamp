@@ -358,7 +358,7 @@ export default function ChatPage() {
   const meUser = conversation?.participants.find(p => p.walletAddress?.toLowerCase() === selfAddress?.toLowerCase());
 
   return (
-    <div className="flex flex-col font-sans h-full">
+    <div className="flex flex-col bg-gray-100 font-sans h-full">
       <header className="p-3 bg-transparent">
         <div className="bg-white p-2 rounded-full shadow-md flex items-center">
             <Link href="/" className="mr-2 p-2">

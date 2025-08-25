@@ -1,48 +1,49 @@
-# StampMe - A Farcaster "Pay-per-Bundle" Messaging App
+# StampMe - Mini-App Layout Refactor
 
 ## Background and Motivation
 
-The goal is to build a "pay-per-bundle" messaging application, deployed as a Farcaster mini-app. Users can buy message bundles to contact other users, with payments handled by a real smart contract on the Base Sepolia testnet. We've completed the initial setup, core chat functionality, smart contract integration, and Farcaster Mini App deployment.
+The application currently suffers from a critical layout bug when run as a Farcaster mini-app. A large, empty gap appears at the bottom of the screen, especially when scrolling or interacting with the page. This issue does not occur in a standard web browser. The root cause is a combination of using standard CSS viewport units (`vh`) which are unreliable in the Farcaster webview environment, and using `position: fixed` for the header and footer, which breaks the page's layout flow.
+
+This plan outlines the steps to refactor the application's layout to be robust and correctly sized within the Farcaster mini-app environment, ensuring a clean and professional user experience.
 
 ## Key Challenges and Analysis
 
-1.  **Farcaster Authentication:** The standard "Connect Wallet" flow is not ideal for Mini Apps. We need a seamless auto-sign-in experience for users coming from Farcaster clients like Warpcast. This involves handling and validating a signed payload from the client.
-2.  **User Discovery:** To make the app useful, users need to be able to find and message others. The best-in-class experience is to let them search and message people they already follow on Farcaster.
-3.  **Manifest Configuration:** Farcaster requires a manifest file (`.well-known/farcaster.json`) that includes a developer "Account Association" signature to prove ownership of the domain. This required using Farcaster's developer tools to generate a signature.
-4.  **Messaging Unregistered Users:** A key challenge is handling a user trying to message someone from their Farcaster following list who has not yet used our app. The system must create a "placeholder" user profile on-the-fly, which the recipient can seamlessly claim upon their first visit.
+1.  **Unreliable Viewport Units:** CSS `vh` units do not respect the UI chrome of the host Farcaster application, leading to incorrect height calculations.
+2.  **`position: fixed` Issues:** Fixed positioning removes elements from the document flow, which causes layout instability and scrolling conflicts inside a webview.
+3.  **The SDK Solution:** The `@coinbase/onchainkit` library provides the `useMiniKit` hook. This hook exposes the `safeAreaInsets` (top and bottom padding occupied by the Farcaster native UI), which is the definitive way to calculate the true available screen space for our app.
 
 ## High-level Task Breakdown
 
-1.  **Refactor Homepage:** Redesign the homepage to show previews of recent chats and the user's Farcaster following list, similar to the Base app.
-2.  **Implement Just-in-Time User Creation:** Modify the messaging flow to allow users to send messages to any Farcaster user, even if they haven't registered on the app yet. This involves creating placeholder profiles for new recipients.
+The strategy is to create a master `AppFrame` component that correctly calculates the available height, and then refactor our pages to use a modern Flexbox layout within that frame.
+
+1.  **Task 1: Create a Dedicated `AppFrame` Client Component**
+    *   **Action:** Create a new file: `mini-app/app/AppFrame.tsx`.
+    *   **Details:** This will be a `'use client'` component. It will import and use the `useMiniKit` hook to access `context.client.safeAreaInsets`. It will then calculate the true available height (`calc(100vh - topInset - bottomInset)`) and render a `<main>` tag that wraps its children and has its height set to this calculated value.
+    *   **Success Criteria:** The component is created and encapsulates the logic for calculating the mini-app's true height. The app builds without errors.
+
+2.  **Task 2: Integrate `AppFrame` into the Root Layout**
+    *   **Action:** Modify `mini-app/app/layout.tsx`.
+    *   **Details:** The root layout will remain a simple server component. It will import the new `AppFrame` component and use it to wrap the `{children}`. This must be done *inside* the `<Providers>` component to ensure the `useMiniKit` hook has access to the required context.
+    *   **Success Criteria:** The application's core structure is updated. Every page is now rendered inside a container that is perfectly sized to the Farcaster mini-app's visible area.
+
+3.  **Task 3: Refactor Homepage to a Flexbox Layout**
+    *   **Action:** Modify `mini-app/app/page.tsx`.
+    *   **Details:** The page's root `div` will be changed to `className="h-full flex flex-col"`. The `<header>` and `BottomNav` components will have their `position: fixed` CSS removed. The main content area will be wrapped in a `div` with `className="flex-1 overflow-y-auto"` to make it the single, scrollable area that fills the remaining space.
+    *   **Success Criteria:** The homepage layout is now robust, uses the full available space correctly, and the scroll/gap bug is eliminated.
+
+4.  **Task 4: Refactor Chat Page to a Flexbox Layout**
+    *   **Action:** Modify `mini-app/app/chat/[fid]/page.tsx`.
+    *   **Details:** The same Flexbox architecture will be applied. The root `div` will become `h-full flex flex-col`. The header and message input footer will have `position: sticky` removed. The message list will become the scrollable `flex-1` content area.
+    *   **Success Criteria:** The chat page layout is fixed, consistent with the homepage, and works correctly when the on-screen keyboard appears. The bug is universally resolved.
 
 ## Project Status Board
-
-- [x] **Task: Refactor Homepage** `completed`
-  - [x] Fetch and display inbox preview
-  - [x] Fetch and display Farcaster following list
-- [ ] **Task: Implement Just-in-Time User Creation** `in_progress`
-  - [ ] Modify `POST /api/messages/send` to accept a `recipientWalletAddress`.
-  - [ ] Implement "find or create" logic for the recipient user in the backend.
-  - [ ] Modify the new-message UI to send `recipientWalletAddress` instead of an internal ID.
-
-### Completed
-- [x] **Initial Setup & Core Chat**
-- [x] **Smart Contract Payment Integration**
-- [x] **Fixing Various UI/UX & Database Bugs**
-- [x] **Implement Farcaster Auto-Sign-In**
-- [x] **Deploy to Farcaster**
+- [ ] Task 1: Create a Dedicated `AppFrame` Client Component
+- [ ] Task 2: Integrate `AppFrame` into the Root Layout
+- [ ] Task 3: Refactor Homepage to a Flexbox Layout
+- [ ] Task 4: Refactor Chat Page to a Flexbox Layout
 
 ## Executor's Feedback or Assistance Requests
-
-Ready to begin implementation of the "Just-in-Time User Creation" feature. Starting with the backend `send` endpoint modification.
+*Awaiting approval to begin execution.*
 
 ## Lessons
-
-*   When a git push fails due to non-fast-forward errors, commit local changes, then `git pull` to merge, and then `git push` again. Avoid `git reset`.
-*   The `&&` operator does not work for chaining commands in Windows PowerShell. Run commands sequentially.
-*   The Farcaster Mini App spec requires handling a `POST` request to the app's main URL for authentication. This involves a rewrite rule in `next.config.mjs`.
-*   The MockUSDC token was deployed with 18 decimals, not 6. All `parseUnits` and `formatUnits` calls must reflect this.
-*   Environment variables (`.env`) are critical and must be consistent across all environments.
-*   **OnchainKit for Mini Apps:** To interact with the Farcaster Mini App container (e.g., to dismiss the splash screen), the app must be wrapped in a `<MiniKitProvider>` from `@coinbase/onchainkit/minikit`. The `useMiniKit` hook can then be used to access the SDK, and `setFrameReady()` should be called (with no arguments) to signal the app has loaded. This is distinct from the general `@coinbase/onchainkit` package.
-*   **React Hook Dependencies:** In React, when using hooks like `useCallback` or `useEffect`, ensure that any functions or variables used inside the hook are defined *before* the hook that depends on them. This prevents `ReferenceError: Cannot access '...' before initialization` errors.
+*To be filled in during execution.*
