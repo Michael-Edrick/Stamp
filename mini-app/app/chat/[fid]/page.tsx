@@ -72,34 +72,6 @@ export default function ChatPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [isSending, setIsSending] = useState(false);
-  const [containerHeight, setContainerHeight] = useState('100vh');
-  
-  useEffect(() => {
-    const visualViewport = window.visualViewport;
-
-    const setHeight = () => {
-      // Use visualViewport if available, otherwise fallback to innerHeight.
-      // visualViewport.height correctly accounts for the on-screen keyboard.
-      const height = visualViewport ? visualViewport.height : window.innerHeight;
-      setContainerHeight(`${height}px`);
-    };
-
-    // Set the initial height and listen for changes.
-    // The 'resize' event on visualViewport is the most reliable way 
-    // to detect changes from the on-screen keyboard on mobile.
-    if (visualViewport) {
-      setHeight(); // Set initial height
-      visualViewport.addEventListener('resize', setHeight);
-      
-      // Cleanup listener
-      return () => visualViewport.removeEventListener('resize', setHeight);
-    } else {
-      // Fallback for older browsers
-      setHeight(); // Set initial height
-      window.addEventListener('resize', setHeight);
-      return () => window.removeEventListener('resize', setHeight);
-    }
-  }, []);
 
   // This ref will hold the content of the message that requires payment
   const pendingMessageContentRef = useRef<string | null>(null);
@@ -386,7 +358,7 @@ export default function ChatPage() {
   const meUser = conversation?.participants.find(p => p.walletAddress?.toLowerCase() === selfAddress?.toLowerCase());
 
   return (
-    <div style={{ height: containerHeight }} className="flex flex-col bg-gray-100 font-sans">
+    <div className="flex flex-col bg-gray-100 font-sans h-[100dvh]">
       <header className="p-3 sticky top-0 z-10 bg-transparent">
         <div className="bg-white p-2 rounded-full shadow-md flex items-center">
             <Link href="/" className="mr-2 p-2">
