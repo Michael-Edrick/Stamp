@@ -15,7 +15,7 @@ export default function AppFrame({
   const frameHeight = `calc(100vh - ${top}px - ${bottom}px)`;
 
   return (
-    <main style={{ height: frameHeight, backgroundColor: 'green' }}>
+    <main style={{ height: frameHeight }}>
       {children}
     </main>
   );
