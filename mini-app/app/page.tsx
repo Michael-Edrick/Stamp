@@ -285,7 +285,7 @@ const BottomNav = ({ isClient, onSearchClick }: { isClient: boolean, onSearchCli
     const navButtonBase = "w-12 h-12 rounded-full flex items-center justify-center transition-transform duration-200 hover:scale-110";
 
     return (
-        <footer className="w-full flex justify-center items-center p-4 bg-[#F0F2F5]">
+        <footer className="w-full flex justify-center items-center p-4 bg-[#F0F2F5] mt-auto">
             <div className="flex items-center justify-center gap-x-4 bg-black rounded-full shadow-lg p-3">
                 <button className={`${navButtonBase} bg-neutral-800`} onClick={onSearchClick}>
                     <MagnifyingGlassIcon className="w-7 h-7 text-white"/>
