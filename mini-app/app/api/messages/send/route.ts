@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { randomBytes } from 'crypto';
 import { NextRequest } from "next/server";
-import { getFarcasterUser } from "@/app/api/auth/[...nextauth]/options";
+// No longer importing getFarcasterUser
 
 // Function to get or create a conversation between two users
 async function getOrCreateConversation(userId1: string, userId2: string) {
@@ -45,7 +45,13 @@ export async function POST(req: NextRequest) {
     if (!walletAddress) {
         return NextResponse.json({ error: "Missing x-wallet-address header" }, { status: 401 });
     }
-    const sender = await getFarcasterUser(walletAddress);
+    // const sender = await getFarcasterUser(walletAddress); // This was incorrect
+    const sender = await prisma.user.findUnique({
+        where: {
+            // Wallet addresses are case-insensitive, so we should normalize to lowercase
+            walletAddress: walletAddress.toLowerCase(),
+        }
+    });
 
     if (!sender) {
       return NextResponse.json({ error: "Sender not found" }, { status: 401 });
