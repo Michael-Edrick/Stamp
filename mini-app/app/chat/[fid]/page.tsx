@@ -38,20 +38,20 @@ const PaymentModal = ({ user, onSelect, onClose, isProcessing }: { user: User | 
         <div className="fixed inset-0 bg-black/50 flex justify-center items-end" onClick={onClose}>
             <div className="bg-black text-white w-full rounded-t-2xl p-4" onClick={(e) => e.stopPropagation()}>
                 <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-lg font-bold">Pay to send message</h2>
+                    <h2 className="text-lg font-bold">Send a message</h2>
                     <button onClick={onClose} disabled={isProcessing}><XMarkIcon className="w-6 h-6" /></button>
                 </div>
-                <p className="text-neutral-400 text-sm mb-4">
-                    This user requires a payment to receive messages from new contacts. Your payment is held in escrow and refunded if they don't reply.
-                </p>
                 <div className="space-y-3">
                     <button className="bg-neutral-900 p-4 rounded-lg flex justify-between items-center cursor-pointer w-full disabled:opacity-50 disabled:cursor-not-allowed" onClick={() => onSelect(standardCost)} disabled={isProcessing}>
-                        <span>Standard send ({user?.refundWindow} day reply window)</span>
-                        <span className="bg-blue-600 text-white px-3 py-1 rounded-full text-sm font-semibold">${standardCost.toFixed(2)}</span>
+                        <span>Standard send</span>
+                        <span className="bg-blue-600 text-white px-3 py-1 rounded-full text-sm font-semibold">${standardCost} USD</span>
                     </button>
                      <button className="bg-neutral-900 p-4 rounded-lg flex justify-between items-center cursor-pointer w-full disabled:opacity-50 disabled:cursor-not-allowed" onClick={() => onSelect(premiumCost)} disabled={isProcessing}>
-                        <span>Premium send (priority inbox)</span>
-                        <span className="bg-orange-500 text-white px-3 py-1 rounded-full text-sm font-semibold">${premiumCost.toFixed(2)}</span>
+                        <span>Premium send</span>
+                        <span className="bg-orange-500 text-white px-3 py-1 rounded-full text-sm font-semibold">${premiumCost} USD</span>
+                    </button>
+                    <button className="bg-neutral-900 p-4 rounded-lg flex justify-between items-center cursor-pointer w-full disabled:opacity-50 disabled:cursor-not-allowed" onClick={onClose} disabled={isProcessing}>
+                        <span>None</span>
                     </button>
                 </div>
             </div>
