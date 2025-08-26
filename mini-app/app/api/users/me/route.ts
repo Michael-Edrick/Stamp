@@ -29,49 +29,43 @@ export async function GET(req: NextRequest) {
     });
 
     if (!user) {
-      // User not found, create a new one
+      // User not found. Try to enrich from Farcaster; if that fails, create a basic profile.
       try {
         const neynarClient = new NeynarAPIClient({ apiKey: process.env.NEYNAR_API_KEY as string });
         const result = await neynarClient.fetchBulkUsersByEthOrSolAddress({ addresses: [walletAddress] });
-
-        // Log the entire result object for debugging, as you suggested
-        console.log("Full Neynar API response:", JSON.stringify(result, null, 2));
-
-        // Apply the type assertion directly to the result, not result.data
-        const farcasterUserData = result as unknown as Record<string, FarcasterUser[]>;
         
-        if (!farcasterUserData) {
-          throw new Error("Received null or invalid data from Neynar API.");
-        }
-
-        // Safely access the user list from the response object
+        const farcasterUserData = result as unknown as Record<string, FarcasterUser[]>;
         const farcasterUserList = Object.values(farcasterUserData)[0];
 
         if (!farcasterUserList || farcasterUserList.length === 0) {
+          // This will be caught by the catch block below, leading to basic profile creation.
           throw new Error(`Farcaster user not found for wallet: ${walletAddress}`);
         }
         
+        // If we found a user, create a rich profile from their Farcaster data
         const farcasterUser = farcasterUserList[0];
-        
-        const newUser = {
-          walletAddress: walletAddress.toLowerCase(),
-          username: farcasterUser.username,
-          name: farcasterUser.display_name || farcasterUser.username || '',
-          image: farcasterUser.pfp_url || '',
-          fid: farcasterUser.fid.toString(),
-        };
-
-        const createdUser = await prisma.user.create({
-          data: newUser,
+        user = await prisma.user.create({
+          data: {
+            walletAddress: walletAddress.toLowerCase(),
+            username: farcasterUser.username,
+            name: farcasterUser.display_name || farcasterUser.username || '',
+            image: farcasterUser.pfp_url || '',
+            fid: farcasterUser.fid.toString(),
+          }
         });
-        user = createdUser;
 
       } catch (error) {
-        console.error("Failed to create user from Farcaster profile. Full error:", error);
-        return NextResponse.json(
-          { message: "Failed to create user from Farcaster profile.", error: error instanceof Error ? error.message : String(error) },
-          { status: 500 }
-        );
+        // If Farcaster enrichment fails for any reason, create a basic user.
+        console.warn(`Farcaster profile enrichment failed for ${walletAddress}. Creating a basic profile. Reason: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        user = await prisma.user.create({
+            data: {
+                walletAddress: walletAddress.toLowerCase(),
+                // Provide a default, unique username
+                username: `user_${walletAddress.slice(2, 10)}`, 
+                name: 'New User', // Provide a default name
+                image: '',
+            }
+        });
       }
     }
     
