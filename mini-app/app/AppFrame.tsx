@@ -12,16 +12,10 @@ export default function AppFrame({
   const safeAreaInsets = context?.client?.safeAreaInsets;
   const top = safeAreaInsets?.top ?? 0;
   const bottom = safeAreaInsets?.bottom ?? 0;
+  const frameHeight = `calc(100vh - ${top}px - ${bottom}px)`;
 
   return (
-    <main 
-      style={{ 
-        height: '100%',
-        paddingTop: `${top}px`,
-        paddingBottom: `${bottom}px`,
-        boxSizing: 'border-box'
-      }}
-    >
+    <main style={{ height: frameHeight }}>
       {children}
     </main>
   );
