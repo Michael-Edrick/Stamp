@@ -156,6 +156,11 @@ export default function ChatPage() {
   }, [conversation?.messages]);
 
   const handleSendMessage = async () => {
+    if (!selfAddress) {
+      alert("Could not identify sender. Please reconnect your wallet and try again.");
+      return;
+    }
+
     if (!message.trim() || isSending || !recipientUser) return;
     
     setIsSending(true);
