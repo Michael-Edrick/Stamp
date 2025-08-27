@@ -58,32 +58,32 @@ export async function POST(req: NextRequest) {
     }
 
     // --- Transaction Confirmation Logic ---
-    if (messageId && txHash) {
-      const existingMessage = await prisma.message.findUnique({
-        where: { id: messageId },
-        include: { conversation: true },
-      });
+    // This logic is now responsible for creating the conversation and the message.
+    if (txHash && content && recipientId && amount) {
+        const conversation = await getOrCreateConversation(sender.id, recipientId);
 
-      if (!existingMessage || existingMessage.senderId !== sender.id) {
-        return NextResponse.json({ error: "Message not found or unauthorized" }, { status: 404 });
-      }
+        const newMessage = await prisma.message.create({
+            data: {
+                content,
+                senderId: sender.id,
+                recipientId,
+                conversationId: conversation.id,
+                status: 'SENT',
+                txHash,
+                amount,
+                // onChainMessageId is now passed from the client on confirmation
+                onChainMessageId: body.onChainMessageId || null,
+            },
+            include: { sender: true },
+        });
 
-      const updatedMessage = await prisma.message.update({
-        where: { id: messageId },
-        data: {
-          status: "SENT",
-          txHash: txHash,
-        },
-        include: { sender: true },
-      });
+        // Grant message bundle on successful payment
+        await prisma.conversation.update({
+            where: { id: conversation.id },
+            data: { messagesRemaining: 10 } // TODO: Make this configurable
+        });
 
-      // Grant message bundle on successful payment
-      await prisma.conversation.update({
-          where: { id: existingMessage.conversationId },
-          data: { messagesRemaining: 10 }
-      });
-
-      return NextResponse.json({ newMessage: updatedMessage }, { status: 201 });
+        return NextResponse.json({ newMessage }, { status: 201 });
     }
     // --- End Transaction Confirmation Logic ---
 
@@ -94,33 +94,28 @@ export async function POST(req: NextRequest) {
       );
     }
     
-    const conversation = await getOrCreateConversation(sender.id, recipientId);
+    // Find the conversation without creating it yet
+    const conversation = await prisma.conversation.findFirst({
+        where: {
+            AND: [
+                { participants: { some: { id: sender.id } } },
+                { participants: { some: { id: recipientId } } },
+            ],
+        },
+    });
 
     // --- Payment Required Logic ---
-    if (conversation.messagesRemaining <= 0) {
-        // Generate a unique ID for the on-chain message
+    // If the conversation doesn't exist or has no messages left, require payment.
+    if (!conversation || conversation.messagesRemaining <= 0) {
+        // Generate a unique ID for the on-chain message, but do not save anything to the DB.
         const onChainMessageId = `0x${randomBytes(32).toString("hex")}`;
         
-        // Create the message in a pending state
-        const pendingMessage = await prisma.message.create({
-            data: {
-                content,
-                senderId: sender.id,
-                recipientId,
-                conversationId: conversation.id,
-                status: 'PENDING_PAYMENT',
-                amount: amount, // Amount will be passed in the next step
-                onChainMessageId: onChainMessageId,
-            }
-        });
-
         // Return a 402 response indicating payment is required
         return NextResponse.json(
             {
               error: "Payment is required to start this conversation.",
               paymentRequired: true,
               onChainMessageId: onChainMessageId,
-              messageId: pendingMessage.id, // Send back the db message ID
             },
             { status: 402 } // Payment Required
         );
@@ -129,20 +124,23 @@ export async function POST(req: NextRequest) {
 
 
     // --- Standard Message Sending Logic ---
+    // This logic now only runs if payment is NOT required.
     const result = await prisma.$transaction(async (tx) => {
+      const existingConversation = await tx.conversation.findUniqueOrThrow({ where: { id: conversation.id }});
+      
       const newMessage = await tx.message.create({
         data: {
           content,
           senderId: sender.id,
           recipientId,
-          conversationId: conversation.id,
+          conversationId: existingConversation.id,
           status: 'SENT',
         },
         include: { sender: true }
       });
 
       const updatedConversation = await tx.conversation.update({
-        where: { id: conversation.id },
+        where: { id: existingConversation.id },
         data: {
           messagesRemaining: {
             decrement: 1,
