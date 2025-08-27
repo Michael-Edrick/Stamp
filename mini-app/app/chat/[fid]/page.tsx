@@ -77,8 +77,10 @@ export default function ChatPage() {
   const pendingMessageContentRef = useRef<string | null>(null);
   // This ref will hold the on-chain message ID from the backend
   const onChainMessageIdRef = useRef<string | null>(null);
-  // This ref will hold the database message ID for the pending message
-  const dbMessageIdRef = useRef<string | null>(null);
+  // This ref will hold the amount for the pending transaction
+  const pendingAmountRef = useRef<number | null>(null);
+  // This ref holds a temporary client-side ID for the optimistic message
+  const optimisticIdRef = useRef<string | null>(null);
 
 
   const { data: approveHash, writeContract: approve, isPending: isApproving, error: approveError } = useWriteContract();
@@ -195,7 +197,7 @@ export default function ChatPage() {
         // Payment is required, open the modal
         pendingMessageContentRef.current = content;
         onChainMessageIdRef.current = responseData.onChainMessageId;
-        dbMessageIdRef.current = responseData.messageId; // Store the db ID
+        // dbMessageIdRef.current = responseData.messageId; // No longer sent from backend here
         setShowPaymentModal(true);
       } else {
         throw new Error(responseData.error || 'Failed to send message');
@@ -226,7 +228,7 @@ export default function ChatPage() {
     }
 
     const optimisticMessage: MessageWithSender = {
-      id: dbMessageIdRef.current!,
+      id: optimisticIdRef.current!,
       content: pendingMessageContentRef.current,
       senderId: meUser.id,
       conversationId: conversation?.id ?? '',
@@ -264,7 +266,7 @@ export default function ChatPage() {
         // Clean up optimistic message on failure
         setConversation(prev => {
             if (!prev) return null;
-            return { ...prev, messages: prev.messages.filter(m => m.id !== dbMessageIdRef.current) };
+            return { ...prev, messages: prev.messages.filter(m => m.id !== optimisticIdRef.current) };
         });
     }
   };
@@ -272,8 +274,7 @@ export default function ChatPage() {
   useEffect(() => {
     // Step 2: Approval successful, now send the message on-chain
     if (isApprovalConfirmed && onChainMessageIdRef.current && recipientUser?.walletAddress && approveHash) {
-      const messageToUpdate = conversation?.messages.find(m => m.id === dbMessageIdRef.current);
-      const amountForTx = messageToUpdate?.amount;
+      const amountForTx = pendingAmountRef.current;
 
       if (amountForTx == null) {
         console.error("Could not find amount for transaction, aborting sendMessage.");
@@ -292,11 +293,11 @@ export default function ChatPage() {
         ]
       });
     }
-  }, [isApprovalConfirmed, sendMessage, recipientUser?.walletAddress, approveHash, conversation?.messages]);
+  }, [isApprovalConfirmed, sendMessage, recipientUser?.walletAddress, approveHash]);
 
   useEffect(() => {
     // Step 3: On-chain message sent, now confirm with backend
-    if (isMessageConfirmed && sendMessageHash && dbMessageIdRef.current) {
+    if (isMessageConfirmed && sendMessageHash) {
         fetch('/api/messages/send', {
             method: 'POST',
             headers: { 
@@ -304,8 +305,12 @@ export default function ChatPage() {
                 'x-wallet-address': selfAddress as string,
             },
             body: JSON.stringify({
-                messageId: dbMessageIdRef.current, // Use the stored DB message ID
+                // Now we send the full message payload to create it
+                content: pendingMessageContentRef.current,
+                recipientId: recipientUser!.id,
+                amount: pendingAmountRef.current,
                 txHash: sendMessageHash,
+                onChainMessageId: onChainMessageIdRef.current,
             }),
         }).then(async (res) => {
             if (res.ok) {
@@ -315,7 +320,7 @@ export default function ChatPage() {
                     if (!prev) return null;
                     return {
                         ...prev,
-                        messages: prev.messages.map(m => m.id === dbMessageIdRef.current ? newMessage : m)
+                        messages: prev.messages.map(m => m.id === optimisticIdRef.current ? newMessage : m)
                     };
                 });
             } else {
@@ -327,9 +332,10 @@ export default function ChatPage() {
             alert("Your payment was successful on-chain, but we failed to update it in our system. Please contact support.");
         }).finally(() => {
             // Clear refs for the next transaction
-            dbMessageIdRef.current = null;
+            optimisticIdRef.current = null;
             onChainMessageIdRef.current = null;
             pendingMessageContentRef.current = null;
+            pendingAmountRef.current = null;
         });
     }
   }, [isMessageConfirmed, sendMessageHash]);
@@ -340,18 +346,19 @@ export default function ChatPage() {
     if (transactionFailed) {
       alert(`Transaction failed: ${approveError?.message || sendMessageError?.message || 'The message transaction failed.'}`);
       
-      if (dbMessageIdRef.current) {
+      if (optimisticIdRef.current) {
         // Remove the optimistic message that failed
         setConversation(prev => {
           if (!prev) return null;
-          return { ...prev, messages: prev.messages.filter(m => m.id !== dbMessageIdRef.current) };
+          return { ...prev, messages: prev.messages.filter(m => m.id !== optimisticIdRef.current) };
         });
       }
       
       // Reset state
       onChainMessageIdRef.current = null;
-      dbMessageIdRef.current = null;
+      optimisticIdRef.current = null;
       pendingMessageContentRef.current = null;
+      pendingAmountRef.current = null;
     }
   }, [approveError, sendMessageError, isMessageError, sendMessageHash]);
 
