@@ -224,8 +224,8 @@ export default function ChatPage() {
     const meUser = conversation?.participants.find(p => p.walletAddress?.toLowerCase() === selfAddress?.toLowerCase());
 
     // --- TEMPORARY DEBUGGING LOGS ---
-    console.log("DEBUG: selfAddress from wagmi:", selfAddress);
-    console.log("DEBUG: conversation.participants:", JSON.stringify(conversation?.participants, null, 2));
+    const debugInfo = `DEBUG INFO:\nSelf Address: ${selfAddress}\n\nParticipants: ${JSON.stringify(conversation?.participants, null, 2)}`;
+    alert(debugInfo);
     // --- END DEBUGGING LOGS ---
 
     if (!meUser) {
