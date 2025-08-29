@@ -99,51 +99,50 @@ export default function ChatPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  // Fetches recipient user and conversation history
-  const loadChatData = useCallback(async (recipientFid: string, currentUserAddress?: `0x${string}`) => {
-    setIsLoading(true);
-    try {
-      // We need the current user's data first to proceed
-      if (!currentUserAddress) {
-        setIsLoading(false);
-        return;
-      }
-      const meResponse = await fetch(`/api/users/me`);
-      if (!meResponse.ok) throw new Error("Failed to fetch current user data.");
-      const meData: User = await meResponse.json();
-      setCurrentUser(meData);
-
-      // Get recipient user data (creating them if they don't exist)
-      const userResponse = await fetch(`/api/users/by-fid?fid=${recipientFid}`);
-      if (!userResponse.ok) throw new Error('Failed to fetch recipient user data.');
-      const recipientData: User = await userResponse.json();
-      setRecipientUser(recipientData);
-
-      // Fetch the conversation between the current user and the recipient
-      const convoResponse = await fetch(`/api/conversations/${recipientData.id}`);
-      if (convoResponse.ok) {
-        const convoData: Conversation = await convoResponse.json();
-        setConversation(convoData);
-      } else if (convoResponse.status === 404) {
-        // No conversation exists yet, which is fine. The state is already null.
-        setConversation(null);
-      } else {
-        throw new Error('Failed to fetch conversation');
-      }
-
-    } catch (error) {
-      console.error(error);
-      // Handle error state in UI
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
   useEffect(() => {
+    const loadChatData = async (recipientFid: string, currentUserAddress?: `0x${string}`) => {
+        setIsLoading(true);
+        try {
+            // We need the current user's data first to proceed
+            if (!currentUserAddress) {
+                setIsLoading(false);
+                return;
+            }
+            const meResponse = await fetch(`/api/users/me`);
+            if (!meResponse.ok) throw new Error("Failed to fetch current user data.");
+            const meData: User = await meResponse.json();
+            setCurrentUser(meData);
+
+            // Get recipient user data (creating them if they don't exist)
+            const userResponse = await fetch(`/api/users/by-fid?fid=${recipientFid}`);
+            if (!userResponse.ok) throw new Error('Failed to fetch recipient user data.');
+            const recipientData: User = await userResponse.json();
+            setRecipientUser(recipientData);
+
+            // Fetch the conversation between the current user and the recipient
+            const convoResponse = await fetch(`/api/conversations/${recipientData.id}`);
+            if (convoResponse.ok) {
+                const convoData: Conversation = await convoResponse.json();
+                setConversation(convoData);
+            } else if (convoResponse.status === 404) {
+                // No conversation exists yet, which is fine. The state is already null.
+                setConversation(null);
+            } else {
+                throw new Error('Failed to fetch conversation');
+            }
+
+        } catch (error) {
+            console.error(error);
+            // Handle error state in UI
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     if (isConnected && selfAddress && fid) {
       loadChatData(fid, selfAddress);
     }
-  }, [isConnected, selfAddress, fid, loadChatData]);
+  }, [isConnected, selfAddress, fid]);
 
   useEffect(() => {
     scrollToBottom();
