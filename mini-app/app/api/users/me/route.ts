@@ -19,7 +19,6 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    console.log(`[GET /api/users/me] Searching for user with walletAddress: ${walletAddress}`);
     let user = await prisma.user.findFirst({
       where: {
         OR: [
@@ -30,25 +29,21 @@ export async function GET(req: NextRequest) {
     });
 
     if (!user) {
-      console.log(`[GET /api/users/me] User not found in DB. Attempting Farcaster enrichment for ${walletAddress}.`);
       // User not found. Try to enrich from Farcaster; if that fails, create a basic profile.
       try {
         const neynarClient = new NeynarAPIClient({ apiKey: process.env.NEYNAR_API_KEY as string });
         const result = await neynarClient.fetchBulkUsersByEthOrSolAddress({ addresses: [walletAddress] });
-        console.log(`[GET /api/users/me] Neynar API response for ${walletAddress}:`, JSON.stringify(result, null, 2));
         
         const farcasterUserData = result as unknown as Record<string, FarcasterUser[]>;
         const farcasterUserList = Object.values(farcasterUserData)[0];
 
         if (!farcasterUserList || farcasterUserList.length === 0) {
           // This will be caught by the catch block below, leading to basic profile creation.
-          console.log(`[GET /api/users/me] Farcaster user not found in Neynar response for ${walletAddress}.`);
           throw new Error(`Farcaster user not found for wallet: ${walletAddress}`);
         }
         
         // If we found a user, create a rich profile from their Farcaster data
         const farcasterUser = farcasterUserList[0];
-        console.log(`[GET /api/users/me] Farcaster user found: ${farcasterUser.username}. Creating rich profile.`);
         user = await prisma.user.create({
           data: {
             walletAddress: walletAddress.toLowerCase(),
@@ -61,7 +56,7 @@ export async function GET(req: NextRequest) {
 
       } catch (error) {
         // If Farcaster enrichment fails for any reason, create a basic user.
-        console.error(`[GET /api/users/me] Farcaster enrichment failed for ${walletAddress}. Creating basic profile. Full Error:`, error);
+        console.warn(`Farcaster profile enrichment failed for ${walletAddress}. Creating a basic profile. Reason: ${error instanceof Error ? error.message : 'Unknown error'}`);
         user = await prisma.user.create({
             data: {
                 walletAddress: walletAddress.toLowerCase(),
@@ -74,10 +69,9 @@ export async function GET(req: NextRequest) {
       }
     }
     
-    console.log(`[GET /api/users/me] Successfully found or created user for ${walletAddress}. Returning user object.`);
     return NextResponse.json(user);
   } catch (error) {
-    console.error(`[GET /api/users/me] CRITICAL ERROR for walletAddress ${walletAddress}:`, error);
+    console.error('Error in GET /api/users/me:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }

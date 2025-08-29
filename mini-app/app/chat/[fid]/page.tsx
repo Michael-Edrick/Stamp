@@ -108,7 +108,7 @@ export default function ChatPage() {
                 setIsLoading(false);
                 return;
             }
-            const meResponse = await fetch(`/api/users/me`);
+            const meResponse = await fetch(`/api/users/me?walletAddress=${currentUserAddress}`);
             if (!meResponse.ok) throw new Error("Failed to fetch current user data.");
             const meData: User = await meResponse.json();
             setCurrentUser(meData);
@@ -116,14 +116,9 @@ export default function ChatPage() {
             // Get recipient user data (creating them if they don't exist)
             const userResponse = await fetch(`/api/users/by-fid?fid=${recipientFid}`);
 
-            // --- TEMPORARY DEBUGGING LOG ---
-            const responseText = await userResponse.text();
-            alert(`DEBUG INFO: /api/users/by-fid\n\nStatus: ${userResponse.status}\n\nResponse Body: ${responseText}`);
-            // --- END DEBUGGING LOG ---
-
             if (!userResponse.ok) throw new Error(`Failed to fetch recipient user data. Status: ${userResponse.status}`);
             
-            const recipientData: User = JSON.parse(responseText); // Parse the text we already read
+            const recipientData: User = await userResponse.json();
             setRecipientUser(recipientData);
 
             // Fetch the conversation between the current user and the recipient
