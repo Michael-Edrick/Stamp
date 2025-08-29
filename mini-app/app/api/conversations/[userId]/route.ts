@@ -42,19 +42,9 @@ export async function GET(request: NextRequest) {
     });
 
     if (!conversation) {
-      // If no conversation exists, we still need to return the participant details for the header.
-      const otherParticipant = await prisma.user.findUnique({ where: { id: otherUserId } });
-      const loggedInUser = await prisma.user.findUnique({ where: { id: loggedInUserId }});
-
-      if (!otherParticipant || !loggedInUser) {
-        return NextResponse.json({ error: 'Could not find one or more users.'}, { status: 404 });
-      }
-
-      return NextResponse.json({
-        messages: [],
-        messagesRemaining: 0,
-        participants: [loggedInUser, otherParticipant],
-      });
+      // If no conversation exists, correctly report that the resource was not found.
+      // The client will handle creating a temporary conversation object for the UI.
+      return NextResponse.json(null, { status: 404 });
     }
 
     return NextResponse.json(conversation);

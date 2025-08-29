@@ -68,6 +68,7 @@ export default function ChatPage() {
 
   const [conversation, setConversation] = useState<Conversation | null>(null);
   const [recipientUser, setRecipientUser] = useState<User | null>(null);
+  const [currentUser, setCurrentUser] = useState<User | null>(null); // State for the logged-in user
   const [message, setMessage] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -102,39 +103,30 @@ export default function ChatPage() {
   const loadChatData = useCallback(async (recipientFid: string, currentUserAddress?: `0x${string}`) => {
     setIsLoading(true);
     try {
-      // 1. Get recipient user data (creating them if they don't exist)
+      // We need the current user's data first to proceed
+      if (!currentUserAddress) {
+        setIsLoading(false);
+        return;
+      }
+      const meResponse = await fetch(`/api/users/me`);
+      if (!meResponse.ok) throw new Error("Failed to fetch current user data.");
+      const meData: User = await meResponse.json();
+      setCurrentUser(meData);
+
+      // Get recipient user data (creating them if they don't exist)
       const userResponse = await fetch(`/api/users/by-fid?fid=${recipientFid}`);
       if (!userResponse.ok) throw new Error('Failed to fetch recipient user data.');
       const recipientData: User = await userResponse.json();
       setRecipientUser(recipientData);
 
-      // We need the current user's data to correctly identify participants
-      if(!currentUserAddress) {
-          setIsLoading(false);
-          return; // Can't fetch conversation without knowing who "me" is
-      }
-      const meResponse = await fetch(`/api/users/me?walletAddress=${currentUserAddress}`);
-      if(!meResponse.ok) throw new Error("Failed to fetch current user data.");
-      const meData: User = await meResponse.json();
-
-
-      // 2. Fetch the conversation between the current user and the recipient
+      // Fetch the conversation between the current user and the recipient
       const convoResponse = await fetch(`/api/conversations/${recipientData.id}`);
-       if (convoResponse.ok) {
+      if (convoResponse.ok) {
         const convoData: Conversation = await convoResponse.json();
-
-        // Ensure participants are correctly ordered/identified
-        const fullParticipants = [meData, recipientData];
-        convoData.participants = fullParticipants;
-
         setConversation(convoData);
       } else if (convoResponse.status === 404) {
-        // No conversation exists yet, set up a mock one for the UI
-        setConversation({ 
-            id: `new-${recipientData.id}`, 
-            messages: [], 
-            participants: [meData, recipientData] 
-        });
+        // No conversation exists yet, which is fine. The state is already null.
+        setConversation(null);
       } else {
         throw new Error('Failed to fetch conversation');
       }
@@ -214,8 +206,8 @@ export default function ChatPage() {
   
   const handlePaymentSelect = async (amount: number) => {
     if (isSendingMessage || isConfirmingMessage) return;
-    if (!selfAddress) {
-      alert("Could not determine your wallet address. Please reconnect and try again.");
+    if (!currentUser) {
+      alert("Could not identify current user. Please reconnect and try again.");
       return;
     }
     if (!recipientUser) {
@@ -223,18 +215,7 @@ export default function ChatPage() {
       return;
     }
 
-    // Optimistically add the message to the UI
-    const meUser = conversation?.participants.find(p => p.walletAddress?.toLowerCase() === selfAddress?.toLowerCase());
-
-    // --- TEMPORARY DEBUGGING LOGS ---
-    const debugInfo = `DEBUG INFO @ handlePaymentSelect:\nSelf Address: ${selfAddress}\n\nConversation State: ${JSON.stringify(conversation, null, 2)}`;
-    alert(debugInfo);
-    // --- END DEBUGGING LOGS ---
-
-    if (!meUser) {
-      alert("Could not identify current user in conversation.");
-      return;
-    }
+    const meUser = currentUser;
 
     const tempId = `temp_${Date.now()}`;
     const optimisticMessage: MessageWithSender = {
@@ -377,8 +358,6 @@ export default function ChatPage() {
     return <div className="flex h-screen items-center justify-center">Loading conversation...</div>;
   }
   
-  const meUser = conversation?.participants.find(p => p.walletAddress?.toLowerCase() === selfAddress?.toLowerCase());
-
   return (
     <div className="flex flex-col bg-gray-100 font-sans h-full">
       <header className="p-3 bg-transparent">
@@ -400,8 +379,8 @@ export default function ChatPage() {
 
       <main className="flex-1 overflow-y-auto p-4 space-y-4">
         {conversation?.messages.map((msg) => {
-          const isSender = msg.senderId === meUser?.id;
-          const senderProfile = isSender ? meUser : recipientUser;
+          const isSender = msg.senderId === currentUser?.id;
+          const senderProfile = isSender ? currentUser : recipientUser;
 
           return (
             <div key={msg.id} className={`flex items-end gap-2 ${isSender ? 'justify-end' : 'justify-start'}`}>
@@ -425,7 +404,7 @@ export default function ChatPage() {
                     </div>
                 )}
               </div>
-              {isSender && <CustomAvatar profile={senderProfile || null} className="w-8 h-8 rounded-full" />}
+              {isSender && <CustomAvatar profile={currentUser || null} className="w-8 h-8 rounded-full" />}
             </div>
           );
         })}
