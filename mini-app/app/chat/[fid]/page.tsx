@@ -226,6 +226,11 @@ export default function ChatPage() {
     // Optimistically add the message to the UI
     const meUser = conversation?.participants.find(p => p.walletAddress?.toLowerCase() === selfAddress?.toLowerCase());
 
+    // --- TEMPORARY DEBUGGING LOGS ---
+    const debugInfo = `DEBUG INFO @ handlePaymentSelect:\nSelf Address: ${selfAddress}\n\nConversation State: ${JSON.stringify(conversation, null, 2)}`;
+    alert(debugInfo);
+    // --- END DEBUGGING LOGS ---
+
     if (!meUser) {
       alert("Could not identify current user in conversation.");
       return;
