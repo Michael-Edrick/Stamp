@@ -115,8 +115,15 @@ export default function ChatPage() {
 
             // Get recipient user data (creating them if they don't exist)
             const userResponse = await fetch(`/api/users/by-fid?fid=${recipientFid}`);
-            if (!userResponse.ok) throw new Error('Failed to fetch recipient user data.');
-            const recipientData: User = await userResponse.json();
+
+            // --- TEMPORARY DEBUGGING LOG ---
+            const responseText = await userResponse.text();
+            alert(`DEBUG INFO: /api/users/by-fid\n\nStatus: ${userResponse.status}\n\nResponse Body: ${responseText}`);
+            // --- END DEBUGGING LOG ---
+
+            if (!userResponse.ok) throw new Error(`Failed to fetch recipient user data. Status: ${userResponse.status}`);
+            
+            const recipientData: User = JSON.parse(responseText); // Parse the text we already read
             setRecipientUser(recipientData);
 
             // Fetch the conversation between the current user and the recipient
