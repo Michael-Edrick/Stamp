@@ -213,29 +213,28 @@ export default function ChatPage() {
   };
   
   const handlePaymentSelect = async (amount: number) => {
-    if (!pendingMessageContentRef.current) {
-      alert("Error: No pending message to pay for.");
+    if (isSendingMessage || isConfirmingMessage) return;
+    if (!selfAddress) {
+      alert("Could not determine your wallet address. Please reconnect and try again.");
       return;
     }
-    
-    setShowPaymentModal(false);
-    
+    if (!recipientUser) {
+      alert("Recipient user not found.");
+      return;
+    }
+
     // Optimistically add the message to the UI
     const meUser = conversation?.participants.find(p => p.walletAddress?.toLowerCase() === selfAddress?.toLowerCase());
 
-    // --- TEMPORARY DEBUGGING LOGS ---
-    const debugInfo = `DEBUG INFO:\nSelf Address: ${selfAddress}\n\nParticipants: ${JSON.stringify(conversation?.participants, null, 2)}`;
-    alert(debugInfo);
-    // --- END DEBUGGING LOGS ---
-
     if (!meUser) {
-        alert("Could not identify current user in conversation.");
-        return;
+      alert("Could not identify current user in conversation.");
+      return;
     }
 
+    const tempId = `temp_${Date.now()}`;
     const optimisticMessage: MessageWithSender = {
-      id: optimisticIdRef.current!,
-      content: pendingMessageContentRef.current,
+      id: tempId,
+      content: pendingMessageContentRef.current!,
       senderId: meUser.id,
       conversationId: conversation?.id ?? '',
       createdAt: new Date(),
