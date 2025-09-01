@@ -39,15 +39,38 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({ error: 'Invalid FID stored for user' }, { status: 500 });
     }
 
-    // Using a limit of 50 for now to keep the response size reasonable
-    const result = await neynarClient.fetchUserFollowing({ fid, limit: 50 });
+    let allFollowing: any[] = [];
+    let cursor: string | null = null;
+    const totalToFetch = 250;
 
-    // The response contains a list of objects, each with a 'user' property.
-    // We need to extract this nested user object.
-    const followingList = result.users.map((u: any) => u.user);
+    // Fetch up to 250 users in batches of 100
+    while (allFollowing.length < totalToFetch) {
+        const remaining = totalToFetch - allFollowing.length;
+        const limit = Math.min(100, remaining);
 
-    // 3. Return the list of followed users
-    return NextResponse.json(followingList);
+        const result = await neynarClient.fetchUserFollowing({ 
+            fid, 
+            limit, 
+            cursor: cursor || undefined 
+        });
+
+        const followingBatch = result.users.map((u: any) => u.user);
+        allFollowing = allFollowing.concat(followingBatch);
+        
+        cursor = result.next.cursor;
+
+        // If there's no next cursor, we've fetched all the users they follow.
+        if (!cursor) {
+            break;
+        }
+    }
+
+    // Sort the combined list by follower count in descending order
+    // Using bracket notation to bypass a TypeScript build error.
+    allFollowing.sort((a: any, b: any) => (b['follower_count'] || 0) - (a['follower_count'] || 0));
+
+    // 3. Return the sorted list of followed users
+    return NextResponse.json(allFollowing);
 
   } catch (error) {
     console.error('Error in GET /api/users/following:', error);
