@@ -1,14 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { NeynarAPIClient } from '@neynar/nodejs-sdk';
-
-// Define the shape of the Farcaster user object we need, as you suggested.
-type FarcasterUser = {
-  fid: number;
-  username: string;
-  display_name?: string;
-  pfp_url?: string;
-};
+import { FarcasterUser } from '@/types/farcaster';
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -19,57 +12,97 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    let user = await prisma.user.findFirst({
-      where: {
-        OR: [
-          { walletAddress: { equals: walletAddress, mode: 'insensitive' } },
-          { custodyAddress: { equals: walletAddress, mode: 'insensitive' } },
-        ]
-      }
+    // Step 1: Check if the address is already linked to a user.
+    const existingAddress = await prisma.verifiedAddress.findUnique({
+      where: { address: walletAddress.toLowerCase() },
+      include: { user: true },
     });
 
-    if (!user) {
-      // User not found. Try to enrich from Farcaster; if that fails, create a basic profile.
-      try {
-        const neynarClient = new NeynarAPIClient({ apiKey: process.env.NEYNAR_API_KEY as string });
-        const result = await neynarClient.fetchBulkUsersByEthOrSolAddress({ addresses: [walletAddress] });
-        
-        const farcasterUserData = result as unknown as Record<string, FarcasterUser[]>;
-        const farcasterUserList = Object.values(farcasterUserData)[0];
+    if (existingAddress) {
+      return NextResponse.json(existingAddress.user);
+    }
 
-        if (!farcasterUserList || farcasterUserList.length === 0) {
-          // This will be caught by the catch block below, leading to basic profile creation.
-          throw new Error(`Farcaster user not found for wallet: ${walletAddress}`);
-        }
-        
-        // If we found a user, create a rich profile from their Farcaster data
-        const farcasterUser = farcasterUserList[0];
-        user = await prisma.user.create({
+    // Step 2: If address is new, query Neynar to get Farcaster profile.
+    const neynarClient = new NeynarAPIClient({ apiKey: process.env.NEYNAR_API_KEY as string });
+    let farcasterUser: FarcasterUser | undefined;
+    
+    try {
+      const result = await neynarClient.fetchBulkUsersByEthOrSolAddress({ addresses: [walletAddress] });
+      const farcasterUserData = result as unknown as Record<string, FarcasterUser[]>;
+      farcasterUser = Object.values(farcasterUserData)[0]?.[0];
+    } catch (neynarError) {
+      console.warn(`Neynar API call failed for address ${walletAddress}. It might not be a Farcaster user.`, neynarError);
+    }
+    
+    // Step 3: Handle user creation/linking based on Neynar data.
+    if (farcasterUser && farcasterUser.fid) {
+      // We found a Farcaster user for this address.
+      const userFid = farcasterUser.fid.toString();
+
+      // Step 3a: Check if a user with this FID already exists in our DB.
+      let user = await prisma.user.findUnique({
+        where: { fid: userFid },
+      });
+
+      if (user) {
+        // User exists, so just link the new address to them.
+        await prisma.verifiedAddress.create({
           data: {
-            walletAddress: walletAddress.toLowerCase(),
+            address: walletAddress.toLowerCase(),
+            userId: user.id,
+          },
+        });
+        return NextResponse.json(user);
+      } else {
+        // This is a new Farcaster user for our app.
+        // Create the user and link all their known addresses.
+        const newUser = await prisma.user.create({
+          data: {
+            fid: userFid,
             username: farcasterUser.username,
             name: farcasterUser.display_name || farcasterUser.username || '',
             image: farcasterUser.pfp_url || '',
-            fid: farcasterUser.fid.toString(),
-          }
+            custodyAddress: farcasterUser.custody_address,
+            // Keep the old walletAddress field populated for now for backward compatibility
+            walletAddress: walletAddress.toLowerCase(), 
+          },
         });
 
-      } catch (error) {
-        // If Farcaster enrichment fails for any reason, create a basic user.
-        console.warn(`Farcaster profile enrichment failed for ${walletAddress}. Creating a basic profile. Reason: ${error instanceof Error ? error.message : 'Unknown error'}`);
-        user = await prisma.user.create({
+        // Link all verified addresses from Neynar to the new user.
+        const allAddresses = farcasterUser.verified_addresses?.eth_addresses || [];
+        if (!allAddresses.includes(walletAddress.toLowerCase())) {
+            allAddresses.push(walletAddress.toLowerCase());
+        }
+        
+        for (const address of allAddresses) {
+          await prisma.verifiedAddress.create({
             data: {
-                walletAddress: walletAddress.toLowerCase(),
-                // Provide a default, unique username
-                username: `user_${walletAddress.slice(2, 10)}`, 
-                name: 'New User', // Provide a default name
-                image: '',
-            }
-        });
+              address: address.toLowerCase(),
+              userId: newUser.id,
+            },
+          });
+        }
+        return NextResponse.json(newUser);
       }
+    } else {
+      // Step 4: This is a new user without a Farcaster profile.
+      const newUser = await prisma.user.create({
+        data: {
+          walletAddress: walletAddress.toLowerCase(),
+          username: `user_${walletAddress.slice(2, 10)}`,
+          name: 'New User',
+          image: '',
+        },
+      });
+      // Link their connecting address.
+      await prisma.verifiedAddress.create({
+        data: {
+          address: walletAddress.toLowerCase(),
+          userId: newUser.id,
+        },
+      });
+      return NextResponse.json(newUser);
     }
-    
-    return NextResponse.json(user);
   } catch (error) {
     console.error('Error in GET /api/users/me:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });

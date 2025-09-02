@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback } from 'react';
-import { useAccount } from "wagmi";
+import { useAccount, useDisconnect } from "wagmi";
 import Link from 'next/link';
 import { UserCircleIcon, PaperAirplaneIcon, MagnifyingGlassIcon, ChatBubbleOvalLeftEllipsisIcon, PlusIcon, ChevronRightIcon } from '@heroicons/react/24/solid';
 import { User as PrismaUser, Conversation as PrismaConversation, Message as PrismaMessage } from '@prisma/client';
@@ -91,6 +91,7 @@ const ConversationCard = ({ conversation, currentUserId }: { conversation: Conve
 
 export default function HomePage() {
   const { address, isConnected } = useAccount();
+  const { disconnect } = useDisconnect();
   const [conversations, setConversations] = useState<ConversationWithDetails[]>([]);
   const [following, setFollowing] = useState<NeynarUser[]>([]);
   const [currentUser, setCurrentUser] = useState<Profile | null>(null);
@@ -113,21 +114,22 @@ export default function HomePage() {
     setError(null);
 
     try {
-      // Fetch all data concurrently
-      const [userResponse, convoResponse, followingResponse] = await Promise.all([
-        fetch(`/api/users/me?walletAddress=${address}`),
+      // Step 1: Fetch the current user's profile first. This is crucial because the other
+      // calls may depend on the user's FID being present in the database.
+      const userResponse = await fetch(`/api/users/me?walletAddress=${address}`);
+      if (!userResponse.ok) {
+        // If we can't get the main user, it's a critical error that stops the process.
+        throw new Error(`Failed to fetch user profile. Status: ${userResponse.status}`);
+      }
+      
+      const userData = await userResponse.json();
+      setCurrentUser(userData);
+
+      // Step 2: Now that we have the user, fetch their conversations and following list concurrently.
+      const [convoResponse, followingResponse] = await Promise.all([
         fetch(`/api/messages/inbox?walletAddress=${address}`),
         fetch(`/api/users/following?walletAddress=${address}`)
       ]);
-
-      // Process current user
-      if (userResponse.ok) {
-        const userData = await userResponse.json();
-        setCurrentUser(userData);
-      } else {
-        // If we can't get the main user, it's a critical error
-        throw new Error('Failed to fetch user profile.');
-      }
 
       // Process conversations
       if (convoResponse.ok) {
@@ -239,8 +241,16 @@ export default function HomePage() {
     <div className="h-full bg-[#F0F2F5]nb font-sans flex flex-col">
        <header className="w-full max-w-md mx-auto flex justify-between items-center p-4 bg-[#F0F2F5]">
           <h1 className="text-xl font-bold text-gray-900">StampMe</h1>
-          <div>
+          <div className="flex items-center gap-x-2">
               {isClient && <ConnectWallet />}
+              {isClient && isConnected && (
+                <button 
+                  onClick={() => disconnect()} 
+                  className="bg-red-500 text-white px-3 py-1.5 rounded-full text-xs font-semibold hover:bg-red-600 transition-colors"
+                >
+                  Logout
+                </button>
+              )}
           </div>
       </header>
       <main className="w-full max-w-md mx-auto px-4 flex-1 overflow-y-auto">

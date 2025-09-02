@@ -43,6 +43,15 @@ model User {
   
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
+
+  verifiedAddresses VerifiedAddress[]
+}
+
+model VerifiedAddress {
+  id        String   @id @default(cuid())
+  address   String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
 }
 
 model Account {

@@ -27,6 +27,7 @@ export async function GET(req: NextRequest) {
     });
 
     if (!user || !user.fid) {
+      console.log(`[DEBUG] /api/users/following: Found user for wallet ${walletAddress}, but they are missing an FID. User object:`, user);
       return NextResponse.json({ error: 'User not found or does not have a Farcaster FID' }, { status: 404 });
     }
 
