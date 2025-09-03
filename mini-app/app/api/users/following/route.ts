@@ -16,19 +16,24 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    // 1. Find the user in our database to get their Farcaster FID
-    const user = await prisma.user.findFirst({
-      where: {
-        OR: [
-          { walletAddress: { equals: walletAddress, mode: 'insensitive' } },
-          { custodyAddress: { equals: walletAddress, mode: 'insensitive' } },
-        ],
-      },
+    // 1. Find the user associated with the connected walletAddress using the new data model.
+    const verifiedAddress = await prisma.verifiedAddress.findUnique({
+      where: { address: walletAddress.toLowerCase() },
+      include: { user: true },
     });
+    
+    // If we don't find the address, or the user is missing, they can't have a following list.
+    if (!verifiedAddress || !verifiedAddress.user) {
+        return NextResponse.json({ error: 'User not found for the given wallet address' }, { status: 404 });
+    }
 
-    if (!user || !user.fid) {
-      console.log(`[DEBUG] /api/users/following: Found user for wallet ${walletAddress}, but they are missing an FID. User object:`, user);
-      return NextResponse.json({ error: 'User not found or does not have a Farcaster FID' }, { status: 404 });
+    const user = verifiedAddress.user;
+
+    // We still need to check for the FID, as non-Farcaster users won't have one.
+    if (!user.fid) {
+      // This is a valid user, but they don't have a Farcaster account, so they can't be following anyone.
+      // Return an empty list, which is the correct state.
+      return NextResponse.json([]);
     }
 
     // 2. Use the FID to fetch the user's following list from Neynar

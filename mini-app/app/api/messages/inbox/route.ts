@@ -10,20 +10,17 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    // First, find the user by their wallet address to get their ID
-    const user = await prisma.user.findFirst({
-        where: {
-            OR: [
-                { walletAddress: { equals: walletAddress, mode: 'insensitive' } },
-                { custodyAddress: { equals: walletAddress, mode: 'insensitive' } },
-            ]
-        },
-        select: { id: true }
+    // Find the user by their wallet address using the new VerifiedAddress table.
+    const verifiedAddress = await prisma.verifiedAddress.findUnique({
+      where: { address: walletAddress.toLowerCase() },
+      select: { user: { select: { id: true } } },
     });
 
-    if (!user) {
-        return NextResponse.json({ error: "User not found" }, { status: 404 });
+    if (!verifiedAddress || !verifiedAddress.user) {
+      return NextResponse.json({ error: "User not found for the given wallet address" }, { status: 404 });
     }
+
+    const { user } = verifiedAddress;
 
     const conversations = await prisma.conversation.findMany({
       where: {

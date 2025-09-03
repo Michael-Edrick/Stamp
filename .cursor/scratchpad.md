@@ -37,13 +37,17 @@ The strategy is to create a master `AppFrame` component that correctly calculate
     *   **Success Criteria:** The chat page layout is fixed, consistent with the homepage, and works correctly when the on-screen keyboard appears. The bug is universally resolved.
 
 ## Project Status Board
-- [ ] Task 1: Create a Dedicated `AppFrame` Client Component
-- [ ] Task 2: Integrate `AppFrame` into the Root Layout
-- [ ] Task 3: Refactor Homepage to a Flexbox Layout
-- [ ] Task 4: Refactor Chat Page to a Flexbox Layout
+- [x] Task 1: Create a Dedicated `AppFrame` Client Component
+- [x] Task 2: Integrate `AppFrame` into the Root Layout
+- [x] Task 3: Refactor Homepage to a Flexbox Layout
+- [x] Task 4: Refactor Chat Page to a Flexbox Layout
+- [x] Fix "Could not identify current user in conversation" bug by fetching current user data correctly.
+- [x] Sort the homepage "Following" list by follower count, fetching the top 250 users for accuracy.
 
 ## Executor's Feedback or Assistance Requests
-*Awaiting approval to begin execution.*
+*All previous tasks are complete. Ready for new planning discussion.*
 
 ## Lessons
-*To be filled in during execution.*
+*   The Neynar API `fetchUserFollowing` endpoint has a maximum limit of 100 users per request. To fetch larger sets of data, pagination using the `cursor` is required.
+*   TypeScript build errors can sometimes occur due to outdated or mismatched type definitions in an SDK. Accessing properties using bracket notation (e.g., `user['follower_count']`) can be a viable workaround to bypass incorrect type checking during the build process.
+*   When a client-side `fetch` call to a backend API endpoint returns a `400 Bad Request`, it's crucial to verify that all required query parameters or body data are being sent correctly from the client.
