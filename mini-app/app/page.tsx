@@ -8,6 +8,7 @@ import CustomAvatar from '@/app/components/CustomAvatar';
 import { useMiniKit } from '@coinbase/onchainkit/minikit';
 import { ConnectWallet } from '@coinbase/onchainkit/wallet';
 import SearchModal from '@/app/components/SearchModal';
+import { NetworkSwitcher } from '@/app/components/NetworkSwitcher';
 
 // Local type definition to avoid import issues with the SDK
 type NeynarUser = {
@@ -239,17 +240,20 @@ export default function HomePage() {
 
   return (
     <div className="h-full bg-[#F0F2F5]nb font-sans flex flex-col">
-       <header className="w-full max-w-md mx-auto flex justify-between items-center p-4 bg-[#F0F2F5]">
+       <header className="w-full max-w-md mx-auto flex justify-between items-center p-4 bg-[#F0F2F2]">
           <h1 className="text-xl font-bold text-gray-900">StampMe</h1>
           <div className="flex items-center gap-x-2">
               {isClient && <ConnectWallet />}
               {isClient && isConnected && (
-                <button 
-                  onClick={() => disconnect()} 
-                  className="bg-red-500 text-white px-3 py-1.5 rounded-full text-xs font-semibold hover:bg-red-600 transition-colors"
-                >
-                  Logout
-                </button>
+                <>
+                  <NetworkSwitcher />
+                  <button 
+                    onClick={() => disconnect()} 
+                    className="bg-red-500 text-white px-3 py-1.5 rounded-full text-xs font-semibold hover:bg-red-600 transition-colors"
+                  >
+                    Logout
+                  </button>
+                </>
               )}
           </div>
       </header>

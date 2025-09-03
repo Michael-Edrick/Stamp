@@ -122,7 +122,11 @@ export default function ChatPage() {
             setRecipientUser(recipientData);
 
             // Fetch the conversation between the current user and the recipient
-            const convoResponse = await fetch(`/api/conversations/${recipientData.id}`);
+            const convoResponse = await fetch(`/api/conversations/${recipientData.id}`, {
+                headers: {
+                    'x-wallet-address': currentUserAddress,
+                }
+            });
             if (convoResponse.ok) {
                 const convoData: Conversation = await convoResponse.json();
                 setConversation(convoData);

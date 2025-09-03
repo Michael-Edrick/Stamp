@@ -45,17 +45,17 @@ export async function POST(req: NextRequest) {
     if (!walletAddress) {
         return NextResponse.json({ error: "Missing x-wallet-address header" }, { status: 401 });
     }
-    // const sender = await getFarcasterUser(walletAddress); // This was incorrect
-    const sender = await prisma.user.findUnique({
-        where: {
-            // Wallet addresses are case-insensitive, so we should normalize to lowercase
-            walletAddress: walletAddress.toLowerCase(),
-        }
+    
+    const verifiedAddress = await prisma.verifiedAddress.findUnique({
+      where: { address: walletAddress.toLowerCase() },
+      include: { user: true },
     });
-
-    if (!sender) {
+    
+    if (!verifiedAddress || !verifiedAddress.user) {
       return NextResponse.json({ error: "Sender not found" }, { status: 401 });
     }
+
+    const sender = verifiedAddress.user;
 
     // --- Transaction Confirmation Logic ---
     // This logic is now responsible for creating the conversation and the message.

@@ -1,6 +1,4 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/app/api/auth/[...nextauth]/options';
 import prisma from '@/lib/prisma';
 
 export async function GET(request: NextRequest) {
@@ -9,12 +7,21 @@ export async function GET(request: NextRequest) {
   const pathSegments = url.pathname.split('/');
   const otherUserId = pathSegments.pop(); // The last segment is the userId
 
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
+  const walletAddress = request.headers.get("x-wallet-address");
+  if (!walletAddress) {
+    return NextResponse.json({ error: "Missing x-wallet-address header" }, { status: 401 });
+  }
+
+  const verifiedAddress = await prisma.verifiedAddress.findUnique({
+    where: { address: walletAddress.toLowerCase() },
+    include: { user: true },
+  });
+  
+  if (!verifiedAddress || !verifiedAddress.user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const loggedInUserId = session.user.id;
+  const loggedInUserId = verifiedAddress.user.id;
 
   if (!otherUserId) {
     return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
