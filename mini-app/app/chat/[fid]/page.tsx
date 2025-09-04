@@ -364,8 +364,8 @@ export default function ChatPage() {
   }
   
   return (
-    <div className="flex flex-col bg-gray-100 font-sans h-full">
-      <header className="sticky top-0 z-10 p-3 bg-gray-100 border-b border-gray-200">
+    <div className="relative flex flex-col bg-gray-100 font-sans h-full">
+      <header className="absolute top-0 left-0 right-0 z-10 p-3 bg-gray-100/80 backdrop-blur-sm border-b border-gray-200">
         <div className="bg-white p-2 rounded-full shadow-md flex items-center">
             <Link href="/" className="mr-2 p-2">
               <ChevronLeftIcon className="w-6 h-6 text-gray-700" />
@@ -382,7 +382,7 @@ export default function ChatPage() {
         </div>
       </header>
 
-      <main className="flex-1 overflow-y-auto p-4 space-y-4">
+      <main className="flex-1 overflow-y-auto p-4 space-y-4 pt-24 pb-24">
         {conversation?.messages.map((msg) => {
           const isSender = msg.senderId === currentUser?.id;
           const senderProfile = isSender ? currentUser : recipientUser;
@@ -416,7 +416,7 @@ export default function ChatPage() {
         <div ref={messagesEndRef} />
       </main>
       
-      <footer className="p-3 bg-transparent mt-auto">
+      <footer className="absolute bottom-0 left-0 right-0 p-3 bg-gray-100/80 backdrop-blur-sm">
         <div className="bg-white p-2 rounded-2xl shadow-md flex items-center">
             <textarea
               rows={1}
