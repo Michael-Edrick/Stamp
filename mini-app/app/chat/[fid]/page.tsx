@@ -365,7 +365,7 @@ export default function ChatPage() {
   
   return (
     <div className="flex flex-col bg-gray-100 font-sans h-full">
-      <header className="sticky top-0 z-10 p-3 bg-gray-100">
+      <header className="sticky top-0 z-10 p-3 bg-gray-100 border-b border-gray-200">
         <div className="bg-white p-2 rounded-full shadow-md flex items-center">
             <Link href="/" className="mr-2 p-2">
               <ChevronLeftIcon className="w-6 h-6 text-gray-700" />
@@ -416,7 +416,7 @@ export default function ChatPage() {
         <div ref={messagesEndRef} />
       </main>
       
-      <footer className="p-3 bg-transparent">
+      <footer className="p-3 bg-transparent mt-auto">
         <div className="bg-white p-2 rounded-2xl shadow-md flex items-center">
             <textarea
               rows={1}
