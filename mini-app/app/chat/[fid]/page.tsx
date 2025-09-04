@@ -419,7 +419,7 @@ export default function ChatPage() {
                             <div /> 
                         )}
                         <span className="text-xs font-bold text-white bg-orange-500 px-2 py-1 rounded-full">
-                            +${formatUnits(BigInt(msg.amount), 18)} USD
+                            +${msg.amount} USD
                         </span>
                     </div>
                 )}

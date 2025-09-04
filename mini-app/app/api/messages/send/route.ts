@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { randomBytes } from 'crypto';
 import { NextRequest } from "next/server";
-import { parseUnits } from "viem";
 // No longer importing getFarcasterUser
 
 // Function to get or create a conversation between two users
@@ -63,8 +62,6 @@ export async function POST(req: NextRequest) {
     if (txHash && content && recipientId && amount) {
         const conversation = await getOrCreateConversation(sender.id, recipientId);
 
-        const amountInWei = parseUnits(amount.toString(), 18);
-
         const newMessage = await prisma.message.create({
             data: {
                 content,
@@ -73,7 +70,7 @@ export async function POST(req: NextRequest) {
                 conversationId: conversation.id,
                 status: 'SENT',
                 txHash,
-                amount: amountInWei.toString(),
+                amount, // Save the amount directly as a number
                 // onChainMessageId is now passed from the client on confirmation
                 onChainMessageId: body.onChainMessageId || null,
             },
