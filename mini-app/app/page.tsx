@@ -93,14 +93,13 @@ const ConversationCard = ({ conversation, currentUserId }: { conversation: Conve
 const DebugPanel = () => {
   const account = useAccount();
   const { connectors } = useConnect();
-  const { context: miniKitContext, isReady } = useMiniKit();
+  const miniKit = useMiniKit();
 
   const debugInfo = {
     wagmi_status: account.status,
     wagmi_address: account.address,
-    minikit_ready: isReady,
-    minikit_app: miniKitContext?.app,
-    minikit_deeplink: miniKitContext?.deeplink,
+    minikit_app: miniKit?.context?.app,
+    minikit_deeplink: miniKit?.context?.deeplink,
     connectors_found: connectors.length,
     connector_names: connectors.map(c => c.name),
   };
