@@ -244,8 +244,18 @@ export default function ChatPage() {
     };
     
     setConversation(prev => {
-        if (!prev) return null;
-        // Check if message already exists to avoid duplicates on retry
+        // If there's no previous conversation, create a shell
+        if (!prev) {
+            return {
+                id: `temp-convo-${recipientUser!.id}`,
+                participants: [currentUser, recipientUser!],
+                messages: [optimisticMessage],
+                createdAt: new Date(),
+                updatedAt: new Date(),
+                messagesRemaining: 0,
+            };
+        }
+        // If conversation exists, just add the message
         if (prev.messages.some(m => m.id === optimisticMessage.id)) {
             return prev;
         }
