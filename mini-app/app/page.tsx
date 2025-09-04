@@ -90,6 +90,32 @@ const ConversationCard = ({ conversation, currentUserId }: { conversation: Conve
 };
 
 
+const DebugPanel = () => {
+  const account = useAccount();
+  const { connectors } = useConnect();
+  const { context: miniKitContext, isReady } = useMiniKit();
+
+  const debugInfo = {
+    wagmi_status: account.status,
+    wagmi_address: account.address,
+    minikit_ready: isReady,
+    minikit_app: miniKitContext?.app,
+    minikit_deeplink: miniKitContext?.deeplink,
+    connectors_found: connectors.length,
+    connector_names: connectors.map(c => c.name),
+  };
+
+  return (
+    <div className="mt-4 p-4 bg-gray-800 text-white rounded-lg text-xs">
+      <h3 className="font-bold mb-2">Debug Info</h3>
+      <pre className="whitespace-pre-wrap break-all">
+        {JSON.stringify(debugInfo, null, 2)}
+      </pre>
+    </div>
+  );
+};
+
+
 export default function HomePage() {
   const { address, isConnected } = useAccount();
   const { disconnect } = useDisconnect();
@@ -276,6 +302,7 @@ export default function HomePage() {
       </header>
       <main className="w-full max-w-md mx-auto px-4 flex-1 overflow-y-auto">
         {renderContent()}
+        {isClient && <DebugPanel />}
       </main>
        <BottomNav 
         isClient={isClient}
