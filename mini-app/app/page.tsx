@@ -1,12 +1,12 @@
 "use client";
 import { useState, useEffect, useCallback } from 'react';
-import { useAccount, useDisconnect } from "wagmi";
+import { useAccount, useDisconnect, useConnect } from "wagmi";
 import Link from 'next/link';
 import { UserCircleIcon, PaperAirplaneIcon, MagnifyingGlassIcon, ChatBubbleOvalLeftEllipsisIcon, PlusIcon, ChevronRightIcon } from '@heroicons/react/24/solid';
 import { User as PrismaUser, Conversation as PrismaConversation, Message as PrismaMessage } from '@prisma/client';
 import CustomAvatar from '@/app/components/CustomAvatar';
 import { useMiniKit } from '@coinbase/onchainkit/minikit';
-import { ConnectWallet } from '@coinbase/onchainkit/wallet'; 
+// Removed the generic ConnectWallet, we'll use a custom button
 import SearchModal from '@/app/components/SearchModal';
 import { NetworkSwitcher } from '@/app/components/NetworkSwitcher';
 
@@ -93,6 +93,7 @@ const ConversationCard = ({ conversation, currentUserId }: { conversation: Conve
 export default function HomePage() {
   const { address, isConnected } = useAccount();
   const { disconnect } = useDisconnect();
+  const { connect, connectors, isPending: isConnecting } = useConnect();
   const [conversations, setConversations] = useState<ConversationWithDetails[]>([]);
   const [following, setFollowing] = useState<NeynarUser[]>([]);
   const [currentUser, setCurrentUser] = useState<Profile | null>(null);
@@ -243,11 +244,32 @@ export default function HomePage() {
        <header className="w-full max-w-md mx-auto flex justify-between items-center p-4 bg-[#F0F2F2]">
           <h1 className="text-xl font-bold text-gray-900">StampMe</h1>
           <div className="flex items-center gap-x-2">
-              {isClient && <ConnectWallet />}
+              {isClient && !isConnected && (
+                <button
+                  onClick={() => connect({ connector: connectors[0] })}
+                  disabled={isConnecting}
+                  className="bg-blue-500 text-white px-4 py-2 rounded-full text-sm font-semibold hover:bg-blue-600 transition-colors disabled:opacity-50"
+                >
+                  {isConnecting ? 'Connecting...' : 'Connect Wallet'}
+                </button>
+              )}
               {isClient && isConnected && (
                 <>
+                  <div className="bg-white rounded-full px-3 py-1.5 flex items-center shadow-sm">
+                    <CustomAvatar profile={currentUser} className="w-6 h-6 rounded-full mr-2" />
+                    <span className="text-sm font-semibold text-gray-800">
+                      {address ? `${address.slice(0, 6)}...${address.slice(-4)}` : '...'}
+                    </span>
+                  </div>
                   <NetworkSwitcher />
-                  {/* The Logout button is removed to prevent disconnection issues within the mini-app environment */}
+                  <button 
+                    onClick={() => disconnect()} 
+                    className="bg-red-500 text-white p-2 rounded-full text-xs font-semibold hover:bg-red-600 transition-colors"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9" />
+                    </svg>
+                  </button>
                 </>
               )}
           </div>
