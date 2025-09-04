@@ -43,11 +43,15 @@ The strategy is to create a master `AppFrame` component that correctly calculate
 - [x] Task 4: Refactor Chat Page to a Flexbox Layout
 - [x] Fix "Could not identify current user in conversation" bug by fetching current user data correctly.
 - [x] Sort the homepage "Following" list by follower count, fetching the top 250 users for accuracy.
+- [x] Implement "Just-in-Time User Creation" for messaging unregistered Farcaster users.
+- [x] Refactor APIs to support multiple wallet addresses per user.
+- [x] Fix conversation loading and message sending with secondary wallet.
 
 ## Executor's Feedback or Assistance Requests
-*All previous tasks are complete. Ready for new planning discussion.*
+*All previous tasks are complete. The multi-address authentication and messaging flow is now working correctly.*
 
 ## Lessons
 *   The Neynar API `fetchUserFollowing` endpoint has a maximum limit of 100 users per request. To fetch larger sets of data, pagination using the `cursor` is required.
 *   TypeScript build errors can sometimes occur due to outdated or mismatched type definitions in an SDK. Accessing properties using bracket notation (e.g., `user['follower_count']`) can be a viable workaround to bypass incorrect type checking during the build process.
 *   When a client-side `fetch` call to a backend API endpoint returns a `400 Bad Request`, it's crucial to verify that all required query parameters or body data are being sent correctly from the client.
+*   When implementing a significant data model change (like the `VerifiedAddress` table), it is critical to trace all data flows and update every API endpoint that relies on the old structure to prevent authentication and data retrieval errors. Forgetting to update even one dependent component can lead to bugs that are hard to trace.

@@ -90,39 +90,6 @@ const ConversationCard = ({ conversation, currentUserId }: { conversation: Conve
 };
 
 
-const DebugPanel = () => {
-  const account = useAccount();
-  const { connectors } = useConnect();
-  const { isFrameReady, context } = useMiniKit();
-
-  // Create a simple, serializable object for debugging
-  const debugInfo = {
-    useAccount: {
-      status: account.status,
-      address: account.address,
-      isConnected: account.isConnected,
-    },
-    useMiniKit: {
-      isFrameReady: isFrameReady,
-      // The context object has a circular structure, so we just check for its existence.
-      hasContext: !!context, 
-    },
-    useConnect: {
-      connectors: connectors.map(c => ({ name: c.name, id: c.id, ready: c.ready }))
-    }
-  };
-
-  return (
-    <div className="mt-4 p-4 bg-gray-800 text-white rounded-lg text-xs" style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
-      <h3 className="font-bold mb-2">Debug Info</h3>
-      <pre>
-        {JSON.stringify(debugInfo, null, 2)}
-      </pre>
-    </div>
-  );
-};
-
-
 export default function HomePage() {
   const { address, isConnected } = useAccount();
   const { disconnect } = useDisconnect();
@@ -295,8 +262,7 @@ export default function HomePage() {
               {isClient && isConnected && currentUser && (
                 <>
                   <div className="bg-white rounded-full px-3 py-1.5 flex items-center shadow-sm">
-                    <CustomAvatar profile={currentUser} className="w-6 h-6 rounded-full mr-2" />
-                    <span className="text-sm font-semibold text-gray-800">
+                    <span className="text-sm font-semibold text-gray-800 mr-2">
                       {address ? `${address.slice(0, 6)}...${address.slice(-4)}` : '...'}
                     </span>
                   </div>
@@ -315,7 +281,6 @@ export default function HomePage() {
       </header>
       <main className="w-full max-w-md mx-auto px-4 flex-1 overflow-y-auto">
         {renderContent()}
-        {isClient && <DebugPanel />}
       </main>
        <BottomNav 
         isClient={isClient}
