@@ -6,7 +6,7 @@ import { UserCircleIcon, PaperAirplaneIcon, MagnifyingGlassIcon, ChatBubbleOvalL
 import { User as PrismaUser, Conversation as PrismaConversation, Message as PrismaMessage } from '@prisma/client';
 import CustomAvatar from '@/app/components/CustomAvatar';
 import { useMiniKit } from '@coinbase/onchainkit/minikit';
-// Removed the generic ConnectWallet, we'll use a custom button
+import { ConnectWallet } from '@coinbase/onchainkit/wallet';
 import SearchModal from '@/app/components/SearchModal';
 import { NetworkSwitcher } from '@/app/components/NetworkSwitcher';
 
@@ -95,21 +95,14 @@ const DebugPanel = () => {
   const { connectors } = useConnect();
   const miniKit = useMiniKit();
 
-  const debugInfo = {
-    wagmi_status: account.status,
-    wagmi_address: account.address,
-    minikit_app: miniKit?.context?.app,
-    minikit_deeplink: miniKit?.context?.deeplink,
-    connectors_found: connectors.length,
-    connector_names: connectors.map(c => c.name),
-  };
-
   return (
-    <div className="mt-4 p-4 bg-gray-800 text-white rounded-lg text-xs">
+    <div className="mt-4 p-4 bg-gray-800 text-white rounded-lg text-xs" style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
       <h3 className="font-bold mb-2">Debug Info</h3>
-      <pre className="whitespace-pre-wrap break-all">
-        {JSON.stringify(debugInfo, null, 2)}
-      </pre>
+      <p><b>useAccount:</b> {JSON.stringify(account, null, 2)}</p>
+      <hr className="my-2 border-gray-600" />
+      <p><b>useMiniKit:</b> {JSON.stringify(miniKit, null, 2)}</p>
+      <hr className="my-2 border-gray-600" />
+      <p><b>useConnect:</b> {JSON.stringify({ connectors: connectors.map(c => ({ name: c.name, id: c.id, ready: c.ready })) }, null, 2)}</p>
     </div>
   );
 };
@@ -269,23 +262,9 @@ export default function HomePage() {
        <header className="w-full max-w-md mx-auto flex justify-between items-center p-4 bg-[#F0F2F2]">
           <h1 className="text-xl font-bold text-gray-900">StampMe</h1>
           <div className="flex items-center gap-x-2">
-              {isClient && !isConnected && (
-                <button
-                  onClick={() => connect({ connector: connectors[0] })}
-                  disabled={isConnecting}
-                  className="bg-blue-500 text-white px-4 py-2 rounded-full text-sm font-semibold hover:bg-blue-600 transition-colors disabled:opacity-50"
-                >
-                  {isConnecting ? 'Connecting...' : 'Connect Wallet'}
-                </button>
-              )}
+              {isClient && <ConnectWallet />}
               {isClient && isConnected && (
                 <>
-                  <div className="bg-white rounded-full px-3 py-1.5 flex items-center shadow-sm">
-                    <CustomAvatar profile={currentUser} className="w-6 h-6 rounded-full mr-2" />
-                    <span className="text-sm font-semibold text-gray-800">
-                      {address ? `${address.slice(0, 6)}...${address.slice(-4)}` : '...'}
-                    </span>
-                  </div>
                   <NetworkSwitcher />
                   <button 
                     onClick={() => disconnect()} 
