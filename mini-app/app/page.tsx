@@ -93,16 +93,30 @@ const ConversationCard = ({ conversation, currentUserId }: { conversation: Conve
 const DebugPanel = () => {
   const account = useAccount();
   const { connectors } = useConnect();
-  const miniKit = useMiniKit();
+  const { isFrameReady, context } = useMiniKit();
+
+  // Create a simple, serializable object for debugging
+  const debugInfo = {
+    useAccount: {
+      status: account.status,
+      address: account.address,
+      isConnected: account.isConnected,
+    },
+    useMiniKit: {
+      isFrameReady: isFrameReady,
+      app: context?.client?.app,
+    },
+    useConnect: {
+      connectors: connectors.map(c => ({ name: c.name, id: c.id, ready: c.ready }))
+    }
+  };
 
   return (
     <div className="mt-4 p-4 bg-gray-800 text-white rounded-lg text-xs" style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
       <h3 className="font-bold mb-2">Debug Info</h3>
-      <p><b>useAccount:</b> {JSON.stringify(account, null, 2)}</p>
-      <hr className="my-2 border-gray-600" />
-      <p><b>useMiniKit:</b> {JSON.stringify(miniKit, null, 2)}</p>
-      <hr className="my-2 border-gray-600" />
-      <p><b>useConnect:</b> {JSON.stringify({ connectors: connectors.map(c => ({ name: c.name, id: c.id, ready: c.ready })) }, null, 2)}</p>
+      <pre>
+        {JSON.stringify(debugInfo, null, 2)}
+      </pre>
     </div>
   );
 };
@@ -265,12 +279,10 @@ export default function HomePage() {
               {isClient && !isConnected && (
                   <button
                     onClick={() => {
-                      const farcasterConnector = connectors.find(c => c.id === 'xyz.farcaster.MiniAppWallet');
-                      if (farcasterConnector) {
-                        connect({ connector: farcasterConnector });
-                      } else {
-                        // Fallback for desktop browsers
-                        connect({ connector: connectors[0] });
+                      // Find the Farcaster connector, or fall back to the first available one
+                      const connector = connectors.find(c => c.id === 'xyz.farcaster.MiniAppWallet') || connectors[0];
+                      if (connector) {
+                        connect({ connector });
                       }
                     }}
                     disabled={isConnecting}
@@ -279,7 +291,7 @@ export default function HomePage() {
                     {isConnecting ? 'Connecting...' : 'Connect Wallet'}
                   </button>
               )}
-              {isClient && isConnected && (
+              {isClient && isConnected && currentUser && (
                 <>
                   <div className="bg-white rounded-full px-3 py-1.5 flex items-center shadow-sm">
                     <CustomAvatar profile={currentUser} className="w-6 h-6 rounded-full mr-2" />
