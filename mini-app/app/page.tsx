@@ -262,9 +262,31 @@ export default function HomePage() {
        <header className="w-full max-w-md mx-auto flex justify-between items-center p-4 bg-[#F0F2F2]">
           <h1 className="text-xl font-bold text-gray-900">StampMe</h1>
           <div className="flex items-center gap-x-2">
-              {isClient && <ConnectWallet />}
+              {isClient && !isConnected && (
+                  <button
+                    onClick={() => {
+                      const farcasterConnector = connectors.find(c => c.id === 'xyz.farcaster.MiniAppWallet');
+                      if (farcasterConnector) {
+                        connect({ connector: farcasterConnector });
+                      } else {
+                        // Fallback for desktop browsers
+                        connect({ connector: connectors[0] });
+                      }
+                    }}
+                    disabled={isConnecting}
+                    className="bg-blue-500 text-white px-4 py-2 rounded-full text-sm font-semibold hover:bg-blue-600 transition-colors disabled:opacity-50"
+                  >
+                    {isConnecting ? 'Connecting...' : 'Connect Wallet'}
+                  </button>
+              )}
               {isClient && isConnected && (
                 <>
+                  <div className="bg-white rounded-full px-3 py-1.5 flex items-center shadow-sm">
+                    <CustomAvatar profile={currentUser} className="w-6 h-6 rounded-full mr-2" />
+                    <span className="text-sm font-semibold text-gray-800">
+                      {address ? `${address.slice(0, 6)}...${address.slice(-4)}` : '...'}
+                    </span>
+                  </div>
                   <NetworkSwitcher />
                   <button 
                     onClick={() => disconnect()} 
