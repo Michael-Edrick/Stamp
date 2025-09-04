@@ -6,7 +6,8 @@ import { UserCircleIcon, PaperAirplaneIcon, MagnifyingGlassIcon, ChatBubbleOvalL
 import { User as PrismaUser, Conversation as PrismaConversation, Message as PrismaMessage } from '@prisma/client';
 import CustomAvatar from '@/app/components/CustomAvatar';
 import { useMiniKit } from '@coinbase/onchainkit/minikit';
-import { ConnectWallet } from '@coinbase/onchainkit/wallet';
+// The generic ConnectWallet button is being replaced with a custom implementation
+// import { ConnectWallet } from '@coinbase/onchainkit/wallet'; 
 import SearchModal from '@/app/components/SearchModal';
 import { NetworkSwitcher } from '@/app/components/NetworkSwitcher';
 
@@ -100,7 +101,7 @@ export default function HomePage() {
   const [error, setError] = useState<string | null>(null);
   const [isClient, setIsClient] = useState(false);
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
-  const { setFrameReady, isFrameReady } = useMiniKit();
+  const { setFrameReady, isFrameReady, connect: connectMiniKit } = useMiniKit();
 
   useEffect(() => {
     if (!isFrameReady) {
@@ -243,7 +244,14 @@ export default function HomePage() {
        <header className="w-full max-w-md mx-auto flex justify-between items-center p-4 bg-[#F0F2F2]">
           <h1 className="text-xl font-bold text-gray-900">StampMe</h1>
           <div className="flex items-center gap-x-2">
-              {isClient && <ConnectWallet />}
+              {isClient && !isConnected && (
+                <button 
+                  onClick={() => connectMiniKit?.()}
+                  className="bg-blue-500 text-white px-4 py-2 rounded-full text-sm font-semibold hover:bg-blue-600 transition-colors"
+                >
+                  Connect Wallet
+                </button>
+              )}
               {isClient && isConnected && (
                 <>
                   <NetworkSwitcher />
