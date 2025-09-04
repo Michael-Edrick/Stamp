@@ -34,6 +34,7 @@ export async function GET(req: NextRequest) {
         participants: {
           select: {
             id: true,
+            fid: true, // <-- Add this line
             name: true,
             username: true,
             image: true,
