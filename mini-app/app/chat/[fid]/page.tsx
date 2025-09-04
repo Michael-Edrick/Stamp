@@ -220,11 +220,16 @@ export default function ChatPage() {
       return;
     }
 
+    setShowPaymentModal(false);
+
+    // Store the pending transaction details in refs
+    pendingAmountRef.current = amount;
+    optimisticIdRef.current = `temp_${Date.now()}`;
+
     const meUser = currentUser;
 
-    const tempId = `temp_${Date.now()}`;
     const optimisticMessage: MessageWithSender = {
-      id: tempId,
+      id: optimisticIdRef.current,
       content: pendingMessageContentRef.current!,
       senderId: meUser.id,
       conversationId: conversation?.id ?? '',
