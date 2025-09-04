@@ -226,7 +226,7 @@ export default function HomePage() {
           <h2 className="text-lg font-bold text-gray-800 mb-4">Following</h2>
           <div className="space-y-3">
             {following.length > 0 ? (
-              following.slice(0, 2).map((user) => (
+              following.slice(0, 4).map((user) => (
                 <UserCard key={user.fid} user={user} />
               ))
             ) : (
