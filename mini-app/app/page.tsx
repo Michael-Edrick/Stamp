@@ -104,7 +104,8 @@ const DebugPanel = () => {
     },
     useMiniKit: {
       isFrameReady: isFrameReady,
-      app: context?.client?.app,
+      // The context object has a circular structure, so we just check for its existence.
+      hasContext: !!context, 
     },
     useConnect: {
       connectors: connectors.map(c => ({ name: c.name, id: c.id, ready: c.ready }))
