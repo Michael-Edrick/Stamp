@@ -11,7 +11,6 @@ import { useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { messageEscrowABI, messageEscrowAddress, usdcContractAddress } from '@/lib/contract';
 import { parseUnits, bytesToHex, formatUnits } from 'viem';
 import { erc20Abi } from 'viem';
-import { useMiniKit } from '@coinbase/onchainkit/minikit';
 
 // We need to use the Prisma-generated User type, but add optional fields
 // that might not be present on every user object we handle.
@@ -64,7 +63,7 @@ const PaymentModal = ({ user, onSelect, onClose, isProcessing }: { user: User | 
 export default function ChatPage() {
   const params = useParams();
   const fid = params.fid as string; // Changed from userId to fid
-  const { data: miniKitData, isReady } = useMiniKit();
+
   const { address: selfAddress, isConnected } = useAccount();
 
   const [conversation, setConversation] = useState<Conversation | null>(null);
@@ -95,15 +94,6 @@ export default function ChatPage() {
     useWaitForTransactionReceipt({ hash: sendMessageHash });
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  const safeAreaInsets = miniKitData?.safeAreaInsets;
-  const headerHeight = 68; // Approximate height of your header in px
-  const footerHeight = 68; // Approximate height of your footer in px
-  const topInset = safeAreaInsets?.top ?? 0;
-  const bottomInset = safeAreaInsets?.bottom ?? 0;
-  
-  // Calculate the total vertical space taken by static elements
-  const verticalPadding = topInset + bottomInset + headerHeight + footerHeight;
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -374,12 +364,9 @@ export default function ChatPage() {
   }
   
   return (
-    <div 
-      className="flex flex-col bg-gray-100 font-sans"
-      style={{ height: `calc(100vh - ${topInset + bottomInset}px)` }}
-    >
-      <header className="p-3 bg-white border-b border-gray-200">
-        <div className="flex items-center">
+    <div className="flex flex-col bg-gray-100 font-sans h-full">
+      <header className="p-3 bg-transparent">
+        <div className="bg-white p-2 rounded-full shadow-md flex items-center">
             <Link href="/" className="mr-2 p-2">
               <ChevronLeftIcon className="w-6 h-6 text-gray-700" />
             </Link>
@@ -429,8 +416,8 @@ export default function ChatPage() {
         <div ref={messagesEndRef} />
       </main>
       
-      <footer className="p-3 bg-white border-t border-gray-200">
-        <div className="bg-gray-100 p-2 rounded-2xl flex items-center">
+      <footer className="p-3 bg-transparent">
+        <div className="bg-white p-2 rounded-2xl shadow-md flex items-center">
             <textarea
               rows={1}
               value={message}
