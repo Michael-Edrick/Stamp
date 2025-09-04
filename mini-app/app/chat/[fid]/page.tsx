@@ -365,7 +365,7 @@ export default function ChatPage() {
   
   return (
     <div className="flex flex-col bg-gray-100 font-sans h-full">
-      <header className="p-3 bg-transparent">
+      <header className="sticky top-0 z-10 p-3 bg-gray-100">
         <div className="bg-white p-2 rounded-full shadow-md flex items-center">
             <Link href="/" className="mr-2 p-2">
               <ChevronLeftIcon className="w-6 h-6 text-gray-700" />
@@ -417,16 +417,22 @@ export default function ChatPage() {
       </main>
       
       <footer className="p-3 bg-transparent">
-        <div className="bg-white p-2 rounded-full shadow-md flex items-center">
-            <input
-              type="text"
+        <div className="bg-white p-2 rounded-2xl shadow-md flex items-center">
+            <textarea
+              rows={1}
               value={message}
-              onChange={(e) => setMessage(e.target.value)}
+              onChange={(e) => {
+                setMessage(e.target.value)
+                // Auto-resize logic
+                e.target.style.height = 'inherit';
+                e.target.style.height = `${e.target.scrollHeight}px`; 
+              }}
               placeholder="Message"
-              className="flex-1 w-full px-4 py-2 bg-gray-100 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 text-base"
+              className="flex-1 w-full px-4 py-2 bg-gray-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-base resize-none overflow-y-auto"
+              style={{maxHeight: '120px'}} // Approx 5 lines of text + padding
               disabled={isSending}
               onKeyDown={(e) => {
-                if (e.key === 'Enter') {
+                if (e.key === 'Enter' && !e.shiftKey) { // Send on Enter, new line on Shift+Enter
                   e.preventDefault();
                   handleSendMessage();
                 }
