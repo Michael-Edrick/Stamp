@@ -29,36 +29,37 @@ interface ConversationWithDetails extends PrismaConversation {
   messages: (PrismaMessage & { sender: Partial<PrismaUser> })[];
 }
 
-
 const UserCard = ({ user }: { user: NeynarUser }) => {
-  // The link now directly goes to the chat page using the user's Farcaster ID (fid).
-  // This works for both existing and new conversations.
   const href = `/chat/${user.fid}`;
 
+  // The entire card is now a clickable link, assuming all users from the
+  // following list are messageable.
   return (
-    <div className="bg-white rounded-2xl p-3 flex items-center justify-between shadow-sm border border-gray-200">
+    <Link
+      href={href}
+      className="bg-white rounded-2xl p-3 flex items-center justify-between shadow-sm border border-gray-200 hover:bg-gray-50 transition-colors"
+    >
       <div className="flex items-center">
-        <CustomAvatar 
+        <CustomAvatar
           profile={{
             name: user?.display_name,
             username: user?.username,
-            image: user?.pfp_url, // Map pfp_url to image
-            fid: user?.fid?.toString() // Convert fid to string
-          }} 
-          className="w-10 h-10 rounded-full mr-3" 
+            image: user?.pfp_url,
+            fid: user?.fid?.toString(),
+          }}
+          className="w-10 h-10 rounded-full mr-3"
         />
         <div>
-          <p className="font-bold text-gray-900">{user?.display_name || 'Unnamed'}</p>
-          <p className="text-sm text-gray-500">@{user?.username || 'user'}</p>
+          <p className="font-bold text-gray-900">
+            {user?.display_name || 'Unnamed'}
+          </p>
+          <p className="text-sm text-gray-500">
+            @{user?.username || 'user'}
+          </p>
         </div>
       </div>
-      {/* Only render the link if we have a valid address to send to */}
-      {user.custody_address && (
-        <Link href={href} onClick={(e) => e.stopPropagation()}>
-          <PaperAirplaneIcon className="w-6 h-6 text-blue-500 -rotate-45 cursor-pointer hover:scale-110 transition-transform" />
-        </Link>
-      )}
-    </div>
+      <PaperAirplaneIcon className="w-6 h-6 text-blue-500 -rotate-45" />
+    </Link>
   );
 };
 
