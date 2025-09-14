@@ -121,7 +121,7 @@ model Message {
 
 model NotificationToken {
   id        String   @id @default(cuid())
-  userId    String
+  userId    String   @unique // Each user should only have one token
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   token     String   @unique
   providerUrl String
