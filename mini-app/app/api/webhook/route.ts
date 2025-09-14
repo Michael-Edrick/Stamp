@@ -6,27 +6,31 @@ import {
 } from '@farcaster/miniapp-node';
 import prisma from '@/lib/prisma';
 
+// Helper function to decode Base64URL encoded strings.
+function decodeBase64Url(encoded: string) {
+  return JSON.parse(Buffer.from(encoded, 'base64url').toString('utf-8'));
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
 
-    // Step 1: Verify the webhook signature. This function will throw an error if
-    // the signature is invalid. It returns the verified FID.
+    // Step 1: Verify the signature. This is for security.
     const { fid } = await parseWebhookEvent(body, verifyAppKeyWithNeynar);
 
-    // Step 2: Find the user in our database associated with the verified FID.
+    // Step 2: Find the user in our database.
     const user = await prisma.user.findUnique({
       where: { fid: fid.toString() },
     });
 
     if (!user) {
-      console.warn(`Webhook received for FID ${fid} but user not found.`);
+      console.warn(`Webhook received for verified FID ${fid} but user not found.`);
       return NextResponse.json({ message: 'User not found' }, { status: 200 });
     }
 
-    // Step 3: Use the original (and now trusted) request body to get the event details.
-    // The event payload is NOT returned by the verification function.
-    const eventPayload = body;
+    // Step 3: Decode the event payload from the original request body.
+    // This was the missing step. The event details are inside this decoded object.
+    const eventPayload = decodeBase64Url(body.payload);
 
     switch (eventPayload.event) {
       case 'miniapp_added':
