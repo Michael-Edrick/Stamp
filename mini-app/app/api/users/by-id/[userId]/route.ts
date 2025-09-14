@@ -34,6 +34,7 @@ export async function GET(
       username: user.username,
       name: user.name,
       image: user.image,
+      walletAddress: user.walletAddress, // Add the missing wallet address
     });
 
   } catch (error) {

@@ -230,7 +230,7 @@ export async function POST(req: NextRequest) {
       });
 
       return { newMessage, updatedConversation };
-    });
+    }, { timeout: 20000 }); // Increased timeout to 20 seconds
 
     return NextResponse.json(result, { status: 201 });
 
