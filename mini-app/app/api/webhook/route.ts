@@ -15,6 +15,9 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
 
+    // Log the entire raw request body for absolute certainty.
+    console.log("Received Raw Webhook Body:", JSON.stringify(body, null, 2));
+
     // Step 1: Verify the signature. This is for security.
     const { fid } = await parseWebhookEvent(body, verifyAppKeyWithNeynar);
 
