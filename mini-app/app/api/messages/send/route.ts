@@ -169,7 +169,9 @@ export async function POST(req: NextRequest) {
             if (!deployerPrivateKey) {
                 throw new Error("DEPLOYER_PRIVATE_KEY environment variable is not set.");
             }
-            const account = privateKeyToAccount(deployerPrivateKey as `0x${string}`);
+            // Ensure the private key is in the correct hex format.
+            const account = privateKeyToAccount(`0x${deployerPrivateKey}`);
+            
             const walletClient = createWalletClient({
                 account,
                 chain: baseSepolia,
