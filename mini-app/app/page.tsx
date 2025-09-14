@@ -69,8 +69,11 @@ const ConversationCard = ({ conversation, currentUserId }: { conversation: Conve
 
   if (!otherParticipant) return null;
 
+  // Use the database ID for the link to support non-Farcaster users.
+  const href = otherParticipant.id ? `/chat/${otherParticipant.id}` : '#';
+
   return (
-    <Link href={`/chat/${otherParticipant?.fid}`} className="block bg-white p-4 rounded-2xl flex items-start space-x-4 shadow-sm border border-gray-200 hover:bg-gray-50 transition-colors">
+    <Link href={href} className="block bg-white p-4 rounded-2xl flex items-start space-x-4 shadow-sm border border-gray-200 hover:bg-gray-50 transition-colors">
       <CustomAvatar profile={otherParticipant} className="w-10 h-10 rounded-full mt-1" />
       <div className="flex-1 overflow-hidden">
         <div className="flex justify-between items-center">
