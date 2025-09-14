@@ -45,6 +45,7 @@ model User {
   updatedAt      DateTime  @updatedAt
 
   verifiedAddresses VerifiedAddress[]
+  notificationTokens NotificationToken[]
 }
 
 model VerifiedAddress {
@@ -116,4 +117,15 @@ model Message {
   updatedAt DateTime @updatedAt
 
   @@index([conversationId])
+}
+
+model NotificationToken {
+  id          String   @id @default(cuid())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String   @unique // Each user has only one token
+  token       String
+  providerUrl String
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }

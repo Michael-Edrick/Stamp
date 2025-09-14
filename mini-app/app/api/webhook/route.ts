@@ -1,124 +1,92 @@
+import { NextRequest, NextResponse } from 'next/server';
 import {
-  setUserNotificationDetails,
-  deleteUserNotificationDetails,
-} from "@/lib/notification";
-import { sendFrameNotification } from "@/lib/notification-client";
-import { http } from "viem";
-import { createPublicClient } from "viem";
-import { optimism } from "viem/chains";
+  ParseWebhookEvent,
+  parseWebhookEvent,
+  verifyAppKeyWithNeynar,
+} from '@farcaster/miniapp-node';
+import prisma from '@/lib/prisma';
 
-const appName = process.env.NEXT_PUBLIC_ONCHAINKIT_PROJECT_NAME;
-
-const KEY_REGISTRY_ADDRESS = "0x00000000Fc1237824fb747aBDE0FF18990E59b7e";
-
-const KEY_REGISTRY_ABI = [
-  {
-    inputs: [
-      { name: "fid", type: "uint256" },
-      { name: "key", type: "bytes" },
-    ],
-    name: "keyDataOf",
-    outputs: [
-      {
-        components: [
-          { name: "state", type: "uint8" },
-          { name: "keyType", type: "uint32" },
-        ],
-        name: "",
-        type: "tuple",
-      },
-    ],
-    stateMutability: "view",
-    type: "function",
-  },
-] as const;
-
-async function verifyFidOwnership(fid: number, appKey: `0x${string}`) {
-  const client = createPublicClient({
-    chain: optimism,
-    transport: http(),
-  });
-
+export async function POST(req: NextRequest) {
   try {
-    const result = await client.readContract({
-      address: KEY_REGISTRY_ADDRESS,
-      abi: KEY_REGISTRY_ABI,
-      functionName: "keyDataOf",
-      args: [BigInt(fid), appKey],
+    const body = await req.json();
+
+    // Verify the webhook event to ensure it's a valid request from a Farcaster client
+    const data = await parseWebhookEvent(body, verifyAppKeyWithNeynar);
+
+    const { fid } = data;
+
+    // Find the user in our database associated with the FID from the webhook
+    const user = await prisma.user.findUnique({
+      where: { fid: fid.toString() },
     });
 
-    return result.state === 1 && result.keyType === 1;
-  } catch (error) {
-    console.error("Key Registry verification failed:", error);
-    return false;
-  }
-}
+    if (!user) {
+      console.warn(`Webhook received for FID ${fid} but user not found.`);
+      // Return a 200 status because it's not a server error, but we can't process it.
+      return NextResponse.json({ message: 'User not found' }, { status: 200 });
+    }
 
-function decode(encoded: string) {
-  return JSON.parse(Buffer.from(encoded, "base64url").toString("utf-8"));
-}
+    // Use a type assertion to handle the discriminated union type from the library
+    const eventData = data as any;
 
-export async function POST(request: Request) {
-  const requestJson = await request.json();
+    switch (eventData.event) {
+      // These events signify the user has opted-in to notifications
+      case 'miniapp_added':
+      case 'notifications_enabled':
+        if (eventData.notificationDetails) {
+          const { token, url } = eventData.notificationDetails;
+          // Use upsert to create a new token or update an existing one for the user
+          await prisma.notificationToken.upsert({
+            where: { userId: user.id },
+            create: {
+              userId: user.id,
+              token,
+              providerUrl: url,
+              isActive: true,
+            },
+            update: {
+              token,
+              providerUrl: url,
+              isActive: true,
+            },
+          });
+          console.log(`Saved/Updated notification token for user ${user.id}`);
+        }
+        break;
 
-  const { header: encodedHeader, payload: encodedPayload } = requestJson;
-
-  const headerData = decode(encodedHeader);
-  const event = decode(encodedPayload);
-
-  const { fid, key } = headerData;
-
-  const valid = await verifyFidOwnership(fid, key);
-
-  if (!valid) {
-    return Response.json(
-      { success: false, error: "Invalid FID ownership" },
-      { status: 401 },
-    );
-  }
-
-  switch (event.event) {
-    case "frame_added":
-      console.log(
-        "frame_added",
-        "event.notificationDetails",
-        event.notificationDetails,
-      );
-      if (event.notificationDetails) {
-        await setUserNotificationDetails(fid, event.notificationDetails);
-        await sendFrameNotification({
-          fid,
-          title: `Welcome to ${appName}`,
-          body: `Thank you for adding ${appName}`,
+      // These events signify the user has opted-out
+      case 'miniapp_removed':
+      case 'notifications_disabled':
+        // We can safely use update because a token must exist to be disabled
+        await prisma.notificationToken.update({
+          where: { userId: user.id },
+          data: { isActive: false },
         });
-      } else {
-        await deleteUserNotificationDetails(fid);
-      }
+        console.log(`Disabled notifications for user ${user.id}`);
+        break;
 
-      break;
-    case "frame_removed": {
-      console.log("frame_removed");
-      await deleteUserNotificationDetails(fid);
-      break;
+      default:
+        console.warn('Received an unknown webhook event type:', eventData.event);
+        break;
     }
-    case "notifications_enabled": {
-      console.log("notifications_enabled", event.notificationDetails);
-      await setUserNotificationDetails(fid, event.notificationDetails);
-      await sendFrameNotification({
-        fid,
-        title: `Welcome to ${appName}`,
-        body: `Thank you for enabling notifications for ${appName}`,
-      });
 
-      break;
-    }
-    case "notifications_disabled": {
-      console.log("notifications_disabled");
-      await deleteUserNotificationDetails(fid);
+    return NextResponse.json({ message: 'Webhook processed successfully' }, { status: 200 });
 
-      break;
+  } catch (e: unknown) {
+    const error = e as ParseWebhookEvent.ErrorType;
+    console.error('Error processing webhook:', error);
+
+    // Handle verification errors gracefully as per the Farcaster documentation
+    switch (error.name) {
+      case 'VerifyJsonFarcasterSignature.InvalidDataError':
+      case 'VerifyJsonFarcasterSignature.InvalidEventDataError':
+        return NextResponse.json({ message: 'Invalid webhook data' }, { status: 400 });
+      case 'VerifyJsonFarcasterSignature.InvalidAppKeyError':
+        return NextResponse.json({ message: 'Invalid app key' }, { status: 401 });
+      case 'VerifyJsonFarcasterSignature.VerifyAppKeyError':
+        return NextResponse.json({ message: 'Internal server error during verification' }, { status: 500 });
+      default:
+        return NextResponse.json({ message: 'An unknown internal server error occurred' }, { status: 500 });
     }
   }
-
-  return Response.json({ success: true });
 }

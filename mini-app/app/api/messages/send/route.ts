@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { randomBytes } from 'crypto';
 import { NextRequest } from "next/server";
+import { sendPaidMessageNotification } from "@/lib/notification-client";
 // No longer importing getFarcasterUser
 
 // Function to get or create a conversation between two users
@@ -82,6 +83,23 @@ export async function POST(req: NextRequest) {
             where: { id: conversation.id },
             data: { messagesRemaining: 10 } // TODO: Make this configurable
         });
+        
+        // After successfully saving, trigger a notification for the paid message
+        if (amount > 0) {
+          const recipient = await prisma.user.findUnique({ where: { id: recipientId } });
+          // Ensure the recipient exists, has an FID, and the sender has a username
+          if (recipient && recipient.fid && sender.username) {
+            // Fire-and-forget the notification so it doesn't block the response
+            sendPaidMessageNotification({
+              recipientFid: parseInt(recipient.fid, 10),
+              senderName: sender.username,
+              messageContent: content,
+            }).catch(error => {
+              // Log errors but don't crash the main flow
+              console.error("Failed to send notification in background:", error);
+            });
+          }
+        }
 
         return NextResponse.json({ newMessage }, { status: 201 });
     }
