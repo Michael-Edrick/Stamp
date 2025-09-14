@@ -142,7 +142,7 @@ export default function HomePage() {
           setConversations(convoData);
         } else {
           console.warn("Inbox API did not return an array:", convoData);
-          setConversations([]); // Default to empty array on unexpected format
+          setConversations([]);
         }
       } else {
         console.warn("Failed to fetch inbox, status:", convoResponse.status);
