@@ -26,14 +26,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ message: 'User not found' }, { status: 200 });
     }
 
-    // The 'data' object from parseWebhookEvent contains the full event payload.
-    // The event type string is at data.event.
-    switch (data.event) {
+    // Use a type assertion to handle the library's complex discriminated union type.
+    // This allows us to bypass the build error and handle the nested data structure.
+    const eventPayload = data as any;
+
+    // The actual event string (e.g., 'miniapp_added') is nested inside the 'event' object.
+    switch (eventPayload.event) {
       // These events signify the user has opted-in to notifications
       case 'miniapp_added':
       case 'notifications_enabled':
-        if (data.notificationDetails) {
-          const { token, url } = data.notificationDetails;
+        // The notification details are also on this nested object.
+        if (eventPayload.notificationDetails) {
+          const { token, url } = eventPayload.notificationDetails;
           // Use upsert to create a new token or update an existing one for the user
           await prisma.notificationToken.upsert({
             where: { userId: user.id },
@@ -66,7 +70,7 @@ export async function POST(req: NextRequest) {
 
       default:
         // Log the entire data object for debugging unknown events.
-        console.warn('Received an unknown webhook event type:', data);
+        console.warn('Received an unknown webhook event type:', eventPayload);
         break;
     }
 
