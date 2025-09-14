@@ -73,6 +73,9 @@ export async function sendPaidMessageNotification(notification: PaidMessageNotif
 
     const result = await response.json();
 
+    // Log the entire raw response from the notification server for debugging.
+    console.log("Received response from Farcaster notification server:", JSON.stringify(result, null, 2));
+
     // Handle tokens that the notification server reports as no longer valid.
     if (result.invalidTokens && result.invalidTokens.length > 0) {
       console.warn('Deactivating invalid tokens:', result.invalidTokens);
