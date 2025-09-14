@@ -3,6 +3,10 @@ import prisma from "@/lib/prisma";
 import { randomBytes } from 'crypto';
 import { NextRequest } from "next/server";
 import { sendPaidMessageNotification } from "@/lib/notification-client";
+import { createWalletClient, http, createPublicClient } from "viem";
+import { privateKeyToAccount } from "viem/accounts";
+import { baseSepolia } from "viem/chains";
+import { messageEscrowABI, messageEscrowAddress } from "@/lib/contract";
 // No longer importing getFarcasterUser
 
 // Function to get or create a conversation between two users
@@ -144,6 +148,63 @@ export async function POST(req: NextRequest) {
     // --- Standard Message Sending Logic ---
     // This logic now only runs if payment is NOT required.
     const result = await prisma.$transaction(async (tx) => {
+      
+      // --- START: Restored Reply-to-Claim Logic ---
+      const lastMessageFromOtherUser = await tx.message.findFirst({
+          where: {
+              conversationId: conversation.id,
+              senderId: recipientId, // The message was from the person we are replying to
+              status: 'SENT',       // The message has not been replied to yet
+              amount: { gt: 0 },   // Ensure it was a paid message
+          },
+          orderBy: { createdAt: 'desc' },
+      });
+
+      // If the last message was a paid message from the other user, release the escrow.
+      if (lastMessageFromOtherUser && lastMessageFromOtherUser.onChainMessageId) {
+          console.log(`Replying to paid message: ${lastMessageFromOtherUser.id}. Releasing escrow.`);
+          
+          try {
+            const deployerPrivateKey = process.env.DEPLOYER_PRIVATE_KEY;
+            if (!deployerPrivateKey) {
+                throw new Error("DEPLOYER_PRIVATE_KEY environment variable is not set.");
+            }
+            const account = privateKeyToAccount(deployerPrivateKey as `0x${string}`);
+            const walletClient = createWalletClient({
+                account,
+                chain: baseSepolia,
+                transport: http(process.env.BASE_SEPOLIA_RPC_URL),
+            });
+            const publicClient = createPublicClient({
+                chain: baseSepolia,
+                transport: http(process.env.BASE_SEPOLIA_RPC_URL),
+            });
+
+            const { request } = await publicClient.simulateContract({
+                account,
+                address: messageEscrowAddress,
+                abi: messageEscrowABI,
+                functionName: 'releaseFunds',
+                args: [lastMessageFromOtherUser.onChainMessageId as `0x${string}`],
+            });
+            const hash = await walletClient.writeContract(request);
+
+            console.log(`Funds released successfully. Tx hash: ${hash}`);
+
+            await tx.message.update({
+                where: { id: lastMessageFromOtherUser.id },
+                data: { status: 'REPLIED' },
+            });
+            console.log(`Updated status of message ${lastMessageFromOtherUser.id} to REPLIED.`);
+
+          } catch (contractError) {
+              console.error("Smart contract call to release funds failed:", contractError);
+              // We throw an error to ensure the Prisma transaction is rolled back.
+              throw new Error("Failed to release funds from smart contract. The reply was not sent.");
+          }
+      }
+      // --- END: Restored Reply-to-Claim Logic ---
+
       const existingConversation = await tx.conversation.findUniqueOrThrow({ where: { id: conversation.id }});
       
       const newMessage = await tx.message.create({
