@@ -49,18 +49,16 @@ export async function GET(req: NextRequest) {
 
     console.log(`Sending test notification for user ID: ${user.id}, FID: ${user.fid}`);
 
-    // Fire-and-forget the notification to simulate the background process.
-    sendPaidMessageNotification({
+    // Await the notification to see the full logs and any potential errors.
+    await sendPaidMessageNotification({
       recipientFid: parseInt(user.fid, 10),
       senderName: "Test System",
       messageContent: "This is a test notification to confirm your setup is working!",
-    }).catch(error => {
-      console.error("Failed to send test notification in background:", error);
     });
 
     return NextResponse.json(
       {
-        message: `Test notification successfully triggered for FID ${user.fid}. Please check your device.`,
+        message: `Test notification process completed for FID ${user.fid}. Please check your device and server logs.`,
       },
       { status: 200 }
     );
