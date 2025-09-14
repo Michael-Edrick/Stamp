@@ -10,35 +10,29 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
 
-    // Verify the webhook event to ensure it's a valid request from a Farcaster client
-    const data = await parseWebhookEvent(body, verifyAppKeyWithNeynar);
+    // Step 1: Verify the webhook signature. This function will throw an error if
+    // the signature is invalid. It returns the verified FID.
+    const { fid } = await parseWebhookEvent(body, verifyAppKeyWithNeynar);
 
-    const { fid } = data;
-
-    // Find the user in our database associated with the FID from the webhook
+    // Step 2: Find the user in our database associated with the verified FID.
     const user = await prisma.user.findUnique({
       where: { fid: fid.toString() },
     });
 
     if (!user) {
       console.warn(`Webhook received for FID ${fid} but user not found.`);
-      // Return a 200 status because it's not a server error, but we can't process it.
       return NextResponse.json({ message: 'User not found' }, { status: 200 });
     }
 
-    // Use a type assertion to handle the library's complex discriminated union type.
-    // This allows us to bypass the build error and handle the nested data structure.
-    const eventPayload = data as any;
+    // Step 3: Use the original (and now trusted) request body to get the event details.
+    // The event payload is NOT returned by the verification function.
+    const eventPayload = body;
 
-    // The actual event string (e.g., 'miniapp_added') is nested inside the 'event' object.
     switch (eventPayload.event) {
-      // These events signify the user has opted-in to notifications
       case 'miniapp_added':
       case 'notifications_enabled':
-        // The notification details are also on this nested object.
         if (eventPayload.notificationDetails) {
           const { token, url } = eventPayload.notificationDetails;
-          // Use upsert to create a new token or update an existing one for the user
           await prisma.notificationToken.upsert({
             where: { userId: user.id },
             create: {
@@ -53,24 +47,21 @@ export async function POST(req: NextRequest) {
               isActive: true,
             },
           });
-          console.log(`Saved/Updated notification token for user ${user.id}`);
+          console.log(`Successfully saved/updated notification token for user ${user.id}`);
         }
         break;
 
-      // These events signify the user has opted-out
       case 'miniapp_removed':
       case 'notifications_disabled':
-        // We can safely use update because a token must exist to be disabled
-        await prisma.notificationToken.update({
+        await prisma.notificationToken.updateMany({
           where: { userId: user.id },
           data: { isActive: false },
         });
-        console.log(`Disabled notifications for user ${user.id}`);
+        console.log(`Successfully disabled notifications for user ${user.id}`);
         break;
 
       default:
-        // Log the entire data object for debugging unknown events.
-        console.warn('Received an unknown webhook event type:', eventPayload);
+        console.warn('Received a verified but unknown webhook event type:', eventPayload);
         break;
     }
 
@@ -80,7 +71,6 @@ export async function POST(req: NextRequest) {
     const error = e as ParseWebhookEvent.ErrorType;
     console.error('Error processing webhook:', error);
 
-    // Handle verification errors gracefully as per the Farcaster documentation
     switch (error.name) {
       case 'VerifyJsonFarcasterSignature.InvalidDataError':
       case 'VerifyJsonFarcasterSignature.InvalidEventDataError':
