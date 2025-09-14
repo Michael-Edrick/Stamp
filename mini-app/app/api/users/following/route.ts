@@ -14,6 +14,7 @@ export async function GET(req: NextRequest) {
   if (!NEYNAR_API_KEY) {
     return NextResponse.json({ error: 'NEYNAR_API_KEY is not configured' }, { status: 500 });
   }
+  const neynarClient = new NeynarAPIClient({apiKey: NEYNAR_API_KEY});
 
   try {
     // 1. Find the user associated with the connected walletAddress using the new data model.
@@ -31,13 +32,27 @@ export async function GET(req: NextRequest) {
 
     // We still need to check for the FID, as non-Farcaster users won't have one.
     if (!user.fid) {
-      // This is a valid user, but they don't have a Farcaster account, so they can't be following anyone.
-      // Return an empty list, which is the correct state.
-      return NextResponse.json([]);
+      // THIS IS THE MODIFIED LOGIC FOR TESTING
+      // If the user has no FID, they are not a Farcaster user.
+      // Instead of an empty list, we will return a default Farcaster user to message.
+      console.log("User has no FID, returning default user for testing.");
+      try {
+        const defaultUserFid = 1107789; // Your main FID
+        const { users } = await neynarClient.fetchBulkUsers([defaultUserFid]);
+        if (users.length > 0) {
+          // The API returns a list, so we send back our single user in a list.
+          return NextResponse.json(users);
+        } else {
+          // If we can't find the default user for some reason, return empty.
+          return NextResponse.json([]);
+        }
+      } catch (neynarError) {
+        console.error("Failed to fetch default user from Neynar:", neynarError);
+        return NextResponse.json([]); // Return empty on error
+      }
     }
 
     // 2. Use the FID to fetch the user's following list from Neynar
-    const neynarClient = new NeynarAPIClient({apiKey: NEYNAR_API_KEY});
     
     // The FID from our database is a string, but the SDK expects a number.
     const fid = parseInt(user.fid, 10);
