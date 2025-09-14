@@ -38,7 +38,7 @@ export async function GET(req: NextRequest) {
       console.log("User has no FID, returning default user for testing.");
       try {
         const defaultUserFid = 1107789; // Your main FID
-        const { users } = await neynarClient.fetchBulkUsers([defaultUserFid]);
+        const { users } = await neynarClient.fetchBulkUsers({ fids: [defaultUserFid] });
         if (users.length > 0) {
           // The API returns a list, so we send back our single user in a list.
           return NextResponse.json(users);
