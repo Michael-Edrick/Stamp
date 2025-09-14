@@ -34,4 +34,4 @@ export async function GET(
     console.error(`Error fetching profile for ${username}:`, error);
     return NextResponse.json({ error: "An error occurred while fetching the profile." }, { status: 500 });
   }
-} 
+}

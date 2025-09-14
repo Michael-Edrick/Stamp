@@ -62,7 +62,8 @@ const PaymentModal = ({ user, onSelect, onClose, isProcessing }: { user: User | 
 
 export default function ChatPage() {
   const params = useParams();
-  const fid = params.fid as string; // Changed from userId to fid
+  // The parameter from the URL is now the universal 'userId'.
+  const userId = params.userId as string;
 
   const { address: selfAddress, isConnected } = useAccount();
 
@@ -100,7 +101,8 @@ export default function ChatPage() {
   };
 
   useEffect(() => {
-    const loadChatData = async (recipientFid: string, currentUserAddress?: `0x${string}`) => {
+    // The function now loads data based on the universal 'userId'.
+    const loadChatData = async (recipientId: string, currentUserAddress?: `0x${string}`) => {
         setIsLoading(true);
         try {
             // We need the current user's data first to proceed
@@ -113,15 +115,16 @@ export default function ChatPage() {
             const meData: User = await meResponse.json();
             setCurrentUser(meData);
 
-            // Get recipient user data (creating them if they don't exist)
-            const userResponse = await fetch(`/api/users/by-fid?fid=${recipientFid}`);
+            // Fetch recipient user data using the new, non-conflicting endpoint.
+            const userResponse = await fetch(`/api/users/by-id/${recipientId}`);
 
             if (!userResponse.ok) throw new Error(`Failed to fetch recipient user data. Status: ${userResponse.status}`);
             
             const recipientData: User = await userResponse.json();
             setRecipientUser(recipientData);
 
-            // Fetch the conversation between the current user and the recipient
+            // Fetch the conversation between the current user and the recipient.
+            // This part already correctly used the recipient's database ID.
             const convoResponse = await fetch(`/api/conversations/${recipientData.id}`, {
                 headers: {
                     'x-wallet-address': currentUserAddress,
@@ -145,10 +148,10 @@ export default function ChatPage() {
         }
     };
 
-    if (isConnected && selfAddress && fid) {
-      loadChatData(fid, selfAddress);
+    if (isConnected && selfAddress && userId) {
+      loadChatData(userId, selfAddress);
     }
-  }, [isConnected, selfAddress, fid]);
+  }, [isConnected, selfAddress, userId]);
 
   useEffect(() => {
     scrollToBottom();
