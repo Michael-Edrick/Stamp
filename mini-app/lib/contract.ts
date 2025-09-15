@@ -1,3 +1,4 @@
+
 export const messageEscrowABI = [
     {
       "inputs": [
@@ -5,6 +6,16 @@ export const messageEscrowABI = [
           "internalType": "address",
           "name": "_usdcAddress",
           "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "_platformFeeWallet",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_platformFeePercentage",
+          "type": "uint256"
         }
       ],
       "stateMutability": "nonpayable",
@@ -136,6 +147,45 @@ export const messageEscrowABI = [
       "type": "function"
     },
     {
+      "inputs": [],
+      "name": "owner",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "platformFeePercentage",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "platformFeeWallet",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
       "inputs": [
         {
           "internalType": "bytes32",
@@ -191,5 +241,8 @@ export const messageEscrowABI = [
     }
   ];
 
-export const messageEscrowAddress = "0xDe987990A5286f4Dce1F119E23432D8bbC6Da70C";
+export const messageEscrowAddress = '0x4FC8edc8918B6cCA8d960dbB2c8738d1A8D7Df6d';
+
+// The address of the mock USDC token contract.
+// This should match the address you used when deploying the MessageEscrow contract.
 export const usdcContractAddress = "0x6051912FC68729aa994989C8B23666AFfC890204"; // MockUSDC on Base Sepolia (18 decimals) 

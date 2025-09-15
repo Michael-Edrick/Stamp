@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.24;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
@@ -7,6 +7,8 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 contract MessageEscrow is ReentrancyGuard {
     IERC20 public usdc;
     address public owner;
+    address public platformFeeWallet;
+    uint256 public platformFeePercentage;
 
     struct Message {
         address sender;
@@ -23,9 +25,13 @@ contract MessageEscrow is ReentrancyGuard {
     event FundsReleased(bytes32 indexed id);
     event Refunded(bytes32 indexed id);
 
-    constructor(address _usdcAddress) {
+    constructor(address _usdcAddress, address _platformFeeWallet, uint256 _platformFeePercentage) {
+        require(_platformFeeWallet != address(0), "Invalid fee wallet address");
+        require(_platformFeePercentage > 0 && _platformFeePercentage <= 100, "Fee percentage must be between 1 and 100");
         usdc = IERC20(_usdcAddress);
         owner = msg.sender;
+        platformFeeWallet = _platformFeeWallet;
+        platformFeePercentage = _platformFeePercentage;
     }
 
     function sendMessage(
@@ -55,7 +61,11 @@ contract MessageEscrow is ReentrancyGuard {
 
         msgData.responded = true;
         
-        require(usdc.transfer(msgData.recipient, msgData.amount), "USDC transfer failed");
+        uint256 feeAmount = (msgData.amount * platformFeePercentage) / 100;
+        uint256 recipientAmount = msgData.amount - feeAmount;
+
+        require(usdc.transfer(platformFeeWallet, feeAmount), "Fee transfer failed");
+        require(usdc.transfer(msgData.recipient, recipientAmount), "Recipient transfer failed");
         
         emit FundsReleased(messageId);
     }
