@@ -9,6 +9,8 @@ import { useMiniKit } from '@coinbase/onchainkit/minikit';
 import { ConnectWallet } from '@coinbase/onchainkit/wallet';
 import SearchModal from '@/app/components/SearchModal';
 import { NetworkSwitcher } from '@/app/components/NetworkSwitcher';
+import Inbox from '@/app/components/Inbox';
+import StampIcon from '@/app/components/StampIcon';
 
 // Local type definition to avoid import issues with the SDK
 type NeynarUser = {
@@ -98,8 +100,8 @@ export default function HomePage() {
   const { address, isConnected } = useAccount();
   const { disconnect } = useDisconnect();
   const { connect, connectors, isPending: isConnecting } = useConnect();
-  const [conversations, setConversations] = useState<ConversationWithDetails[]>([]);
-  const [following, setFollowing] = useState<NeynarUser[]>([]);
+  // const [conversations, setConversations] = useState<ConversationWithDetails[]>([]);
+  // const [following, setFollowing] = useState<NeynarUser[]>([]);
   const [currentUser, setCurrentUser] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -131,10 +133,11 @@ export default function HomePage() {
       const userData = await userResponse.json();
       setCurrentUser(userData);
 
+      /*
       // Step 2: Now that we have the user, fetch their conversations and following list concurrently.
       const [convoResponse, followingResponse] = await Promise.all([
         fetch(`/api/messages/inbox?walletAddress=${address}`),
-        fetch(`/api/users/following?walletAddress=${address}`)
+        // fetch(`/api/users/following?walletAddress=${address}`)
       ]);
 
       // Process conversations
@@ -142,17 +145,18 @@ export default function HomePage() {
         const convoData = await convoResponse.json();
         // Validate that the response is an array before setting state
         if (Array.isArray(convoData)) {
-          setConversations(convoData);
+          // setConversations(convoData);
         } else {
           console.warn("Inbox API did not return an array:", convoData);
-          setConversations([]);
+          // setConversations([]);
         }
       } else {
         console.warn("Failed to fetch inbox, status:", convoResponse.status);
-        setConversations([]); // Default to empty array on error
+        // setConversations([]); // Default to empty array on error
       }
 
       // Process following list
+      
       if (followingResponse.ok) {
         const followingData = await followingResponse.json();
         // Validate that the response is an array before setting state
@@ -166,6 +170,7 @@ export default function HomePage() {
         console.warn("Failed to fetch following list, status:", followingResponse.status);
         setFollowing([]); // Default to empty array on error
       }
+      */
 
     } catch (err) {
       console.error("Error fetching homepage data:", err);
@@ -183,8 +188,8 @@ export default function HomePage() {
       // Clear data when disconnected
       setLoading(true);
       setCurrentUser(null);
-      setConversations([]);
-      setFollowing([]);
+      // setConversations([]);
+      // setFollowing([]);
     }
   }, [isConnected, address, fetchData]);
   
@@ -206,47 +211,16 @@ export default function HomePage() {
     }
 
     return (
-      <div className="space-y-8">
-        {/* Your Chats Section */}
-        <div>
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-bold text-gray-800">Your chats</h2>
-            <Link href="/inbox" className="flex items-center text-blue-600 font-semibold text-sm">
-              Chat <ChevronRightIcon className="w-4 h-4 ml-1" />
-            </Link>
-          </div>
-          <div className="space-y-3">
-            {conversations.length > 0 ? (
-              conversations.slice(0, 2).map((convo) => (
-                currentUser?.id && <ConversationCard key={convo.id} conversation={convo} currentUserId={currentUser.id} />
-              ))
-            ) : (
-              <p className="text-center text-gray-500 py-4">No recent chats.</p>
-            )}
-          </div>
-        </div>
-
-        {/* Following Section */}
-        <div>
-          <h2 className="text-lg font-bold text-gray-800 mb-4">Following</h2>
-          <div className="space-y-3">
-            {following.length > 0 ? (
-              following.slice(0, 4).map((user) => (
-                <UserCard key={user.fid} user={user} />
-              ))
-            ) : (
-              <p className="text-center text-gray-500 py-4">Not following anyone yet.</p>
-            )}
-          </div>
-        </div>
-      </div>
+      <Inbox />
     );
   };
 
   return (
-    <div className="h-full bg-[#F0F2F5]nb font-sans flex flex-col">
-       <header className="w-full max-w-md mx-auto flex justify-between items-center p-4 bg-[#F0F2F2]">
-          <h1 className="text-xl font-bold text-gray-900">StampMe</h1>
+    <div className="h-full bg-[#DEDEDE]nb font-sans flex flex-col">
+       <header className="w-full max-w-md mx-auto flex justify-between items-center p-4 bg-[#DEDEDE]">
+          <Link href="/" aria-label="Home">
+            <StampIcon className="w-8 h-8" />
+          </Link>
           <div className="flex items-center gap-x-2">
               {isClient && !isConnected && (
                   <button
@@ -265,6 +239,8 @@ export default function HomePage() {
               )}
               {isClient && isConnected && currentUser && (
                 <>
+                  {/* The following block is temporarily hidden for UI review */}
+                  {/*
                   <div className="bg-white rounded-full px-3 py-1.5 flex items-center shadow-sm">
                     <span className="text-sm font-semibold text-gray-800 mr-2">
                       {address ? `${address.slice(0, 6)}...${address.slice(-4)}` : '...'}
@@ -279,6 +255,18 @@ export default function HomePage() {
                       <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9" />
                     </svg>
                   </button>
+                  */}
+                  <Link 
+                    href={currentUser ? `/profile` : '#'} 
+                    className={`w-10 h-10 rounded-full transition-transform duration-200 hover:scale-110 flex items-center justify-center ${!currentUser ? 'pointer-events-none' : ''}`}
+                    aria-disabled={!currentUser}
+                  >
+                    {currentUser ? (
+                      <CustomAvatar profile={currentUser} className="w-full h-full rounded-full" />
+                    ) : (
+                      <UserCircleIcon className="w-full h-full text-gray-400" />
+                    )}
+                  </Link>
                 </>
               )}
           </div>
@@ -286,15 +274,24 @@ export default function HomePage() {
       <main className="w-full max-w-md mx-auto px-4 flex-1 overflow-y-auto">
         {renderContent()}
       </main>
-       <BottomNav 
+      {/* <BottomNav 
         isClient={isClient}
         onSearchClick={() => setIsSearchModalOpen(true)}
-       />
-       {isSearchModalOpen && <SearchModal onClose={() => setIsSearchModalOpen(false)} />}
+      /> */}
+      {isSearchModalOpen && <SearchModal onClose={() => setIsSearchModalOpen(false)} />}
+      
+      {/* Floating Action Button */}
+      <button 
+        className="fixed bottom-6 right-6 bg-blue-500 text-white rounded-full w-14 h-14 flex items-center justify-center shadow-lg hover:bg-blue-600 transition-colors"
+        aria-label="New Message"
+      >
+        <PlusIcon className="w-8 h-8" />
+      </button>
     </div>
   );
 }
 
+/*
 const BottomNav = ({ isClient, onSearchClick }: { isClient: boolean, onSearchClick: () => void }) => {
     const { address } = useAccount();
     const [currentUser, setCurrentUser] = useState<Profile | null>(null);
@@ -325,14 +322,14 @@ const BottomNav = ({ isClient, onSearchClick }: { isClient: boolean, onSearchCli
     const navButtonBase = "w-12 h-12 rounded-full flex items-center justify-center transition-transform duration-200 hover:scale-110";
 
     return (
-        <footer className="w-full flex justify-center items-center p-4 bg-[#F0F2F5]">
+        <footer className="w-full flex justify-center items-center p-4 bg-[#DEDEDE]">
             <div className="flex items-center justify-center gap-x-4 bg-black rounded-full shadow-lg p-3">
                 <button className={`${navButtonBase} bg-neutral-800`} onClick={onSearchClick}>
                     <MagnifyingGlassIcon className="w-7 h-7 text-white"/>
                 </button>
                 <Link href="/inbox" className={`${navButtonBase} bg-orange-500`}>
                     <ChatBubbleOvalLeftEllipsisIcon className="w-7 h-7 text-white"/>
-                </Link>
+                </button>
                 <button className={`${navButtonBase} bg-blue-600 cursor-not-allowed`} disabled>
                     <PlusIcon className="w-7 h-7 text-white"/>
                 </button>
@@ -351,3 +348,4 @@ const BottomNav = ({ isClient, onSearchClick }: { isClient: boolean, onSearchCli
         </footer>
     );
 };
+*/

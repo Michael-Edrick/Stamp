@@ -50,8 +50,86 @@ The strategy is to create a master `AppFrame` component that correctly calculate
 ## Executor's Feedback or Assistance Requests
 *All previous tasks are complete. The multi-address authentication and messaging flow is now working correctly.*
 
-## Lessons
-*   The Neynar API `fetchUserFollowing` endpoint has a maximum limit of 100 users per request. To fetch larger sets of data, pagination using the `cursor` is required.
-*   TypeScript build errors can sometimes occur due to outdated or mismatched type definitions in an SDK. Accessing properties using bracket notation (e.g., `user['follower_count']`) can be a viable workaround to bypass incorrect type checking during the build process.
-*   When a client-side `fetch` call to a backend API endpoint returns a `400 Bad Request`, it's crucial to verify that all required query parameters or body data are being sent correctly from the client.
-*   When implementing a significant data model change (like the `VerifiedAddress` table), it is critical to trace all data flows and update every API endpoint that relies on the old structure to prevent authentication and data retrieval errors. Forgetting to update even one dependent component can lead to bugs that are hard to trace.
+**Update:** The "Platform Fee Implementation" feature has been successfully implemented, tested, and the new contract has been deployed. The platform is now correctly collecting a 10% fee on claimed messages. All related tasks are complete.
+
+---
+
+# UI & Flow Refactoring
+
+## Background and Motivation
+The user wants to refactor the application's user interface, starting with the homepage. The goal is to simplify the main view by removing the list of "Following" users, while preserving the code for potential future use.
+
+## High-level Task Breakdown
+
+*   **Task 1: Temporarily Remove the "Following" List from the Homepage**
+    *   **Action:** Modify `mini-app/app/page.tsx`.
+    *   **Details:**
+        1.  Locate the `fetch` call to the `/api/users/following` endpoint and comment it out.
+        2.  Locate the JSX code that maps over the `following` state variable to render the `UserCard` components and comment out the entire section.
+    *   **Success Criteria:** The homepage loads and functions correctly, but the list of followed users is no longer visible. The application builds without errors.
+
+*   **Task 2: Create a Reusable `Inbox` Component**
+    *   **Action:** Create a new file: `mini-app/app/components/Inbox.tsx`.
+    *   **Details:**
+        1.  Move the data fetching logic (the call to `/api/messages/inbox`) and state management from the existing `inbox/page.tsx` into this new component.
+        2.  The component will render the full, scrollable list of conversations.
+    *   **Success Criteria:** A self-contained `Inbox.tsx` component is created that handles all logic for fetching and displaying a user's complete inbox.
+
+*   **Task 3: Integrate the `Inbox` Component into the Homepage**
+    *   **Action:** Modify `mini-app/app/page.tsx`.
+    *   **Details:**
+        1.  Remove the old "Your chats" section and its associated data fetching logic.
+        2.  Import and render the new `<Inbox />` component in its place.
+    *   **Success Criteria:** The homepage now displays the full, scrollable inbox.
+
+*   **Task 4: Clean up the old `/inbox` Page**
+    *   **Action:** Modify `mini-app/app/inbox/page.tsx`.
+    *   **Details:**
+        1.  Strip the page down to a simple container that imports and displays the `<Inbox />` component.
+    *   **Success Criteria:** The `/inbox` page continues to work correctly but with much simpler, non-duplicated code.
+
+*   **Task 5: Update App Color Scheme and Conversation Card Layout**
+    *   **Action:** Modify global CSS and the `Inbox.tsx` component.
+    *   **Details:**
+        1.  Change the application's primary background color from `#F0F2F5` to `#DEDEDE`.
+        2.  In `mini-app/app/components/Inbox.tsx`, change the background color of conversation cards to `#ECECEC`.
+        3.  In the same component, adjust the layout to display the username next to the display name (e.g., "**Display Name** @username").
+    *   **Success Criteria:** The app's background and card colors are updated, and the username appears correctly formatted on each conversation card.
+
+*   **Task 6: Remove "StampMe" Title from Homepage Header**
+    *   **Action:** Modify `mini-app/app/page.tsx`.
+    *   **Details:** Locate and remove the `<h1>StampMe</h1>` element from the header.
+    *   **Success Criteria:** The homepage header no longer displays the "StampMe" title.
+
+*   **Task 7: Create a Reusable `StampIcon` SVG Component**
+    *   **Action:** Create a new file: `mini-app/app/components/StampIcon.tsx`.
+    *   **Details:** Write a new React component that renders a precise SVG of the orange stamp shape.
+    *   **Success Criteria:** The `StampIcon.tsx` component is created and displays the stamp icon correctly.
+
+*   **Task 8: Add the Stamp Icon Home Button to the Homepage Header**
+    *   **Action:** Modify `mini-app/app/page.tsx`.
+    *   **Details:**
+        1.  Import the new `StampIcon` component.
+        2.  Place the `StampIcon` inside a Next.js `<Link href="/">` component to act as a home button.
+        3.  Integrate this link into the header on the top-left.
+    *   **Success Criteria:** The homepage header displays the stamp icon button in the top-left corner, and it functions as a link to home.
+
+*   **Task 9: Remove the `BottomNav` Component**
+    *   **Action:** Modify `mini-app/app/page.tsx`.
+    *   **Details:** Completely remove the `BottomNav` component and its invocation from the homepage layout.
+    *   **Success Criteria:** The application renders without the black bottom navigation bar.
+
+*   **Task 10: Implement the Floating `+` Button**
+    *   **Action:** Modify `mini-app/app/page.tsx`.
+    *   **Details:** Add a new circular, blue button with a `+` icon, using fixed positioning to float it in the bottom-right corner of the page.
+    *   **Success Criteria:** A floating action button is visible and correctly positioned on the homepage.
+
+*   **Task 11: Move the Profile Avatar to the Header**
+    *   **Action:** Modify `mini-app/app/page.tsx`.
+    *   **Details:** Relocate the user's profile avatar from the old navigation bar to the top-right of the main header. It will function as a link to the profile page.
+    *   **Success Criteria:** The user's avatar appears in the header and links correctly to their profile, matching the new design.
+
+*   **Task 12: Temporarily Hide Wallet Information from Header**
+    *   **Action:** Modify `mini-app/app/page.tsx`.
+    *   **Details:** Comment out the block of code that displays the connected wallet address, network switcher, and logout button.
+    *   **Success Criteria:** The header renders with only the stamp icon on the left and the profile avatar on the right.
