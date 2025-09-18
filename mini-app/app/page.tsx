@@ -10,7 +10,8 @@ import { ConnectWallet } from '@coinbase/onchainkit/wallet';
 import SearchModal from '@/app/components/SearchModal';
 import { NetworkSwitcher } from '@/app/components/NetworkSwitcher';
 import Inbox from '@/app/components/Inbox';
-import StampIcon from '@/app/components/StampIcon';
+import Image from 'next/image';
+import ComposeModal from './components/ComposeModal';
 
 // Local type definition to avoid import issues with the SDK
 type NeynarUser = {
@@ -108,6 +109,7 @@ export default function HomePage() {
   const [isClient, setIsClient] = useState(false);
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
   const { setFrameReady, isFrameReady } = useMiniKit();
+  const [isComposeModalOpen, setComposeModalOpen] = useState(false);
 
   useEffect(() => {
     if (!isFrameReady) {
@@ -219,7 +221,7 @@ export default function HomePage() {
     <div className="h-full bg-[#DEDEDE]nb font-sans flex flex-col">
        <header className="w-full max-w-md mx-auto flex justify-between items-center p-4 bg-[#DEDEDE]">
           <Link href="/" aria-label="Home">
-            <StampIcon className="w-8 h-8" />
+            <Image src="/stamp-logo.png" alt="Stamp Logo" width={32} height={32} />
           </Link>
           <div className="flex items-center gap-x-2">
               {isClient && !isConnected && (
@@ -282,11 +284,19 @@ export default function HomePage() {
       
       {/* Floating Action Button */}
       <button 
+        onClick={() => setComposeModalOpen(true)}
         className="fixed bottom-6 right-6 bg-blue-500 text-white rounded-full w-14 h-14 flex items-center justify-center shadow-lg hover:bg-blue-600 transition-colors"
         aria-label="New Message"
       >
         <PlusIcon className="w-8 h-8" />
       </button>
+
+      {/* Compose Modal */}
+      <ComposeModal 
+        isOpen={isComposeModalOpen}
+        onClose={() => setComposeModalOpen(false)}
+        currentUser={currentUser}
+      />
     </div>
   );
 }
