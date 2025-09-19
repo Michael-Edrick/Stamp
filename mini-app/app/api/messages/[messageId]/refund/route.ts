@@ -17,7 +17,7 @@ export async function POST(
   }
   const walletAddress = user.walletAddress;
 
-  const { messageId } = params;
+  const messageId = params.messageId;
 
   if (!messageId) {
     return NextResponse.json(
@@ -45,22 +45,42 @@ export async function POST(
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
-    // Update the message status to REFUNDED
-    const updatedMessage = await prisma.message.update({
-      where: {
-        id: messageId,
-      },
-      data: {
-        status: 'REFUNDED',
-      },
-      include: {
-        sender: true, // Include sender to match the frontend type
+    // Use a transaction to both delete the message and reset the conversation
+    await prisma.$transaction(async (tx) => {
+      // First, find the message to get its conversation ID
+      const messageToDelete = await tx.message.findUnique({
+        where: { id: messageId },
+        select: { conversationId: true }
+      });
+
+      if (!messageToDelete) {
+        // This case should be rare, but good to handle.
+        // The transaction will be rolled back.
+        throw new Error("Message not found during transaction.");
       }
+
+      // Delete the message
+      await tx.message.delete({
+        where: {
+          id: messageId,
+        },
+      });
+
+      // Reset the messagesRemaining count on the conversation
+      await tx.conversation.update({
+        where: {
+          id: messageToDelete.conversationId,
+        },
+        data: {
+          messagesRemaining: 0,
+        }
+      });
     });
 
-    return NextResponse.json({ updatedMessage });
+
+    return NextResponse.json({ deletedMessageId: messageId });
   } catch (error) {
-    console.error("Error updating message status to refunded:", error);
+    console.error("Error unsending message:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

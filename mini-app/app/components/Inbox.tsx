@@ -11,6 +11,7 @@ import StampAvatar from './StampAvatar';
 interface ConversationWithDetails extends PrismaConversation {
   participants: Partial<User>[];
   messages: (Message & { sender: Partial<User> })[];
+  isUnread?: boolean;
 }
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
@@ -97,6 +98,11 @@ export default function Inbox() {
                     </div>
                   </div>
 
+                  {/* Unread Dot */}
+                  {convo.isUnread && (
+                    <div className="w-3 h-3 bg-blue-500 rounded-full flex-shrink-0 self-center" />
+                  )}
+
                   {/* Divider */}
                   <hr className="my-3 border-gray-300" />
 
@@ -138,6 +144,10 @@ export default function Inbox() {
                   {lastMessage.content}
                 </p>
               </div>
+               {/* Unread Dot */}
+               {convo.isUnread && (
+                <div className="w-3 h-3 bg-blue-500 rounded-full self-center" />
+              )}
             </Link>
           )
         })

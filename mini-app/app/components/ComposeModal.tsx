@@ -183,6 +183,9 @@ const ComposeModal = ({ isOpen, onClose, currentUser }: ComposeModalProps) => {
         return;
       }
       
+      const expiryDuration = BigInt(172800); // 48 hours in seconds
+      console.log("Sending expiryDuration from ComposeModal:", expiryDuration);
+
       sendMessage({
         address: messageEscrowAddress,
         abi: messageEscrowABI,
@@ -191,7 +194,7 @@ const ComposeModal = ({ isOpen, onClose, currentUser }: ComposeModalProps) => {
           recipientDbUserRef.current.walletAddress as `0x${string}`,
           onChainMessageIdRef.current as `0x${string}`,
           parseUnits(amountForTx.toString(), 18),
-          BigInt(1),
+          expiryDuration,
         ]
       });
     }

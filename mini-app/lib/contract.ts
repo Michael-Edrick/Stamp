@@ -241,8 +241,7 @@ export const messageEscrowABI = [
     }
   ];
 
-export const messageEscrowAddress = '0x4FC8edc8918B6cCA8d960dbB2c8738d1A8D7Df6d';
+export const messageEscrowAddress = "0x608426E7c83f8d39a02815Ad15849b765215f0cC";
 
-// The address of the mock USDC token contract.
-// This should match the address you used when deploying the MessageEscrow contract.
-export const usdcContractAddress = "0x6051912FC68729aa994989C8B23666AFfC890204"; // MockUSDC on Base Sepolia (18 decimals) 
+// The address of the project-specific mock USDC token contract.
+export const usdcContractAddress = "0x6051912FC68729aa994989C8B23666AFfC890204"; 

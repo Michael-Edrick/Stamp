@@ -55,7 +55,14 @@ export async function GET(req: NextRequest) {
       },
     });
 
-    return NextResponse.json(conversations, { status: 200 });
+    // Manually add the isUnread flag to each conversation
+    const conversationsWithUnread = conversations.map(convo => {
+      const lastMessage = convo.messages[0];
+      const isUnread = lastMessage && lastMessage.senderId !== user.id;
+      return { ...convo, isUnread };
+    });
+
+    return NextResponse.json(conversationsWithUnread, { status: 200 });
   } catch (error) {
     console.error("Error fetching inbox:", error);
     return NextResponse.json(

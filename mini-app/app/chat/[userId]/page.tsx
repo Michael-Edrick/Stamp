@@ -10,14 +10,18 @@ import {
 import { Menu, Transition } from '@headlessui/react'
 import Link from "next/link";
 import { useAccount } from "wagmi";
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { User as PrismaUser, Message as PrismaMessage } from '@prisma/client';
 import CustomAvatar from "@/app/components/CustomAvatar";
 import { useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
+import { readContract } from '@wagmi/core'
+import { config } from '@/lib/wagmi'
 import { messageEscrowABI, messageEscrowAddress, usdcContractAddress } from '@/lib/contract';
 import { parseUnits, bytesToHex, formatUnits } from 'viem';
 import { erc20Abi } from 'viem';
 import PaymentModal from '@/app/components/PaymentModal';
+import StampAvatar from '@/app/components/StampAvatar';
+import InfoModal from '@/app/components/InfoModal';
 
 // We need to use the Prisma-generated User type, but add optional fields
 // that might not be present on every user object we handle.
@@ -38,6 +42,7 @@ interface Conversation {
 
 export default function ChatPage() {
   const params = useParams();
+  const router = useRouter();
   // The parameter from the URL is now the universal 'userId'.
   const userId = params.userId as string;
 
@@ -55,6 +60,8 @@ export default function ChatPage() {
   const [editingContent, setEditingContent] = useState('');
   const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
   const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const [isInfoModalOpen, setInfoModalOpen] = useState(false);
+  const [infoModalContent, setInfoModalContent] = useState({ title: '', message: '' });
 
   // This ref will hold the content of the message that requires payment
   const pendingMessageContentRef = useRef<string | null>(null);
@@ -190,16 +197,51 @@ export default function ChatPage() {
     }
 
     try {
+      console.log("Checking message expiry for onChainMessageId:", onChainMessageId);
+      const messageData = await readContract(config, {
+        address: messageEscrowAddress,
+        abi: messageEscrowABI,
+        functionName: 'messages',
+        args: [onChainMessageId as `0x${string}`],
+      });
+      console.log("Raw message data from contract:", messageData);
+
+      const [_recipient, _sender, _amount, expiry, _isReleased] = messageData as [string, string, bigint, bigint, boolean];
+      const expiryTimestamp = Number(expiry) * 1000;
+      const now = Date.now();
+
+      console.log("Expiry Timestamp (ms):", expiryTimestamp);
+      console.log("Current Timestamp (ms):", now);
+      console.log("Is refund allowed (now > expiry)?", now > expiryTimestamp);
+
+      if (now < expiryTimestamp) {
+        const remainingTime = expiryTimestamp - now;
+        const hours = Math.floor(remainingTime / (1000 * 60 * 60));
+        const minutes = Math.floor((remainingTime % (1000 * 60 * 60)) / (1000 * 60));
+        setInfoModalContent({
+          title: "Refund Not Yet Available",
+          message: `You can only unsend after 48 hours. Please wait for ${hours}h ${minutes}m.`
+        });
+        setInfoModalOpen(true);
+        return;
+      }
+
+      // If check passes, proceed with the refund transaction
+      optimisticIdRef.current = messageId; // Set the ID for the confirmation hook
       claimRefund({
         address: messageEscrowAddress,
         abi: messageEscrowABI,
         functionName: 'claimRefund',
         args: [onChainMessageId as `0x${string}`]
       });
-      // We'll handle the DB update in the useEffect hook watching for isRefundConfirmed
+
     } catch (error) {
-      console.error("Refund failed to start:", error);
-      alert((error as Error).message);
+      console.error("Failed to check expiry or claim refund:", error);
+      setInfoModalContent({
+        title: "Error",
+        message: "Could not process refund. Please try again."
+      });
+      setInfoModalOpen(true);
     }
   };
 
@@ -345,6 +387,9 @@ export default function ChatPage() {
         return;
       }
       
+      const expiryDuration = BigInt(172800); // 48 hours in seconds
+      console.log("Sending expiryDuration to smart contract:", expiryDuration);
+
       sendMessage({
         address: messageEscrowAddress,
         abi: messageEscrowABI,
@@ -353,7 +398,7 @@ export default function ChatPage() {
           recipientUser.walletAddress as `0x${string}`,
           onChainMessageIdRef.current as `0x${string}`,
           parseUnits(amountForTx.toString(), 18),
-          BigInt(1), // Changed from 3600 to 1 second for near-instant expiry
+          expiryDuration,
         ]
       });
     }
@@ -379,18 +424,26 @@ export default function ChatPage() {
             },
         }).then(async (res) => {
             if (res.ok) {
-                const { updatedMessage } = await res.json();
-                // Replace the old message with the refunded one
+                const { deletedMessageId } = await res.json();
+                // Remove the message from the conversation and redirect
                 setConversation(prev => {
                     if (!prev) return null;
+                    const updatedMessages = prev.messages.filter(m => m.id !== deletedMessageId);
+                    
+                    // If the conversation is now empty, redirect
+                    if (updatedMessages.length === 0) {
+                      router.push('/');
+                    }
+
                     return {
                         ...prev,
-                        messages: prev.messages.map(m => m.id === messageIdToRefund ? updatedMessage : m)
+                        messages: updatedMessages
                     };
                 });
+
             } else {
                 const { error } = await res.json();
-                throw new Error(error || 'Failed to confirm refund with backend.');
+                throw new Error(error || 'Failed to confirm unsend with backend.');
             }
         }).catch(error => {
             console.error("Backend refund confirmation failed:", error);
@@ -495,8 +548,9 @@ export default function ChatPage() {
         </div>
       </header>
 
-      <main className="flex-1 overflow-y-auto p-4 space-y-4">
-        {conversation?.messages.map((msg) => {
+      <main className="flex-1 overflow-y-auto p-4 flex flex-col-reverse space-y-4">
+        <div ref={messagesEndRef} />
+        {conversation?.messages.slice().reverse().map((msg) => {
           const isSender = msg.senderId === currentUser?.id;
           const senderProfile = isSender ? currentUser : recipientUser;
 
@@ -520,7 +574,7 @@ export default function ChatPage() {
               )}
               <div
                 ref={bubbleRef}
-                className={`max-w-[80%] min-w-[180px] rounded-2xl bg-white px-4 py-3 text-gray-800 relative break-words`}
+                className={`max-w-[80%] rounded-2xl bg-white p-4 text-gray-800 relative break-words`}
               >
                 {isSender && (
                   <div className="absolute top-1 left-1">
@@ -601,72 +655,52 @@ export default function ChatPage() {
                       </Menu>
                     </div>
                   )}
-                  <div
-                    className={`flex justify-between items-center mb-1 ${
-                      isSender ? "pt-4" : ""
-                    }`}
-                  >
-                    <div className="flex items-center">
-                      <p className="text-sm font-bold">{senderProfile?.name}</p>
-                      <p className="ml-2 text-xs text-gray-500">
-                        @{senderProfile?.username}
-                      </p>
-                    </div>
-                  </div>
-                  {editingMessageId === msg.id ? (
+                  
+                  {msg.amount && msg.amount > 0 ? (
+                    // Paid message layout
                     <div>
-                      <textarea
-                        value={editingContent}
-                        onChange={(e) => setEditingContent(e.target.value)}
-                        className="w-full p-2 border rounded-md"
-                      />
-                      <div className="flex justify-end gap-2 mt-2">
-                        <button
-                          onClick={() => setEditingMessageId(null)}
-                          className="px-3 py-1 text-sm bg-gray-200 rounded-md hover:bg-gray-300"
-                        >
-                          Cancel
-                        </button>
-                        <button
-                          onClick={handleSaveEdit}
-                          className="px-3 py-1 text-sm bg-blue-500 text-white rounded-md hover:bg-blue-600"
-                        >
-                          Save
-                        </button>
+                      <div className="flex justify-center mb-2">
+                        <StampAvatar
+                          profile={senderProfile || {}}
+                          amount={msg.amount}
+                          className="w-32 h-32"
+                          style={{ transform: 'rotate(5.38deg)' }}
+                        />
                       </div>
+                      <p className="text-sm">{msg.content}</p>
                     </div>
                   ) : (
-                    <p className="text-sm">{msg.content}</p>
+                    // Normal message layout
+                    <>
+                      <div
+                        className={`flex justify-between items-center mb-1 ${
+                          isSender ? "pt-4" : ""
+                        }`}
+                      >
+                        <div className="flex items-center">
+                          <p className="text-sm font-bold">{senderProfile?.name}</p>
+                          <p className="ml-2 text-xs text-gray-500">
+                            @{senderProfile?.username}
+                          </p>
+                        </div>
+                      </div>
+                      <p className="text-sm">{msg.content}</p>
+                    </>
                   )}
-                  {msg.amount && (
-                    <div className="mt-2 flex items-center justify-between">
-                      {msg.status === "REPLIED" ? (
-                        <span className="text-xs text-blue-400 font-bold">
-                          claimed!
-                        </span>
-                      ) : (
-                        <div />
-                      )}
-                      <span className="text-xs font-bold text-white bg-orange-500 px-2 py-1 rounded-full">
-                        +${msg.amount} USD
-                      </span>
-                    </div>
-                  )}
-                </div>
-                {isSender && (
-                  <CustomAvatar
-                    profile={currentUser || null}
-                    className="w-8 h-8 rounded-full"
-                  />
-                )}
               </div>
-            );
-          })}
-          <div ref={messagesEndRef} />
-        </main>
-        
-        <footer className="p-3 bg-transparent">
-          <div className="bg-white p-2 rounded-full flex items-center">
+              {isSender && (
+                <CustomAvatar
+                  profile={currentUser || null}
+                  className="w-8 h-8 rounded-full"
+                />
+              )}
+            </div>
+          );
+        })}
+      </main>
+      
+      <footer className="p-3 bg-transparent">
+        <div className="bg-white p-2 rounded-full flex items-center">
               <textarea
                 ref={textareaRef}
                 rows={1}
@@ -705,6 +739,13 @@ export default function ChatPage() {
           </div>
         </div>
       )}
+
+      <InfoModal 
+        isOpen={isInfoModalOpen}
+        onClose={() => setInfoModalOpen(false)}
+        title={infoModalContent.title}
+        message={infoModalContent.message}
+      />
     </div>
   );
 }
