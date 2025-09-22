@@ -185,8 +185,8 @@ export default function ProfilePage() {
               {/* --- Section 1: Identity --- */}
               <div className="bg-black rounded-3xl px-6">
                 <FormRow label="PFP"><CustomAvatar profile={profile} className="w-10 h-10 rounded-full" /></FormRow>
-                <FormRow label="Name"><input type="text" name="name" value={profile.name || ''} onChange={handleInputChange} className="bg-transparent w-full text-left focus:outline-none" /></FormRow>
-                <FormRow label="#"><input type="text" name="username" value={profile.username || ''} onChange={handleInputChange} className="bg-transparent w-full text-left focus:outline-none" /></FormRow>
+                <FormRow label="Name"><input type="text" name="name" value={profile.name || ''} onChange={handleInputChange} className="bg-transparent w-full text-left focus:outline-none text-gray-500" disabled /></FormRow>
+                <FormRow label="#"><input type="text" name="username" value={profile.username || ''} onChange={handleInputChange} className="bg-transparent w-full text-left focus:outline-none text-gray-500" disabled /></FormRow>
                 <FormRow label="Tags"><input type="text" name="tags" value={profile.tags?.join(', ') || ''} onChange={handleTagsChange} className="bg-transparent w-full text-left focus:outline-none" placeholder="e.g. BASE, LBS, WEB 3"/></FormRow>
                 <FormRow label={<SocialIcon platform="Instagram"/>}><input type="text" name="instagram" value={profile.instagram || ''} onChange={handleInputChange} className="bg-transparent w-full text-left focus:outline-none" /></FormRow>
                 <FormRow label={<SocialIcon platform="X"/>} isLast={true}><input type="text" name="x_social" value={profile.x_social || ''} onChange={handleInputChange} className="bg-transparent w-full text-left focus:outline-none" /></FormRow>

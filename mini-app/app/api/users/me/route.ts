@@ -118,13 +118,32 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "walletAddress is required for updates" }, { status: 400 });
     }
 
+    // Explicitly remove name and username from the update payload
+    delete updateData.name;
+    delete updateData.username;
+
     // Ensure tags are handled as an array
     if (updateData.tags && typeof updateData.tags === 'string') {
       updateData.tags = updateData.tags.split(',').map((tag: string) => tag.trim()).filter(Boolean);
     }
 
+    // Find the user by wallet address case-insensitively first
+    const user = await prisma.user.findFirst({
+      where: {
+        walletAddress: {
+          equals: walletAddress,
+          mode: 'insensitive',
+        },
+      },
+    });
+
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    // Now update using the unique ID
     const updatedUser = await prisma.user.update({
-      where: { walletAddress: walletAddress },
+      where: { id: user.id },
       data: updateData,
     });
 
