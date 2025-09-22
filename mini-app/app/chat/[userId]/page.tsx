@@ -23,8 +23,6 @@ import PaymentModal from '@/app/components/PaymentModal';
 import StampAvatar from '@/app/components/StampAvatar';
 import InfoModal from '@/app/components/InfoModal';
 
-// We need to use the Prisma-generated User type, but add optional fields
-// that might not be present on every user object we handle.
 type User = PrismaUser & {
   standardCost?: number | null;
   premiumCost?: number | null;
@@ -43,14 +41,13 @@ interface Conversation {
 export default function ChatPage() {
   const params = useParams();
   const router = useRouter();
-  // The parameter from the URL is now the universal 'userId'.
   const userId = params.userId as string;
 
   const { address: selfAddress, isConnected } = useAccount();
 
   const [conversation, setConversation] = useState<Conversation | null>(null);
   const [recipientUser, setRecipientUser] = useState<User | null>(null);
-  const [currentUser, setCurrentUser] = useState<User | null>(null); // State for the logged-in user
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [message, setMessage] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -62,14 +59,11 @@ export default function ChatPage() {
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const [isInfoModalOpen, setInfoModalOpen] = useState(false);
   const [infoModalContent, setInfoModalContent] = useState({ title: '', message: '' });
+  const [isSendingTriggered, setIsSendingTriggered] = useState(false);
 
-  // This ref will hold the content of the message that requires payment
   const pendingMessageContentRef = useRef<string | null>(null);
-  // This ref will hold the on-chain message ID from the backend
   const onChainMessageIdRef = useRef<string | null>(null);
-  // This ref will hold the amount for the pending transaction
   const pendingAmountRef = useRef<number | null>(null);
-  // This ref holds a temporary client-side ID for the optimistic message
   const optimisticIdRef = useRef<string | null>(null);
 
 
@@ -96,11 +90,9 @@ export default function ChatPage() {
   };
 
   useEffect(() => {
-    // The function now loads data based on the universal 'userId'.
     const loadChatData = async (recipientId: string, currentUserAddress?: `0x${string}`) => {
         setIsLoading(true);
         try {
-            // We need the current user's data first to proceed
             if (!currentUserAddress) {
                 setIsLoading(false);
                 return;
@@ -110,7 +102,6 @@ export default function ChatPage() {
             const meData: User = await meResponse.json();
             setCurrentUser(meData);
 
-            // Fetch recipient user data using the new, non-conflicting endpoint.
             const userResponse = await fetch(`/api/users/by-id/${recipientId}`);
 
             if (!userResponse.ok) throw new Error(`Failed to fetch recipient user data. Status: ${userResponse.status}`);
@@ -118,8 +109,6 @@ export default function ChatPage() {
             const recipientData: User = await userResponse.json();
             setRecipientUser(recipientData);
 
-            // Fetch the conversation between the current user and the recipient.
-            // This part already correctly used the recipient's database ID.
             const convoResponse = await fetch(`/api/conversations/${recipientData.id}`, {
                 headers: {
                     'x-wallet-address': currentUserAddress,
@@ -129,7 +118,6 @@ export default function ChatPage() {
                 const convoData: Conversation = await convoResponse.json();
                 setConversation(convoData);
             } else if (convoResponse.status === 404) {
-                // No conversation exists yet, which is fine. The state is already null.
                 setConversation(null);
             } else {
                 throw new Error('Failed to fetch conversation');
@@ -137,7 +125,6 @@ export default function ChatPage() {
 
         } catch (error) {
             console.error(error);
-            // Handle error state in UI
         } finally {
             setIsLoading(false);
         }
@@ -192,27 +179,25 @@ export default function ChatPage() {
 
   const handleClaimRefund = async (messageId: string, onChainMessageId: string) => {
     if (!selfAddress || !onChainMessageId) {
-      alert("Cannot process refund: required information is missing.");
+      setInfoModalContent({
+        title: "Error",
+        message: "Cannot process refund: required information is missing."
+      });
+      setInfoModalOpen(true);
       return;
     }
 
     try {
-      console.log("Checking message expiry for onChainMessageId:", onChainMessageId);
       const messageData = await readContract(config, {
         address: messageEscrowAddress,
         abi: messageEscrowABI,
         functionName: 'messages',
         args: [onChainMessageId as `0x${string}`],
       });
-      console.log("Raw message data from contract:", messageData);
 
       const [_recipient, _sender, _amount, expiry, _isReleased] = messageData as [string, string, bigint, bigint, boolean];
       const expiryTimestamp = Number(expiry) * 1000;
       const now = Date.now();
-
-      console.log("Expiry Timestamp (ms):", expiryTimestamp);
-      console.log("Current Timestamp (ms):", now);
-      console.log("Is refund allowed (now > expiry)?", now > expiryTimestamp);
 
       if (now < expiryTimestamp) {
         const remainingTime = expiryTimestamp - now;
@@ -226,8 +211,7 @@ export default function ChatPage() {
         return;
       }
 
-      // If check passes, proceed with the refund transaction
-      optimisticIdRef.current = messageId; // Set the ID for the confirmation hook
+      optimisticIdRef.current = messageId;
       claimRefund({
         address: messageEscrowAddress,
         abi: messageEscrowABI,
@@ -266,8 +250,8 @@ export default function ChatPage() {
         },
         body: JSON.stringify({ 
             content, 
-            recipientId: recipientUser.id, // Send the internal DB ID
-            txHash: null, // No transaction yet
+            recipientId: recipientUser.id,
+            txHash: null,
             amount: null 
         })
       });
@@ -275,17 +259,14 @@ export default function ChatPage() {
       const responseData = await response.json();
 
       if (response.ok) {
-        // Message sent successfully without payment
         setConversation(prev => {
             if (!prev) return null;
             const newMessages = [...prev.messages, responseData.newMessage];
             return { ...prev, messages: newMessages };
         });
       } else if (response.status === 402 && responseData.paymentRequired) {
-        // Payment is required, open the modal
         pendingMessageContentRef.current = content;
         onChainMessageIdRef.current = responseData.onChainMessageId;
-        // dbMessageIdRef.current = responseData.messageId; // No longer sent from backend here
         setShowPaymentModal(true);
       } else {
         throw new Error(responseData.error || 'Failed to send message');
@@ -294,32 +275,20 @@ export default function ChatPage() {
     } catch (error) {
       console.error("Sending message failed:", error);
       alert((error as Error).message);
-      setMessage(content); // Restore message on failure
+      setMessage(content);
     } finally {
       setIsSending(false);
-      // Reset textarea height after sending
       if (textareaRef.current) {
         textareaRef.current.style.height = 'inherit';
       }
     }
   };
   
-  const handlePaymentSelect = async (amount: number) => {
-    if (isSendingMessage || isConfirmingMessage) return;
-    if (!currentUser) {
-      alert("Could not identify current user. Please reconnect and try again.");
-      return;
-    }
-    if (!recipientUser) {
-      alert("Recipient user not found.");
-      return;
-    }
-
+  const handlePaymentSelect = (amount: number) => {
     setShowPaymentModal(false);
-
-    // Store the pending transaction details in refs
     pendingAmountRef.current = amount;
     optimisticIdRef.current = `temp_${Date.now()}`;
+    setIsSendingTriggered(false);
 
     const meUser = currentUser;
 
@@ -339,18 +308,13 @@ export default function ChatPage() {
     };
     
     setConversation(prev => {
-        // If there's no previous conversation, create a shell
         if (!prev) {
             return {
                 id: `temp-convo-${recipientUser!.id}`,
                 participants: [currentUser, recipientUser!],
                 messages: [optimisticMessage],
-                createdAt: new Date(),
-                updatedAt: new Date(),
-                messagesRemaining: 0,
             };
         }
-        // If conversation exists, just add the message
         if (prev.messages.some(m => m.id === optimisticMessage.id)) {
             return prev;
         }
@@ -358,8 +322,7 @@ export default function ChatPage() {
     });
 
     try {
-        // Start the blockchain transaction flow
-        const amountInWei = parseUnits(amount.toString(), 18); // Assuming 18 decimals for mock USDC
+        const amountInWei = parseUnits(amount.toString(), 6);
         approve({
           address: usdcContractAddress,
           abi: erc20Abi,
@@ -369,7 +332,6 @@ export default function ChatPage() {
     } catch (error) {
         console.error("Approval failed to start:", error);
         alert((error as Error).message);
-        // Clean up optimistic message on failure
         setConversation(prev => {
             if (!prev) return null;
             return { ...prev, messages: prev.messages.filter(m => m.id !== optimisticIdRef.current) };
@@ -378,8 +340,9 @@ export default function ChatPage() {
   };
 
   useEffect(() => {
-    // Step 2: Approval successful, now send the message on-chain
-    if (isApprovalConfirmed && onChainMessageIdRef.current && recipientUser?.walletAddress && approveHash) {
+    console.log("ChatPage sendMessage effect triggered. isApprovalConfirmed:", isApprovalConfirmed);
+    if (isApprovalConfirmed && onChainMessageIdRef.current && recipientUser?.walletAddress && !isSendingTriggered) {
+      setIsSendingTriggered(true);
       const amountForTx = pendingAmountRef.current;
 
       if (amountForTx == null) {
@@ -387,9 +350,8 @@ export default function ChatPage() {
         return;
       }
       
-      const expiryDuration = BigInt(172800); // 48 hours in seconds
-      console.log("Sending expiryDuration to smart contract:", expiryDuration);
-
+      const expiryDuration = BigInt(172800);
+      
       sendMessage({
         address: messageEscrowAddress,
         abi: messageEscrowABI,
@@ -397,23 +359,16 @@ export default function ChatPage() {
         args: [
           recipientUser.walletAddress as `0x${string}`,
           onChainMessageIdRef.current as `0x${string}`,
-          parseUnits(amountForTx.toString(), 18),
+          parseUnits(amountForTx.toString(), 6),
           expiryDuration,
         ]
       });
     }
-  }, [isApprovalConfirmed, sendMessage, recipientUser?.walletAddress, approveHash]);
+  }, [isApprovalConfirmed, sendMessage, recipientUser?.walletAddress, isSendingTriggered]);
 
   useEffect(() => {
-    // Step 3 (Refund): On-chain refund sent, now confirm with backend
     if (isRefundConfirmed && refundHash) {
-      // Find the message that was refunded to get its DB ID
-      const refundedMessage = conversation?.messages.find(msg => msg.onChainMessageId && bytesToHex(msg.onChainMessageId as any) === refundHash);
-
-      // This part is tricky because the refundHash is the TX hash, not the on-chain ID.
-      // We need a way to link the refund transaction back to a message.
-      // Let's store the ID of the message being refunded in a ref.
-      const messageIdToRefund = optimisticIdRef.current; // Re-using a ref for now.
+      const messageIdToRefund = optimisticIdRef.current;
       
       if (messageIdToRefund) {
         fetch(`/api/messages/${messageIdToRefund}/refund`, {
@@ -425,14 +380,13 @@ export default function ChatPage() {
         }).then(async (res) => {
             if (res.ok) {
                 const { deletedMessageId } = await res.json();
-                // Remove the message from the conversation and redirect
                 setConversation(prev => {
                     if (!prev) return null;
                     const updatedMessages = prev.messages.filter(m => m.id !== deletedMessageId);
                     
-                    // If the conversation is now empty, redirect
                     if (updatedMessages.length === 0) {
                       router.push('/');
+                      return null;
                     }
 
                     return {
@@ -440,6 +394,10 @@ export default function ChatPage() {
                         messages: updatedMessages
                     };
                 });
+                if (conversation && conversation.messages.length > 1) {
+                } else {
+                   router.push('/');
+                }
 
             } else {
                 const { error } = await res.json();
@@ -449,16 +407,15 @@ export default function ChatPage() {
             console.error("Backend refund confirmation failed:", error);
             alert("Your refund was successful on-chain, but we failed to update it in our system. Please contact support.");
         }).finally(() => {
-            optimisticIdRef.current = null; // Clear the ref
+            optimisticIdRef.current = null;
             setOpenMenuId(null);
         });
       }
     }
-  }, [isRefundConfirmed, refundHash, selfAddress, conversation?.messages]);
+  }, [isRefundConfirmed, refundHash, selfAddress, router]);
 
 
   useEffect(() => {
-    // Step 3: On-chain message sent, now confirm with backend
     if (isMessageConfirmed && sendMessageHash) {
         fetch('/api/messages/send', {
             method: 'POST',
@@ -467,7 +424,6 @@ export default function ChatPage() {
                 'x-wallet-address': selfAddress as string,
             },
             body: JSON.stringify({
-                // Now we send the full message payload to create it
                 content: pendingMessageContentRef.current,
                 recipientId: recipientUser!.id,
                 amount: pendingAmountRef.current,
@@ -477,7 +433,6 @@ export default function ChatPage() {
         }).then(async (res) => {
             if (res.ok) {
                 const { newMessage } = await res.json();
-                // Replace the optimistic message with the confirmed one
                 setConversation(prev => {
                     if (!prev) return null;
                     return {
@@ -493,7 +448,6 @@ export default function ChatPage() {
             console.error("Backend confirmation failed:", error);
             alert("Your payment was successful on-chain, but we failed to update it in our system. Please contact support.");
         }).finally(() => {
-            // Clear refs for the next transaction
             optimisticIdRef.current = null;
             onChainMessageIdRef.current = null;
             pendingMessageContentRef.current = null;
@@ -503,20 +457,17 @@ export default function ChatPage() {
   }, [isMessageConfirmed, sendMessageHash]);
 
   useEffect(() => {
-    // Handle any transaction errors
     const transactionFailed = approveError || sendMessageError || (sendMessageHash && isMessageError);
     if (transactionFailed) {
       alert(`Transaction failed: ${approveError?.message || sendMessageError?.message || 'The message transaction failed.'}`);
       
       if (optimisticIdRef.current) {
-        // Remove the optimistic message that failed
         setConversation(prev => {
           if (!prev) return null;
           return { ...prev, messages: prev.messages.filter(m => m.id !== optimisticIdRef.current) };
         });
       }
       
-      // Reset state
       onChainMessageIdRef.current = null;
       optimisticIdRef.current = null;
       pendingMessageContentRef.current = null;
@@ -554,9 +505,8 @@ export default function ChatPage() {
           const isSender = msg.senderId === currentUser?.id;
           const senderProfile = isSender ? currentUser : recipientUser;
 
-          // Check if the refund option should be available
           const isPaidMessage = msg.amount && msg.amount > 0;
-          const isPendingReply = msg.status === 'SENT'; // Refundable when SENT, not PENDING_PAYMENT
+          const isPendingReply = msg.status === 'SENT';
           const canRefund = isSender && isPaidMessage && isPendingReply;
 
           return (
@@ -583,7 +533,6 @@ export default function ChatPage() {
                           <Menu.Button
                             onClick={(e) => {
                               const rect = e.currentTarget.getBoundingClientRect();
-                              // Determine if this specific message can be refunded to adjust menu height
                               const isPaidMessage = msg.amount && msg.amount > 0;
                               const isPendingReply = msg.status === 'SENT';
                               const canRefundThisMessage = isSender && isPaidMessage && isPendingReply;
@@ -657,20 +606,18 @@ export default function ChatPage() {
                   )}
                   
                   {msg.amount && msg.amount > 0 ? (
-                    // Paid message layout
-                    <div>
-                      <div className="flex justify-center mb-2">
+                    <div className="flex flex-col items-center">
+                      <div className="mb-2">
                         <StampAvatar
                           profile={senderProfile || {}}
                           amount={msg.amount}
                           className="w-32 h-32"
                           style={{ transform: 'rotate(5.38deg)' }}
                         />
-                      </div>
-                      <p className="text-sm">{msg.content}</p>
+                </div>
+                <p className="text-sm">{msg.content}</p>
                     </div>
                   ) : (
-                    // Normal message layout
                     <>
                       <div
                         className={`flex justify-between items-center mb-1 ${
@@ -686,7 +633,7 @@ export default function ChatPage() {
                       </div>
                       <p className="text-sm">{msg.content}</p>
                     </>
-                  )}
+                )}
               </div>
               {isSender && (
                 <CustomAvatar
@@ -701,29 +648,28 @@ export default function ChatPage() {
       
       <footer className="p-3 bg-transparent">
         <div className="bg-white p-2 rounded-full flex items-center">
-              <textarea
+            <textarea
                 ref={textareaRef}
-                rows={1}
-                value={message}
-                onChange={(e) => {
-                  setMessage(e.target.value)
-                  // Auto-resize logic
-                  e.target.style.height = 'inherit';
-                  e.target.style.height = `${e.target.scrollHeight}px`; 
-                }}
-                placeholder="Message"
+              rows={1}
+              value={message}
+              onChange={(e) => {
+                setMessage(e.target.value)
+                e.target.style.height = 'inherit';
+                e.target.style.height = `${e.target.scrollHeight}px`; 
+              }}
+              placeholder="Message"
                 className="flex-1 w-full px-4 py-2 bg-white rounded-full focus:outline-none text-base resize-none overflow-y-auto"
-                style={{maxHeight: '120px'}} // Approx 5 lines of text + padding
-                disabled={isSending}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) { // Send on Enter, new line on Shift+Enter
-                    e.preventDefault();
-                    handleSendMessage();
-                  }
-                }}
-              />
-          </div>
-        </footer>
+                style={{maxHeight: '120px'}}
+              disabled={isSending}
+              onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSendMessage();
+                }
+              }}
+            />
+        </div>
+      </footer>
       
       {showPaymentModal && <PaymentModal user={recipientUser} onSelect={handlePaymentSelect} onClose={() => setShowPaymentModal(false)} isProcessing={isApproving || isConfirmingApproval || isSendingMessage || isConfirmingMessage} />}
       

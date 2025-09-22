@@ -241,7 +241,7 @@ export const messageEscrowABI = [
     }
   ];
 
-export const messageEscrowAddress = "0x608426E7c83f8d39a02815Ad15849b765215f0cC";
+export const messageEscrowAddress = "0x90A1abbCdf2597c3672fCFD52Bfc6507Dd5EB130";
 
 // The address of the project-specific mock USDC token contract.
 export const usdcContractAddress = "0x6051912FC68729aa994989C8B23666AFfC890204"; 

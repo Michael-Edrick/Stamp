@@ -6,6 +6,8 @@ export async function POST(req: NextRequest) {
   try {
     const farcasterUser = (await req.json()) as FarcasterUser;
 
+    console.log("Data received from Neynar API:", farcasterUser);
+
     if (!farcasterUser || !farcasterUser.fid) {
       return NextResponse.json(
         { error: "Valid Farcaster user data is required" },
@@ -36,14 +38,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(existingUser);
     } else {
       // If user does not exist, create them
+      // Use the primary verified ETH address if available, otherwise fall back
+      const primaryAddress = farcasterUser.verified_addresses?.primary?.eth_address;
+      const walletAddress = primaryAddress || farcasterUser.verified_addresses?.eth_addresses?.[0];
+
       const newUser = await prisma.user.create({
         data: {
           fid: String(farcasterUser.fid),
           username: farcasterUser.username,
           name: farcasterUser.display_name,
           image: farcasterUser.pfp_url,
-          walletAddress: farcasterUser.custody_address?.toLowerCase(),
-          custodyAddress: farcasterUser.custody_address?.toLowerCase(),
+          walletAddress: walletAddress,
+          custodyAddress: farcasterUser.custody_address,
         },
       });
       return NextResponse.json(newUser);

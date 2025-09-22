@@ -3,8 +3,6 @@
 import { Fragment, useState, useEffect, useRef } from 'react';
 import { Transition } from '@headlessui/react';
 import { XMarkIcon } from '@heroicons/react/24/solid';
-import StampIcon from './StampIcon';
-import Link from 'next/link';
 import CustomAvatar from './CustomAvatar';
 import { User as PrismaUser } from '@prisma/client';
 import { User as FarcasterUser } from "@neynar/nodejs-sdk/build/neynar-api/v2";
@@ -14,7 +12,7 @@ import { useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { messageEscrowABI, messageEscrowAddress, usdcContractAddress } from '@/lib/contract';
 import { parseUnits } from 'viem';
 import { erc20Abi } from 'viem';
-import PaymentModal from './PaymentModal'; // Reusable Payment Modal
+import PaymentModal from './PaymentModal';
 
 interface ComposeModalProps {
   isOpen: boolean;
@@ -30,23 +28,21 @@ const ComposeModal = ({ isOpen, onClose, currentUser }: ComposeModalProps) => {
   const [isSending, setIsSending] = useState(false);
   const [message, setMessage] = useState('');
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [isSendingTriggered, setIsSendingTriggered] = useState(false);
   const router = useRouter();
 
   const [debouncedQuery] = useDebounce(searchQuery, 300);
 
-  // Refs for the payment flow
   const recipientDbUserRef = useRef<PrismaUser | null>(null);
   const pendingMessageContentRef = useRef<string | null>(null);
   const onChainMessageIdRef = useRef<string | null>(null);
   const pendingAmountRef = useRef<number | null>(null);
 
-  // Wagmi hooks for contract interactions
   const { data: approveHash, writeContract: approve, isPending: isApproving, error: approveError } = useWriteContract();
   const { data: sendMessageHash, writeContract: sendMessage, isPending: isSendingMessage, error: sendMessageError } = useWriteContract();
   const { isLoading: isConfirmingApproval, isSuccess: isApprovalConfirmed } = useWaitForTransactionReceipt({ hash: approveHash });
   const { isLoading: isConfirmingMessage, isSuccess: isMessageConfirmed, isError: isMessageError } = useWaitForTransactionReceipt({ hash: sendMessageHash });
 
-  // Reset component state when it's closed
   useEffect(() => {
     if (!isOpen) {
       setSearchQuery('');
@@ -103,7 +99,6 @@ const ComposeModal = ({ isOpen, onClose, currentUser }: ComposeModalProps) => {
 
     setIsSending(true);
     try {
-      // Step 1: Find or create the user in our DB and get their full profile
       const findOrCreateResponse = await fetch('/api/users/find-or-create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -113,9 +108,8 @@ const ComposeModal = ({ isOpen, onClose, currentUser }: ComposeModalProps) => {
       if (!findOrCreateResponse.ok) throw new Error("Failed to find or create user in the database.");
       
       const recipientDbUser: PrismaUser = await findOrCreateResponse.json();
-      recipientDbUserRef.current = recipientDbUser; // Store the full user object
+      recipientDbUserRef.current = recipientDbUser;
 
-      // Step 2: Now that we have the user, proceed with sending the message
       const sendMessageResponse = await fetch('/api/messages/send', {
         method: 'POST',
         headers: { 
@@ -124,7 +118,7 @@ const ComposeModal = ({ isOpen, onClose, currentUser }: ComposeModalProps) => {
         },
         body: JSON.stringify({ 
             content: message, 
-            recipientId: recipientDbUser.id, // Use the ID from the user we just found/created
+            recipientId: recipientDbUser.id,
         })
       });
 
@@ -153,9 +147,10 @@ const ComposeModal = ({ isOpen, onClose, currentUser }: ComposeModalProps) => {
     
     setShowPaymentModal(false);
     pendingAmountRef.current = amount;
-    
+    setIsSendingTriggered(false);
+
     try {
-        const amountInWei = parseUnits(amount.toString(), 18);
+        const amountInWei = parseUnits(amount.toString(), 6);
         approve({
           address: usdcContractAddress,
           abi: erc20Abi,
@@ -169,23 +164,18 @@ const ComposeModal = ({ isOpen, onClose, currentUser }: ComposeModalProps) => {
   };
 
   useEffect(() => {
-    console.log("--- Checking sendMessage trigger ---");
-    console.log("isApprovalConfirmed:", isApprovalConfirmed);
-    console.log("onChainMessageIdRef.current:", onChainMessageIdRef.current);
-    console.log("recipientDbUserRef.current?.walletAddress:", recipientDbUserRef.current?.walletAddress);
-    console.log("approveHash:", approveHash);
-
-    if (isApprovalConfirmed && onChainMessageIdRef.current && recipientDbUserRef.current?.walletAddress && approveHash) {
-      console.log("✅ All conditions met. Sending message...");
+    console.log("ComposeModal sendMessage effect triggered. isApprovalConfirmed:", isApprovalConfirmed);
+    if (isApprovalConfirmed && onChainMessageIdRef.current && recipientDbUserRef.current?.walletAddress && !isSendingTriggered) {
+      setIsSendingTriggered(true);
       const amountForTx = pendingAmountRef.current;
+
       if (amountForTx == null) {
         console.error("❌ Amount for transaction is null.");
         return;
       }
       
-      const expiryDuration = BigInt(172800); // 48 hours in seconds
-      console.log("Sending expiryDuration from ComposeModal:", expiryDuration);
-
+      const expiryDuration = BigInt(172800);
+      
       sendMessage({
         address: messageEscrowAddress,
         abi: messageEscrowABI,
@@ -193,12 +183,12 @@ const ComposeModal = ({ isOpen, onClose, currentUser }: ComposeModalProps) => {
         args: [
           recipientDbUserRef.current.walletAddress as `0x${string}`,
           onChainMessageIdRef.current as `0x${string}`,
-          parseUnits(amountForTx.toString(), 18),
+          parseUnits(amountForTx.toString(), 6),
           expiryDuration,
         ]
       });
     }
-  }, [isApprovalConfirmed, sendMessage, approveHash, recipientDbUserRef.current]);
+  }, [isApprovalConfirmed, sendMessage, isSendingTriggered]);
 
   useEffect(() => {
     if (isMessageConfirmed && sendMessageHash) {
@@ -241,7 +231,6 @@ const ComposeModal = ({ isOpen, onClose, currentUser }: ComposeModalProps) => {
     <>
       <Transition.Root show={isOpen} as={Fragment}>
         <div className="fixed inset-0 z-40">
-          {/* Backdrop */}
           <Transition.Child
             as={Fragment}
             enter="ease-out duration-300"
@@ -257,7 +246,6 @@ const ComposeModal = ({ isOpen, onClose, currentUser }: ComposeModalProps) => {
             />
           </Transition.Child>
 
-          {/* Sliding Panel */}
           <Transition.Child
             as={Fragment}
             enter="transform transition ease-in-out duration-300"
@@ -270,7 +258,6 @@ const ComposeModal = ({ isOpen, onClose, currentUser }: ComposeModalProps) => {
             <div className="absolute bottom-0 h-[85%] w-full">
               <div className="flex h-full flex-col overflow-y-scroll bg-white shadow-xl rounded-t-2xl p-4">
 
-                {/* Content */}
                 <div className="relative flex-1 flex flex-col">
                   <div className="py-2">
                       <div className="relative">
