@@ -5,7 +5,7 @@ import { Transition } from '@headlessui/react';
 import { XMarkIcon } from '@heroicons/react/24/solid';
 import CustomAvatar from './CustomAvatar';
 import { User as PrismaUser } from '@prisma/client';
-import { User as FarcasterUser } from "@neynar/nodejs-sdk/build/neynar-api/v2";
+import { V2User as FarcasterUser } from "@neynar/nodejs-sdk";
 import { useDebounce } from 'use-debounce';
 import { useRouter } from 'next/navigation';
 import { useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
