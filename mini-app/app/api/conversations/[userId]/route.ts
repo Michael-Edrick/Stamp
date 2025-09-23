@@ -1,13 +1,12 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import prisma from '@/lib/prisma';
 
-export async function GET(request: NextRequest) {
-  // Workaround for the persistent params issue: parse the ID from the URL.
-  const url = new URL(request.url);
-  const pathSegments = url.pathname.split('/');
-  const otherUserId = pathSegments.pop(); // The last segment is the userId
-
-  const walletAddress = request.headers.get("x-wallet-address");
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ userId: string }> }
+) {
+  const { userId: otherUserId } = await params;
+  const walletAddress = request.headers.get('x-wallet-address');
   if (!walletAddress) {
     return NextResponse.json({ error: "Missing x-wallet-address header" }, { status: 401 });
   }

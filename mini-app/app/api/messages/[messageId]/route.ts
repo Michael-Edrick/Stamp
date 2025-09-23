@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 
-export async function PATCH(req: NextRequest, { params }: { params: { messageId: string } }) {
-  const { messageId } = params;
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: Promise<{ messageId: string }> }
+) {
+  const { messageId } = await params;
   const walletAddress = req.headers.get('x-wallet-address');
 
   if (!walletAddress) {
