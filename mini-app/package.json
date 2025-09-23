@@ -21,6 +21,8 @@
     "@next-auth/prisma-adapter": "^1.0.7",
     "@neynar/nodejs-sdk": "^3.31.0",
     "@prisma/client": "^6.11.1",
+    "@privy-io/react-auth": "^3.0.1",
+    "@privy-io/wagmi": "^2.0.0",
     "@tanstack/react-query": "^5",
     "ethers": "^6.15.0",
     "next": "^15.3.3",
