@@ -6,7 +6,7 @@ import { getAuthenticatedUser } from "@/lib/auth";
 // and updates the message status in the database.
 export async function POST(
   req: NextRequest,
-  { params }: { params: { messageId: string } }
+  context: { params: { messageId: string } }
 ) {
   // const session = await getAuth();
   // const walletAddress = session?.walletAddress;
@@ -17,7 +17,7 @@ export async function POST(
   }
   const walletAddress = user.walletAddress;
 
-  const messageId = params.messageId;
+  const messageId = context.params.messageId;
 
   if (!messageId) {
     return NextResponse.json(
