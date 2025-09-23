@@ -34,7 +34,7 @@ const ComposeModal = ({ isOpen, onClose, currentUser }: ComposeModalProps) => {
   const [isSendingTriggered, setIsSendingTriggered] = useState(false);
   const router = useRouter();
 
-  const [debouncedQuery] = useDebounce(searchQuery, 300);
+  const [debouncedQuery] = useDebounce(searchTerm, 300);
 
   const recipientDbUserRef = useRef<PrismaUser | null>(null);
   const pendingMessageContentRef = useRef<string | null>(null);
@@ -48,7 +48,7 @@ const ComposeModal = ({ isOpen, onClose, currentUser }: ComposeModalProps) => {
 
   useEffect(() => {
     if (!isOpen) {
-      setSearchQuery('');
+      setSearchTerm('');
       setSearchResults([]);
       setSelectedUser(null);
       setMessage('');
@@ -88,13 +88,13 @@ const ComposeModal = ({ isOpen, onClose, currentUser }: ComposeModalProps) => {
 
   const handleSelectUser = (user: FarcasterUser) => {
     setSelectedUser(user);
-    setSearchQuery(user.username);
+    setSearchTerm(user.username);
     setSearchResults([]);
   };
 
   const handleClearRecipient = () => {
     setSelectedUser(null);
-    setSearchQuery('');
+    setSearchTerm('');
   }
 
   const handleSendMessage = async () => {
@@ -282,8 +282,8 @@ const ComposeModal = ({ isOpen, onClose, currentUser }: ComposeModalProps) => {
                                   <input
                                       type="text"
                                       placeholder="@..."
-                                      value={searchQuery}
-                                      onChange={(e) => setSearchQuery(e.target.value)}
+                                      value={searchTerm}
+                                      onChange={(e) => setSearchTerm(e.target.value)}
                                       className="w-full bg-transparent text-gray-900 placeholder-gray-400 focus:outline-none"
                                   />
                               )}
