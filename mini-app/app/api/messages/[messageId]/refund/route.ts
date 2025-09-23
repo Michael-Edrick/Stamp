@@ -17,7 +17,7 @@ export async function POST(
   }
   const walletAddress = user.walletAddress;
 
-  const messageId = params.messageId;
+  const { messageId } = params;
 
   if (!messageId) {
     return NextResponse.json(
