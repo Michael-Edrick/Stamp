@@ -5,7 +5,7 @@ import { Transition } from '@headlessui/react';
 import { XMarkIcon } from '@heroicons/react/24/solid';
 import CustomAvatar from './CustomAvatar';
 import { User as PrismaUser } from '@prisma/client';
-import { V2User as FarcasterUser } from "@neynar/nodejs-sdk";
+import { UserResponse } from "@neynar/nodejs-sdk";
 import { useDebounce } from 'use-debounce';
 import { useRouter } from 'next/navigation';
 import { useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
@@ -21,7 +21,9 @@ interface ComposeModalProps {
 }
 
 const ComposeModal = ({ isOpen, onClose, currentUser }: ComposeModalProps) => {
-  const [searchQuery, setSearchQuery] = useState('');
+  const { user } = usePrivy();
+  const { wallets } = useWallets();
+  const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState<FarcasterUser[]>([]);
   const [selectedUser, setSelectedUser] = useState<FarcasterUser | null>(null);
   const [isLoading, setIsLoading] = useState(false);

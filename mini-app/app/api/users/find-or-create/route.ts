@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { V2User as FarcasterUser } from "@neynar/nodejs-sdk";
+import { UserResponse } from "@neynar/nodejs-sdk";
 
 export async function POST(req: NextRequest) {
   try {
-    const farcasterUser = (await req.json()) as FarcasterUser;
+    const farcasterUser = (await req.json()) as UserResponse["user"];
 
     console.log("Data received from Neynar API:", farcasterUser);
 
