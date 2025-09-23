@@ -291,6 +291,10 @@ export default function ChatPage() {
     setIsSendingTriggered(false);
 
     const meUser = currentUser;
+    if (!meUser) {
+      alert("Cannot send message: current user not loaded.");
+      return;
+    }
 
     const optimisticMessage: MessageWithSender = {
       id: optimisticIdRef.current,
