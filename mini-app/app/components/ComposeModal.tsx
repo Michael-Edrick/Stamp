@@ -9,7 +9,6 @@ import { User as FarcasterUser } from "@neynar/nodejs-sdk/build/api";
 import { useDebounce } from 'use-debounce';
 import { useRouter } from 'next/navigation';
 import { usePrivy } from "@privy-io/react-auth";
-import { useWallets } from "@privy-io/wagmi";
 import { useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { messageEscrowABI, messageEscrowAddress, usdcContractAddress } from '@/lib/contract';
 import { parseUnits } from 'viem';
@@ -23,8 +22,7 @@ interface ComposeModalProps {
 }
 
 const ComposeModal = ({ isOpen, onClose, currentUser }: ComposeModalProps) => {
-  const { user } = usePrivy();
-  const { wallets } = useWallets();
+  const { user, wallets } = usePrivy();
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState<FarcasterUser[]>([]);
   const [selectedUser, setSelectedUser] = useState<FarcasterUser | null>(null);
