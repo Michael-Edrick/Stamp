@@ -23,8 +23,7 @@ type NeynarUser = {
   custody_address?: string; 
 };
 
-type Profile = Omit<Partial<PrismaUser>, 'id'> & {
-  id: string;
+type Profile = PrismaUser & {
   avatar?: string;
 };
 
