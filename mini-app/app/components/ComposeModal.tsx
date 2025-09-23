@@ -6,7 +6,6 @@ import { XMarkIcon } from '@heroicons/react/24/solid';
 import CustomAvatar from './CustomAvatar';
 import { User as PrismaUser } from '@prisma/client';
 import { User as FarcasterUser } from "@neynar/nodejs-sdk/build/api";
-import { v2 } from "@neynar/nodejs-sdk";
 import { useDebounce } from 'use-debounce';
 import { useRouter } from 'next/navigation';
 import { usePrivy } from "@privy-io/react-auth";
@@ -16,8 +15,6 @@ import { messageEscrowABI, messageEscrowAddress, usdcContractAddress } from '@/l
 import { parseUnits } from 'viem';
 import { erc20Abi } from 'viem';
 import PaymentModal from './PaymentModal';
-
-type FarcasterUser = v2.User;
 
 interface ComposeModalProps {
   isOpen: boolean;
