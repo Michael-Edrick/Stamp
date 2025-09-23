@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { User as FarcasterUser } from "@neynar/nodejs-sdk/build/neynar-api/v2";
+import { User as FarcasterUser } from "@neynar/nodejs-sdk";
 
 export async function POST(req: NextRequest) {
   try {
