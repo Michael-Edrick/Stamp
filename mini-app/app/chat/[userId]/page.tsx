@@ -326,7 +326,7 @@ export default function ChatPage() {
     });
 
     try {
-        const amountInWei = parseUnits(amount.toString(), 6);
+        const amountInWei = parseUnits(amount.toString(), 18);
         approve({
           address: usdcContractAddress,
           abi: erc20Abi,
@@ -363,7 +363,7 @@ export default function ChatPage() {
         args: [
           recipientUser.walletAddress as `0x${string}`,
           onChainMessageIdRef.current as `0x${string}`,
-          parseUnits(amountForTx.toString(), 6),
+          parseUnits(amountForTx.toString(), 18),
           expiryDuration,
         ]
       });
