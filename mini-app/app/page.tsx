@@ -247,8 +247,9 @@ export default function HomePage() {
                     <span className="text-sm font-semibold text-gray-800 mr-2">
                       {address ? `${address.slice(0, 6)}...${address.slice(-4)}` : '...'}
                     </span>
-                  </div>
+                  </div>*/}
                   <NetworkSwitcher />
+                  {/*
                   <button 
                     onClick={() => disconnect()} 
                     className="bg-red-500 text-white p-2 rounded-full text-xs font-semibold hover:bg-red-600 transition-colors"
