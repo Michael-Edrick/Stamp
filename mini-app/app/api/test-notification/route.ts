@@ -54,6 +54,7 @@ export async function GET(req: NextRequest) {
       recipientFid: parseInt(user.fid, 10),
       senderName: "Test System",
       messageContent: "This is a test notification to confirm your setup is working!",
+      amount: 5, // Add a mock amount for testing
     });
 
     return NextResponse.json(
