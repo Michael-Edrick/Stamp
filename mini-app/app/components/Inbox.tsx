@@ -98,10 +98,10 @@ export default function Inbox() {
                     </div>
                   </div>
 
-                  {/* Unread Dot */}
-                  {convo.isUnread && (
+                  {/* Unread Dot - Hide for paid messages */}
+                  {/* {convo.isUnread && (
                     <div className="w-3 h-3 bg-blue-500 rounded-full flex-shrink-0 self-center" />
-                  )}
+                  )} */}
 
                   {/* Divider */}
                   <hr className="my-3 border-gray-300" />
