@@ -5,15 +5,16 @@ interface PaidMessageNotification {
   recipientFid: number;
   senderName: string;
   messageContent: string;
+  amount: number;
 }
 
 /**
- * Sends a push notification to a user for a paid message.
- * This function handles fetching the user's notification token and making the
+ * Sends a push notification to a Farcaster client for a paid message.
+ * This function finds the user's active notification token and makes a
  * POST request to the Farcaster client's notification server.
  */
 export async function sendPaidMessageNotification(notification: PaidMessageNotification) {
-  const { recipientFid, senderName, messageContent } = notification;
+  const { recipientFid, senderName, messageContent, amount } = notification;
 
   try {
     // Find the user and their active notification token from the database.
@@ -38,24 +39,19 @@ export async function sendPaidMessageNotification(notification: PaidMessageNotif
 
     // If no active token is found, we cannot send a notification.
     if (!userWithToken || !userWithToken.notificationTokens.length) {
-      console.log(`No active notification token found for FID ${recipientFid}. Skipping.`);
       return;
     }
 
     const { token, providerUrl } = userWithToken.notificationTokens[0];
 
     // Construct the request body according to the Farcaster notification spec.
-    // NOTE: The Farcaster spec uses 'notificationId', 'title', 'body', etc.
-    // on the top-level object, not nested under a 'notification' key.
     const requestBody = {
       notificationId: `paid-message-${Date.now()}`,
-      title: `You received a paid message from ${senderName}!`,
-      body: `"${messageContent.substring(0, 100)}${messageContent.length > 100 ? '...' : ''}"`,
-      targetUrl: 'https://stamp-me.vercel.app/inbox',
+      title: "StampMe",
+      body: `${senderName} sent you a priority DM with $${amount}`,
+      targetUrl: 'https://stamp-me.vercel.app/',
       tokens: [token],
     };
-
-    console.log(`Sending notification to FID ${recipientFid}...`);
 
     // Manually make the POST request as per the Farcaster documentation.
     const response = await fetch(providerUrl, {
@@ -75,7 +71,6 @@ export async function sendPaidMessageNotification(notification: PaidMessageNotif
 
     // Handle tokens that the notification server reports as no longer valid.
     if (result.invalidTokens && result.invalidTokens.length > 0) {
-      console.warn('Deactivating invalid tokens:', result.invalidTokens);
       await prisma.notificationToken.updateMany({
         where: {
           token: { in: result.invalidTokens },
@@ -85,8 +80,6 @@ export async function sendPaidMessageNotification(notification: PaidMessageNotif
         },
       });
     }
-
-    console.log('Notification sent successfully to tokens:', result.successfulTokens);
 
   } catch (error) {
     console.error(`Failed to send notification to FID ${recipientFid}:`, error);

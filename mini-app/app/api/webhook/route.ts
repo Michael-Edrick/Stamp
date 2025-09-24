@@ -12,19 +12,13 @@ function decodeBase64Url(encoded: string) {
 }
 
 export async function POST(req: NextRequest) {
-  console.log("--- Webhook POST request received ---");
   try {
-    console.log("Step 0: Parsing webhook body...");
     const body = await req.json();
-    console.log("Webhook body parsed successfully. Body:", JSON.stringify(body, null, 2));
 
     // Step 1: Verify the signature. This is for security.
-    console.log("Step 1: Verifying webhook signature...");
     const { fid } = await parseWebhookEvent(body, verifyAppKeyWithNeynar);
-    console.log(`Webhook signature verified successfully. FID: ${fid}`);
 
     // Step 2: Find the user in our database.
-    console.log(`Step 2: Finding user with FID ${fid}...`);
     const user = await prisma.user.findUnique({
       where: { fid: fid.toString() },
     });
@@ -33,20 +27,15 @@ export async function POST(req: NextRequest) {
       console.warn(`Webhook received for verified FID ${fid} but user not found in database.`);
       return NextResponse.json({ message: 'User not found' }, { status: 200 });
     }
-    console.log(`User found successfully. User ID: ${user.id}`);
 
     // Step 3: Decode the event payload from the original request body.
-    console.log("Step 3: Decoding event payload...");
     const eventPayload = decodeBase64Url(body.payload);
-    console.log("Event payload decoded successfully. Event:", eventPayload.event);
 
     switch (eventPayload.event) {
       case 'frame_added':
       case 'notifications_enabled':
-        console.log("Handling 'notifications_enabled' event.");
         if (eventPayload.notificationDetails) {
           const { token, url } = eventPayload.notificationDetails;
-          console.log(`Saving notification token for user ${user.id}. Token: ${token}, URL: ${url}`);
           await prisma.notificationToken.upsert({
             where: { userId: user.id },
             create: {
@@ -69,7 +58,6 @@ export async function POST(req: NextRequest) {
 
       case 'miniapp_removed':
       case 'notifications_disabled':
-        console.log("Handling 'notifications_disabled' event.");
         await prisma.notificationToken.updateMany({
           where: { userId: user.id },
           data: { isActive: false },
@@ -82,15 +70,11 @@ export async function POST(req: NextRequest) {
         break;
     }
 
-    console.log("--- Webhook processing finished successfully ---");
     return NextResponse.json({ message: 'Webhook processed successfully' }, { status: 200 });
 
   } catch (e: unknown) {
     const error = e as ParseWebhookEvent.ErrorType;
-    console.error('!!! --- Error processing webhook --- !!!');
-    console.error('Error Name:', error.name);
-    console.error('Error Message:', error.message);
-    console.error('Full Error Object:', JSON.stringify(error, null, 2));
+    console.error('Error processing webhook:', error);
 
     switch (error.name) {
       case 'VerifyJsonFarcasterSignature.InvalidDataError':

@@ -98,6 +98,7 @@ export async function POST(req: NextRequest) {
               recipientFid: parseInt(recipient.fid, 10),
               senderName: sender.username,
               messageContent: content,
+              amount: amount,
             }).catch(error => {
               // Log errors but don't crash the main flow
               console.error("Failed to send notification in background:", error);
@@ -162,7 +163,6 @@ export async function POST(req: NextRequest) {
 
       // If the last message was a paid message from the other user, release the escrow.
       if (lastMessageFromOtherUser && lastMessageFromOtherUser.onChainMessageId) {
-          console.log(`Replying to paid message: ${lastMessageFromOtherUser.id}. Releasing escrow.`);
           
           try {
             const deployerPrivateKey = process.env.DEPLOYER_PRIVATE_KEY;
