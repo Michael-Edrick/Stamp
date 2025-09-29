@@ -133,3 +133,22 @@ The user wants to refactor the application's user interface, starting with the h
     *   **Action:** Modify `mini-app/app/page.tsx`.
     *   **Details:** Comment out the block of code that displays the connected wallet address, network switcher, and logout button.
     *   **Success Criteria:** The header renders with only the stamp icon on the left and the profile avatar on the right.
+
+---
+
+# Farcaster Embed Failure (Root Cause Analysis)
+
+**Status: Active**
+
+## Background and Motivation
+Despite having a valid `farcaster.json` manifest, sharing the app's URL in the Base app does not generate a rich embed preview. The URL is treated as a plain link. This prevents the app from being launched as a mini-app from a shared link.
+
+## Analysis and Findings
+1.  **Initial Hypothesis (Incorrect):** The issue was initially believed to be caused by an incorrect Farcaster Frame action type (`post` vs `launch_frame`) or a leftover `rewrites` rule in `next.config.mjs`. These were corrected, but the problem persisted.
+2.  **Diagnostic Testing:** A test was performed to isolate the `MiniKitProvider` by commenting out other providers (`WagmiProvider`, `SessionProvider`, `QueryClientProvider`). This caused the build to fail, preventing the test's completion.
+3.  **Definitive Root Cause:** By inspecting the live, deployed HTML of the homepage, it was confirmed that the crucial **`fc:frame` meta tags are completely missing from the final server output.** The `generateMetadata` function in `layout.tsx` is not being rendered into the HTML `<head>`.
+
+## Conclusion
+The failure of the `generateMetadata` function to execute correctly on the server is the root cause. This is almost certainly due to a conflict in the `providers.tsx` file, where the complex nesting of client-side providers (Wagmi, NextAuth) is preventing Next.js from server-rendering the necessary metadata tags. The link scraper sees no frame tags and correctly treats the URL as a regular webpage.
+
+The next step is to refactor `providers.tsx` to resolve this conflict.
