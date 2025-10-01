@@ -108,8 +108,13 @@ export default function HomePage() {
   const [error, setError] = useState<string | null>(null);
   const [isClient, setIsClient] = useState(false);
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
-  const { setFrameReady, isFrameReady } = useMiniKit();
+  const minikit = useMiniKit();
+  const { setFrameReady, isFrameReady } = minikit;
   const [isComposeModalOpen, setComposeModalOpen] = useState(false);
+
+  useEffect(() => {
+    console.log('EVIDENCE: Full useMiniKit object:', JSON.stringify(minikit, null, 2));
+  }, [minikit]);
 
   useEffect(() => {
     if (!isFrameReady) {
