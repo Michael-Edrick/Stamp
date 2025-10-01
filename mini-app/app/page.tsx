@@ -113,7 +113,25 @@ export default function HomePage() {
   const [isComposeModalOpen, setComposeModalOpen] = useState(false);
 
   useEffect(() => {
-    console.log('EVIDENCE: Full useMiniKit object:', JSON.stringify(minikit, null, 2));
+    // console.log('EVIDENCE: Full useMiniKit object:', JSON.stringify(minikit, null, 2));
+    const logData = async () => {
+      try {
+        await fetch('/api/log-client-data', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(minikit),
+        });
+      } catch (error) {
+        console.error('Failed to send client log:', error);
+      }
+    };
+
+    // Only send the log if the minikit object is populated
+    if (minikit && Object.keys(minikit).length > 0) {
+      logData();
+    }
   }, [minikit]);
 
   useEffect(() => {
