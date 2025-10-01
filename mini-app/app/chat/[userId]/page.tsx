@@ -662,7 +662,7 @@ export default function ChatPage() {
                 e.target.style.height = `${e.target.scrollHeight}px`; 
               }}
               placeholder="Message"
-                className="flex-1 w-full px-4 py-2 bg-white rounded-full focus:outline-none text-base resize-none overflow-y-auto"
+                className="flex-1 w-full px-4 py-2 bg-white rounded-full focus:outline-none text-base resize-none overflow-y-auto text-gray-900"
                 style={{maxHeight: '120px'}}
               disabled={isSending}
               onKeyDown={(e) => {
