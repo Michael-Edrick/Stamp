@@ -284,7 +284,7 @@ const ComposeModal = ({ isOpen, onClose, currentUser }: ComposeModalProps) => {
                                       placeholder="@..."
                                       value={searchTerm}
                                       onChange={(e) => setSearchTerm(e.target.value)}
-                                      className="w-full bg-transparent text-gray-900 placeholder-gray-400 focus:outline-none"
+                                      className="w-full bg-transparent text-gray-900 placeholder-gray-400 focus:outline-none text-base"
                                   />
                               )}
                           </div>
