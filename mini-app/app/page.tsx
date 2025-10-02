@@ -229,7 +229,8 @@ export default function HomePage() {
       // setConversations([]);
       // setFollowing([]);
     }
-  }, [isConnected, address, fetchData]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isConnected, address]);
   
   const renderContent = () => {
     if (!isConnected) {
