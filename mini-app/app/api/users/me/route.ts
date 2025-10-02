@@ -3,16 +3,72 @@ import prisma from '@/lib/prisma';
 import { NeynarAPIClient } from '@neynar/nodejs-sdk';
 import { FarcasterUser } from '@/types/farcaster';
 
+async function findOrCreateUserWithFid(fid: string, username: string, displayName: string, pfpUrl: string, connectingAddress: string) {
+  // Try to find the user by FID first
+  const existingUser = await prisma.user.findUnique({
+    where: { fid },
+  });
+
+  if (existingUser) {
+    // If user exists, ensure the connecting address is linked
+    await prisma.verifiedAddress.upsert({
+      where: { address: connectingAddress.toLowerCase() },
+      update: { userId: existingUser.id },
+      create: { address: connectingAddress.toLowerCase(), userId: existingUser.id },
+    });
+    return existingUser;
+  }
+
+  // If user does not exist, we need their full profile for custody_address
+  const neynarClient = new NeynarAPIClient({ apiKey: process.env.NEYNAR_API_KEY as string });
+  const fullProfile = (await neynarClient.fetchBulkUsers([Number(fid)]))?.users[0];
+
+  // Create the new user
+  const newUser = await prisma.user.create({
+    data: {
+      fid,
+      username,
+      name: displayName,
+      image: pfpUrl,
+      custodyAddress: fullProfile?.custody_address,
+      walletAddress: connectingAddress.toLowerCase(),
+    },
+  });
+
+  // Link the connecting address
+  await prisma.verifiedAddress.create({
+    data: {
+      address: connectingAddress.toLowerCase(),
+      userId: newUser.id,
+    },
+  });
+
+  return newUser;
+}
+
+
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const walletAddress = searchParams.get('walletAddress');
+  const headers = req.headers;
+  const minikitFid = headers.get('x-minikit-user-fid');
 
   if (!walletAddress) {
     return NextResponse.json({ error: 'walletAddress is required' }, { status: 400 });
   }
 
   try {
-    // Step 1: Check if the address is already linked to a user.
+    // --- Path A: MiniKit Data is Present ---
+    if (minikitFid) {
+      const minikitUsername = headers.get('x-minikit-user-username')!;
+      const minikitDisplayName = headers.get('x-minikit-user-displayname')!;
+      const minikitPfpUrl = headers.get('x-minikit-user-pfpurl')!;
+
+      const user = await findOrCreateUserWithFid(minikitFid, minikitUsername, minikitDisplayName, minikitPfpUrl, walletAddress);
+      return NextResponse.json(user);
+    }
+
+    // --- Path B: No MiniKit Data (Regular Browser Fallback) ---
     const existingAddress = await prisma.verifiedAddress.findUnique({
       where: { address: walletAddress.toLowerCase() },
       include: { user: true },
@@ -22,7 +78,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json(existingAddress.user);
     }
 
-    // Step 2: If address is new, query Neynar to get Farcaster profile.
+    // If address is new, query Neynar to get Farcaster profile.
     const neynarClient = new NeynarAPIClient({ apiKey: process.env.NEYNAR_API_KEY as string });
     let farcasterUser: FarcasterUser | undefined;
     
@@ -34,58 +90,12 @@ export async function GET(req: NextRequest) {
       console.warn(`Neynar API call failed for address ${walletAddress}. It might not be a Farcaster user.`, neynarError);
     }
     
-    // Step 3: Handle user creation/linking based on Neynar data.
+    // Handle user creation/linking based on Neynar data.
     if (farcasterUser && farcasterUser.fid) {
-      // We found a Farcaster user for this address.
-      const userFid = farcasterUser.fid.toString();
-
-      // Step 3a: Check if a user with this FID already exists in our DB.
-      let user = await prisma.user.findUnique({
-        where: { fid: userFid },
-      });
-
-      if (user) {
-        // User exists, so just link the new address to them.
-        await prisma.verifiedAddress.create({
-          data: {
-            address: walletAddress.toLowerCase(),
-            userId: user.id,
-          },
-        });
-        return NextResponse.json(user);
-      } else {
-        // This is a new Farcaster user for our app.
-        // Create the user and link all their known addresses.
-        const newUser = await prisma.user.create({
-          data: {
-            fid: userFid,
-            username: farcasterUser.username,
-            name: farcasterUser.display_name || farcasterUser.username || '',
-            image: farcasterUser.pfp_url || '',
-            custodyAddress: farcasterUser.custody_address,
-            // Keep the old walletAddress field populated for now for backward compatibility
-            walletAddress: walletAddress.toLowerCase(), 
-          },
-        });
-
-        // Link all verified addresses from Neynar to the new user.
-        const allAddresses = farcasterUser.verified_addresses?.eth_addresses || [];
-        if (!allAddresses.includes(walletAddress.toLowerCase())) {
-            allAddresses.push(walletAddress.toLowerCase());
-        }
-        
-        for (const address of allAddresses) {
-          await prisma.verifiedAddress.create({
-            data: {
-              address: address.toLowerCase(),
-              userId: newUser.id,
-            },
-          });
-        }
-        return NextResponse.json(newUser);
-      }
+      const user = await findOrCreateUserWithFid(String(farcasterUser.fid), farcasterUser.username, farcasterUser.display_name, farcasterUser.pfp_url, walletAddress);
+      return NextResponse.json(user);
     } else {
-      // Step 4: This is a new user without a Farcaster profile.
+      // This is a new user without a Farcaster profile.
       const newUser = await prisma.user.create({
         data: {
           walletAddress: walletAddress.toLowerCase(),

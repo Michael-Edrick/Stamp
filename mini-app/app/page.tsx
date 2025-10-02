@@ -147,9 +147,22 @@ export default function HomePage() {
     setError(null);
 
     try {
-      // Step 1: Fetch the current user's profile first. This is crucial because the other
-      // calls may depend on the user's FID being present in the database.
-      const userResponse = await fetch(`/api/users/me?walletAddress=${address}`);
+      // Step 1: Fetch the current user's profile first.
+      // We now pass the minikit user data in headers if it exists.
+      const headers: HeadersInit = {};
+      const minikitUser = minikit?.context?.user;
+
+      if (minikitUser?.fid) {
+        headers['x-minikit-user-fid'] = String(minikitUser.fid);
+        headers['x-minikit-user-username'] = minikitUser.username;
+        headers['x-minikit-user-displayname'] = minikitUser.displayName;
+        headers['x-minikit-user-pfpurl'] = minikitUser.pfpUrl;
+      }
+
+      const userResponse = await fetch(`/api/users/me?walletAddress=${address}`, {
+        headers,
+      });
+
       if (!userResponse.ok) {
         // If we can't get the main user, it's a critical error that stops the process.
         throw new Error(`Failed to fetch user profile. Status: ${userResponse.status}`);
@@ -203,7 +216,7 @@ export default function HomePage() {
     } finally {
       setLoading(false);
     }
-  }, [address]);
+  }, [address, minikit]);
 
   useEffect(() => {
     setIsClient(true);
@@ -211,7 +224,7 @@ export default function HomePage() {
       fetchData();
     } else if (!isConnected) {
       // Clear data when disconnected
-      setLoading(true);
+      setLoading(false); // Changed from true to false to prevent loading state on initial load
       setCurrentUser(null);
       // setConversations([]);
       // setFollowing([]);
