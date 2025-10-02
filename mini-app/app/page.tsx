@@ -154,9 +154,9 @@ export default function HomePage() {
 
       if (minikitUser?.fid) {
         headers['x-minikit-user-fid'] = String(minikitUser.fid);
-        headers['x-minikit-user-username'] = minikitUser.username;
-        headers['x-minikit-user-displayname'] = minikitUser.displayName;
-        headers['x-minikit-user-pfpurl'] = minikitUser.pfpUrl;
+        headers['x-minikit-user-username'] = minikitUser.username || '';
+        headers['x-minikit-user-displayname'] = minikitUser.displayName || '';
+        headers['x-minikit-user-pfpurl'] = minikitUser.pfpUrl || '';
       }
 
       const userResponse = await fetch(`/api/users/me?walletAddress=${address}`, {
