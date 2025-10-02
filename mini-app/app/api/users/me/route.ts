@@ -21,7 +21,8 @@ async function findOrCreateUserWithFid(fid: string, username: string, displayNam
 
   // If user does not exist, we need their full profile for custody_address
   const neynarClient = new NeynarAPIClient({ apiKey: process.env.NEYNAR_API_KEY as string });
-  const fullProfile = (await neynarClient.fetchBulkUsers([Number(fid)]))?.users[0];
+  const result = await neynarClient.fetchBulkUsers({ fids: [Number(fid)] });
+  const fullProfile = result.users[0];
 
   // Create the new user
   const newUser = await prisma.user.create({
