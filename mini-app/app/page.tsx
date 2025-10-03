@@ -153,6 +153,7 @@ export default function HomePage() {
   }, [isFrameReady, setFrameReady]);
 
   const fetchData = useCallback(async () => {
+    console.log("DEBUG: fetchData function was called. Wallet address:", address);
     if (!address) return;
     
     setLoading(true);
