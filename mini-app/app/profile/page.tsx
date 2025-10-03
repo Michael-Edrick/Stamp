@@ -187,21 +187,31 @@ export default function ProfilePage() {
                 <FormRow label="PFP"><CustomAvatar profile={profile} className="w-10 h-10 rounded-full" /></FormRow>
                 <FormRow label="Name"><input type="text" name="name" value={profile.name || ''} onChange={handleInputChange} className="bg-transparent w-full text-left focus:outline-none text-gray-500" disabled /></FormRow>
                 <FormRow label="#"><input type="text" name="username" value={profile.username || ''} onChange={handleInputChange} className="bg-transparent w-full text-left focus:outline-none text-gray-500" disabled /></FormRow>
-                <FormRow label="Tags"><input type="text" name="tags" value={profile.tags?.join(', ') || ''} onChange={handleTagsChange} className="bg-transparent w-full text-left focus:outline-none" placeholder="e.g. BASE, LBS, WEB 3"/></FormRow>
-                <FormRow label={<SocialIcon platform="Instagram"/>}><input type="text" name="instagram" value={profile.instagram || ''} onChange={handleInputChange} className="bg-transparent w-full text-left focus:outline-none" /></FormRow>
-                <FormRow label={<SocialIcon platform="X"/>} isLast={true}><input type="text" name="x_social" value={profile.x_social || ''} onChange={handleInputChange} className="bg-transparent w-full text-left focus:outline-none" /></FormRow>
+                <FormRow label="Tags"><input type="text" name="tags" value={profile.tags?.join(', ') || ''} onChange={handleTagsChange} className="bg-transparent w-full text-left focus:outline-none text-base" placeholder="e.g. BASE, LBS, WEB 3"/></FormRow>
+                <FormRow label={<SocialIcon platform="Instagram"/>}><input type="text" name="instagram" value={profile.instagram || ''} onChange={handleInputChange} className="bg-transparent w-full text-left focus:outline-none text-base" /></FormRow>
+                <FormRow label={<SocialIcon platform="X"/>} isLast={true}><input type="text" name="x_social" value={profile.x_social || ''} onChange={handleInputChange} className="bg-transparent w-full text-left focus:outline-none text-base" /></FormRow>
               </div>
 
               {/* --- Section 2: Bio --- */}
               <div className="bg-black rounded-3xl p-6">
                 <label htmlFor="bio" className="block text-sm font-medium text-gray-400 mb-2">Bio</label>
-                <textarea id="bio" name="bio" rows={4} value={profile.bio || ''} onChange={handleInputChange} className="block w-full rounded-lg bg-[#1C1C1E] border-transparent p-3 focus:border-blue-500 focus:ring-blue-500"/>
+                <textarea id="bio" name="bio" rows={4} value={profile.bio || ''} onChange={handleInputChange} className="block w-full rounded-lg bg-[#1C1C1E] border-transparent p-3 focus:border-blue-500 focus:ring-blue-500 text-base"/>
               </div>
 
               {/* --- Section 3: Settings --- */}
               <div className="bg-black rounded-3xl px-6">
-                <FormRow label="Standard cost to message you:"><input type="number" name="standardCost" value={profile.standardCost ?? ''} onChange={handleInputChange} className="bg-transparent w-20 text-left focus:outline-none" /> USD</FormRow>
-                <FormRow label="Premium cost to message you:"><input type="number" name="premiumCost" value={profile.premiumCost ?? ''} onChange={handleInputChange} className="bg-transparent w-20 text-left focus:outline-none" /> USD</FormRow>
+                <FormRow label="Standard cost to message you:">
+                  <div className="flex items-center w-full">
+                    <input type="number" name="standardCost" value={profile.standardCost ?? ''} onChange={handleInputChange} className="bg-transparent w-full text-left focus:outline-none text-base" />
+                    <span className="text-gray-400">USD</span>
+                  </div>
+                </FormRow>
+                <FormRow label="Premium cost to message you:">
+                  <div className="flex items-center w-full">
+                    <input type="number" name="premiumCost" value={profile.premiumCost ?? ''} onChange={handleInputChange} className="bg-transparent w-full text-left focus:outline-none text-base" />
+                    <span className="text-gray-400">USD</span>
+                  </div>
+                </FormRow>
                 <FormRow label="Wallet" isLast={true}><span className="text-gray-500 truncate block">{profile.walletAddress}</span></FormRow>
               </div>
 
