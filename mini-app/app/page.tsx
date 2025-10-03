@@ -113,6 +113,18 @@ export default function HomePage() {
   const [isComposeModalOpen, setComposeModalOpen] = useState(false);
 
   useEffect(() => {
+    // Timeout to handle regular browser case where isFrameReady never becomes true
+    const timer = setTimeout(() => {
+      if (!isFrameReady) {
+        console.log("Timeout reached: Assuming regular browser environment.");
+        setLoading(false); // Stop loading to show "Connect Wallet"
+      }
+    }, 3000); // 3-second timeout
+
+    return () => clearTimeout(timer);
+  }, [isFrameReady]);
+
+  useEffect(() => {
     // console.log('EVIDENCE: Full useMiniKit object:', JSON.stringify(minikit, null, 2));
     const logData = async () => {
       try {
@@ -220,19 +232,24 @@ export default function HomePage() {
 
   useEffect(() => {
     setIsClient(true);
-    if (isConnected && address) {
+    // This effect now correctly waits for isFrameReady before proceeding.
+    // This solves the race condition where wagmi connects before MiniKit is initialized.
+    if (isFrameReady && isConnected && address) {
       fetchData();
-    } else if (!isConnected) {
-      // Clear data when disconnected
-      setLoading(false); // Changed from true to false to prevent loading state on initial load
+    } else if (isFrameReady && !isConnected) {
+      // Clear data when disconnected, but only after we know we're not in a MiniKit environment
+      setLoading(false); 
       setCurrentUser(null);
-      // setConversations([]);
-      // setFollowing([]);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isConnected, address]);
+  }, [isConnected, address, isFrameReady]);
   
   const renderContent = () => {
+    // Show loading until the frame is ready OR we've determined the connection state
+    if (loading) {
+      return <div className="text-center text-gray-500 py-10">Loading...</div>;
+    }
+
     if (!isConnected) {
       return (
         <div className="text-center text-gray-500 py-10">
@@ -241,10 +258,6 @@ export default function HomePage() {
       );
     }
     
-    if (loading) {
-      return <div className="text-center text-gray-500 py-10">Loading...</div>;
-    }
-
     if (error) {
       return <div className="text-center text-red-500 py-10">Error: {error}</div>;
     }
