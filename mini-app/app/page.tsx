@@ -113,6 +113,10 @@ export default function HomePage() {
   const [isComposeModalOpen, setComposeModalOpen] = useState(false);
   const [hasAttemptedFetch, setHasAttemptedFetch] = useState(false);
 
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
   const logToVercel = useCallback(async (message: string, data: object = {}) => {
     try {
       await fetch('/api/log-client-data', {
@@ -323,6 +327,8 @@ export default function HomePage() {
     );
   };
 
+  console.log('DEBUG_HEADER_CONDITION', { isClient, isConnected, currentUser });
+
   return (
     <div className="h-full bg-[#DEDEDE]nb font-sans flex flex-col">
        <header className="w-full max-w-md mx-auto flex justify-between items-center p-4 bg-[#DEDEDE]">
@@ -347,11 +353,11 @@ export default function HomePage() {
               )}
               {isClient && isConnected && currentUser && (
                 <>
-                  <div className="bg-white rounded-full px-3 py-1.5 flex items-center shadow-sm">
+                  {/* <div className="bg-white rounded-full px-3 py-1.5 flex items-center shadow-sm">
                     <span className="text-sm font-semibold text-gray-800 mr-2">
                       {address ? `${address.slice(0, 6)}...${address.slice(-4)}` : '...'}
                     </span>
-                  </div>
+                  </div> */}
                   <NetworkSwitcher />
                   <button 
                     onClick={() => disconnect()} 
