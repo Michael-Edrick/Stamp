@@ -111,6 +111,7 @@ export default function HomePage() {
   const minikit = useMiniKit();
   const { setFrameReady, isFrameReady } = minikit;
   const [isComposeModalOpen, setComposeModalOpen] = useState(false);
+  const [hasAttemptedFetch, setHasAttemptedFetch] = useState(false);
 
   useEffect(() => {
     // Timeout to handle regular browser case where isFrameReady never becomes true
@@ -145,6 +146,52 @@ export default function HomePage() {
       logData();
     }
   }, [minikit]);
+
+  useEffect(() => {
+    // This is the new main logic hook based on your plan.
+
+    // Don't do anything if we aren't connected or have already fetched data.
+    if (!isConnected || !address || hasAttemptedFetch) {
+      return;
+    }
+
+    const minikitUser = minikit?.context?.user;
+
+    // SUCCESS PATH: If the MiniKit user data is here, fetch immediately.
+    if (minikitUser?.fid) {
+      console.log("DEBUG: MiniKit user found. Fetching data immediately.");
+      fetchData();
+      setHasAttemptedFetch(true);
+      return; // Stop.
+    }
+
+    // FALLBACK PATH: If no MiniKit user, start a 5-second timer.
+    console.log("DEBUG: MiniKit user not found. Starting 5-second fallback timer.");
+    const fallbackTimer = setTimeout(() => {
+      // Re-check the flag inside the timer. If the user data arrived while waiting,
+      // the other part of this hook would have already run and set the flag.
+      if (!hasAttemptedFetch) {
+        console.log("DEBUG: 5-second timer finished. Fetching data for browser fallback.");
+        fetchData();
+        setHasAttemptedFetch(true);
+      }
+    }, 5000);
+
+    // Cleanup function: If dependencies change (e.g., minikitUser arrives)
+    // before the timer finishes, cancel the old timer.
+    return () => {
+      clearTimeout(fallbackTimer);
+    };
+  }, [isConnected, address, minikit?.context?.user, hasAttemptedFetch, fetchData]);
+
+  useEffect(() => {
+    // Reset the fetch flag if the user disconnects.
+    if (!isConnected) {
+      setHasAttemptedFetch(false);
+      setCurrentUser(null);
+      setLoading(true); // Show loading for the next connection attempt
+    }
+  }, [isConnected]);
 
   useEffect(() => {
     if (!isFrameReady) {
@@ -230,26 +277,6 @@ export default function HomePage() {
       setLoading(false);
     }
   }, [address, minikit]);
-
-  useEffect(() => {
-    setIsClient(true);
-    const minikitUser = minikit?.context?.user;
-
-    // This effect now correctly waits for the *actual user data* from MiniKit,
-    // not just the isFrameReady signal. This solves the race condition.
-    if (minikitUser?.fid && isConnected && address) {
-      fetchData();
-    } else if (isFrameReady && !minikitUser && isConnected && address) {
-      // This is the fallback for a regular browser or if MiniKit fails to provide a user.
-      // It only runs after the frame has been checked (`isFrameReady`).
-      fetchData();
-    } else if (isFrameReady && !isConnected) {
-      // Clear data when disconnected, but only after we know we're not in a MiniKit environment
-      setLoading(false);
-      setCurrentUser(null);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isConnected, address, isFrameReady, minikit?.context?.user]);
   
   const renderContent = () => {
     // Show loading until the frame is ready OR we've determined the connection state
