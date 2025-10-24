@@ -348,14 +348,12 @@ export default function HomePage() {
               {isClient && isConnected && currentUser && (
                 <>
                   {/* The following block is temporarily hidden for UI review */}
-                  {/*
                   <div className="bg-white rounded-full px-3 py-1.5 flex items-center shadow-sm">
                     <span className="text-sm font-semibold text-gray-800 mr-2">
                       {address ? `${address.slice(0, 6)}...${address.slice(-4)}` : '...'}
                     </span>
-                  </div>*/}
+                  </div>
                   <NetworkSwitcher />
-                  {/*
                   <button 
                     onClick={() => disconnect()} 
                     className="bg-red-500 text-white p-2 rounded-full text-xs font-semibold hover:bg-red-600 transition-colors"
@@ -364,7 +362,6 @@ export default function HomePage() {
                       <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9" />
                     </svg>
                   </button>
-                  */}
                   <Link 
                     href={currentUser ? `/profile` : '#'} 
                     className={`w-10 h-10 rounded-full transition-transform duration-200 hover:scale-110 flex items-center justify-center ${!currentUser ? 'pointer-events-none' : ''}`}
