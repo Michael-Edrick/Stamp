@@ -160,7 +160,13 @@ export default function HomePage() {
   }, [minikit]);
 
   const fetchData = useCallback(async () => {
-    console.log("DEBUG: fetchData function was called. Wallet address:", address);
+    // This log is now the very first thing that happens.
+    await fetch('/api/log-client-data', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: "FETCH_DATA_CALLED", address, hasMinikitUser: !!minikit?.context?.user }),
+    });
+
     if (!address) return;
     
     setLoading(true);
