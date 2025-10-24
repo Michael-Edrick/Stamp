@@ -233,17 +233,23 @@ export default function HomePage() {
 
   useEffect(() => {
     setIsClient(true);
-    // This effect now correctly waits for isFrameReady before proceeding.
-    // This solves the race condition where wagmi connects before MiniKit is initialized.
-    if (isFrameReady && isConnected && address) {
+    const minikitUser = minikit?.context?.user;
+
+    // This effect now correctly waits for the *actual user data* from MiniKit,
+    // not just the isFrameReady signal. This solves the race condition.
+    if (minikitUser?.fid && isConnected && address) {
+      fetchData();
+    } else if (isFrameReady && !minikitUser && isConnected && address) {
+      // This is the fallback for a regular browser or if MiniKit fails to provide a user.
+      // It only runs after the frame has been checked (`isFrameReady`).
       fetchData();
     } else if (isFrameReady && !isConnected) {
       // Clear data when disconnected, but only after we know we're not in a MiniKit environment
-      setLoading(false); 
+      setLoading(false);
       setCurrentUser(null);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isConnected, address, isFrameReady]);
+  }, [isConnected, address, isFrameReady, minikit?.context?.user]);
   
   const renderContent = () => {
     // Show loading until the frame is ready OR we've determined the connection state
