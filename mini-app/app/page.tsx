@@ -147,58 +147,6 @@ export default function HomePage() {
     }
   }, [minikit]);
 
-  useEffect(() => {
-    // This is the new main logic hook based on your plan.
-
-    // Don't do anything if we aren't connected or have already fetched data.
-    if (!isConnected || !address || hasAttemptedFetch) {
-      return;
-    }
-
-    const minikitUser = minikit?.context?.user;
-
-    // SUCCESS PATH: If the MiniKit user data is here, fetch immediately.
-    if (minikitUser?.fid) {
-      console.log("DEBUG: MiniKit user found. Fetching data immediately.");
-      fetchData();
-      setHasAttemptedFetch(true);
-      return; // Stop.
-    }
-
-    // FALLBACK PATH: If no MiniKit user, start a 5-second timer.
-    console.log("DEBUG: MiniKit user not found. Starting 5-second fallback timer.");
-    const fallbackTimer = setTimeout(() => {
-      // Re-check the flag inside the timer. If the user data arrived while waiting,
-      // the other part of this hook would have already run and set the flag.
-      if (!hasAttemptedFetch) {
-        console.log("DEBUG: 5-second timer finished. Fetching data for browser fallback.");
-        fetchData();
-        setHasAttemptedFetch(true);
-      }
-    }, 5000);
-
-    // Cleanup function: If dependencies change (e.g., minikitUser arrives)
-    // before the timer finishes, cancel the old timer.
-    return () => {
-      clearTimeout(fallbackTimer);
-    };
-  }, [isConnected, address, minikit?.context?.user, hasAttemptedFetch, fetchData]);
-
-  useEffect(() => {
-    // Reset the fetch flag if the user disconnects.
-    if (!isConnected) {
-      setHasAttemptedFetch(false);
-      setCurrentUser(null);
-      setLoading(true); // Show loading for the next connection attempt
-    }
-  }, [isConnected]);
-
-  useEffect(() => {
-    if (!isFrameReady) {
-      setFrameReady();
-    }
-  }, [isFrameReady, setFrameReady]);
-
   const fetchData = useCallback(async () => {
     console.log("DEBUG: fetchData function was called. Wallet address:", address);
     if (!address) return;
@@ -277,6 +225,58 @@ export default function HomePage() {
       setLoading(false);
     }
   }, [address, minikit]);
+
+  useEffect(() => {
+    // This is the new main logic hook based on your plan.
+
+    // Don't do anything if we aren't connected or have already fetched data.
+    if (!isConnected || !address || hasAttemptedFetch) {
+      return;
+    }
+
+    const minikitUser = minikit?.context?.user;
+
+    // SUCCESS PATH: If the MiniKit user data is here, fetch immediately.
+    if (minikitUser?.fid) {
+      console.log("DEBUG: MiniKit user found. Fetching data immediately.");
+      fetchData();
+      setHasAttemptedFetch(true);
+      return; // Stop.
+    }
+
+    // FALLBACK PATH: If no MiniKit user, start a 5-second timer.
+    console.log("DEBUG: MiniKit user not found. Starting 5-second fallback timer.");
+    const fallbackTimer = setTimeout(() => {
+      // Re-check the flag inside the timer. If the user data arrived while waiting,
+      // the other part of this hook would have already run and set the flag.
+      if (!hasAttemptedFetch) {
+        console.log("DEBUG: 5-second timer finished. Fetching data for browser fallback.");
+        fetchData();
+        setHasAttemptedFetch(true);
+      }
+    }, 5000);
+
+    // Cleanup function: If dependencies change (e.g., minikitUser arrives)
+    // before the timer finishes, cancel the old timer.
+    return () => {
+      clearTimeout(fallbackTimer);
+    };
+  }, [isConnected, address, minikit?.context?.user, hasAttemptedFetch, fetchData]);
+
+  useEffect(() => {
+    // Reset the fetch flag if the user disconnects.
+    if (!isConnected) {
+      setHasAttemptedFetch(false);
+      setCurrentUser(null);
+      setLoading(true); // Show loading for the next connection attempt
+    }
+  }, [isConnected]);
+
+  useEffect(() => {
+    if (!isFrameReady) {
+      setFrameReady();
+    }
+  }, [isFrameReady, setFrameReady]);
   
   const renderContent = () => {
     // Show loading until the frame is ready OR we've determined the connection state
