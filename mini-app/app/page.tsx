@@ -117,23 +117,10 @@ export default function HomePage() {
     setIsClient(true);
   }, []);
 
-  const logToVercel = useCallback(async (message: string, data: object = {}) => {
-    try {
-      await fetch('/api/log-client-data', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message, ...data }),
-      });
-    } catch (error) {
-      console.error('Failed to send custom client log:', error);
-    }
-  }, []);
-
   useEffect(() => {
     // Timeout to handle regular browser case where isFrameReady never becomes true
     const timer = setTimeout(() => {
       if (!isFrameReady) {
-        console.log("Timeout reached: Assuming regular browser environment.");
         setLoading(false); // Stop loading to show "Connect Wallet"
       }
     }, 3000); // 3-second timeout
@@ -141,36 +128,7 @@ export default function HomePage() {
     return () => clearTimeout(timer);
   }, [isFrameReady]);
 
-  useEffect(() => {
-    // console.log('EVIDENCE: Full useMiniKit object:', JSON.stringify(minikit, null, 2));
-    const logData = async () => {
-      try {
-        await fetch('/api/log-client-data', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(minikit),
-        });
-      } catch (error) {
-        console.error('Failed to send client log:', error);
-      }
-    };
-
-    // Only send the log if the minikit object is populated
-    if (minikit && Object.keys(minikit).length > 0) {
-      logData();
-    }
-  }, [minikit]);
-
   const fetchData = useCallback(async () => {
-    // This log is now the very first thing that happens.
-    await fetch('/api/log-client-data', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: "FETCH_DATA_CALLED", address, hasMinikitUser: !!minikit?.context?.user }),
-    });
-
     if (!address) return;
     
     setLoading(true);
@@ -181,9 +139,6 @@ export default function HomePage() {
       // We now pass the minikit user data in headers if it exists.
       const headers: HeadersInit = {};
       const minikitUser = minikit?.context?.user;
-
-      // Log the user data we're about to send.
-      await logToVercel('PREPARING_HEADERS', { minikitUser });
 
       if (minikitUser?.fid) {
         headers['x-minikit-user-fid'] = String(minikitUser.fid);
@@ -249,7 +204,7 @@ export default function HomePage() {
     } finally {
       setLoading(false);
     }
-  }, [address, minikit, logToVercel]);
+  }, [address, minikit]);
 
   useEffect(() => {
     // This is the new main logic hook based on your plan.
@@ -263,7 +218,6 @@ export default function HomePage() {
 
     // SUCCESS PATH: If the MiniKit user data is here, fetch immediately.
     if (minikitUser?.fid) {
-      logToVercel("SUCCESS_PATH_TAKEN", { minikitUser });
       fetchData();
       setHasAttemptedFetch(true);
       return; // Stop.
@@ -274,7 +228,6 @@ export default function HomePage() {
       // Re-check the flag inside the timer. If the user data arrived while waiting,
       // the other part of this hook would have already run and set the flag.
       if (!hasAttemptedFetch) {
-        logToVercel("FALLBACK_PATH_TAKEN", { minikitUserAtTimeout: minikit?.context?.user });
         fetchData();
         setHasAttemptedFetch(true);
       }
@@ -285,9 +238,7 @@ export default function HomePage() {
     return () => {
       clearTimeout(fallbackTimer);
     };
-    // By adding fetchData and logToVercel to the dependencies, we ensure this hook
-    // re-runs when they are redefined, which is crucial for correctness.
-  }, [isConnected, address, minikit?.context?.user, hasAttemptedFetch, fetchData, logToVercel]);
+  }, [isConnected, address, minikit?.context?.user, hasAttemptedFetch, fetchData]);
 
   useEffect(() => {
     // Reset the fetch flag if the user disconnects.

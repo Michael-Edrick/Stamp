@@ -20,7 +20,6 @@ async function findOrCreateUserWithFid(fid: string, username: string, displayNam
   }
 
   // If user does not exist, we need their full profile for custody_address
-  console.log('ATTEMPTING_NEYNAR_CALL', { fid });
   const neynarClient = new NeynarAPIClient({ apiKey: process.env.NEYNAR_API_KEY as string });
   const result = await neynarClient.fetchBulkUsers({ fids: [Number(fid)] });
   const fullProfile = result.users[0];
@@ -50,22 +49,11 @@ async function findOrCreateUserWithFid(fid: string, username: string, displayNam
 
 
 export async function GET(req: NextRequest) {
-  const headers = req.headers;
-  const minikitFid = headers.get('x-minikit-user-fid');
-  const minikitUsername = headers.get('x-minikit-user-username');
-  const minikitDisplayName = headers.get('x-minikit-user-displayname');
-  const minikitPfpUrl = headers.get('x-minikit-user-pfpurl');
-
-  console.log('BACKEND_RECEIVED_HEADERS:', {
-    minikitFid,
-    minikitUsername,
-    minikitDisplayName,
-    minikitPfpUrl,
-  });
-
   const { searchParams } = new URL(req.url);
   const walletAddress = searchParams.get('walletAddress');
-  
+  const headers = req.headers;
+  const minikitFid = headers.get('x-minikit-user-fid');
+
   if (!walletAddress) {
     return NextResponse.json({ error: 'walletAddress is required' }, { status: 400 });
   }
