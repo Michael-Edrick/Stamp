@@ -347,7 +347,6 @@ export default function HomePage() {
               )}
               {isClient && isConnected && currentUser && (
                 <>
-                  {/* The following block is temporarily hidden for UI review */}
                   <div className="bg-white rounded-full px-3 py-1.5 flex items-center shadow-sm">
                     <span className="text-sm font-semibold text-gray-800 mr-2">
                       {address ? `${address.slice(0, 6)}...${address.slice(-4)}` : '...'}
