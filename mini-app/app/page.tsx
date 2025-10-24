@@ -178,6 +178,9 @@ export default function HomePage() {
       const headers: HeadersInit = {};
       const minikitUser = minikit?.context?.user;
 
+      // Log the user data we're about to send.
+      await logToVercel('PREPARING_HEADERS', { minikitUser });
+
       if (minikitUser?.fid) {
         headers['x-minikit-user-fid'] = String(minikitUser.fid);
         headers['x-minikit-user-username'] = minikitUser.username || '';
@@ -242,7 +245,7 @@ export default function HomePage() {
     } finally {
       setLoading(false);
     }
-  }, [address, minikit]);
+  }, [address, minikit, logToVercel]);
 
   useEffect(() => {
     // This is the new main logic hook based on your plan.

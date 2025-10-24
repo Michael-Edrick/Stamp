@@ -49,11 +49,22 @@ async function findOrCreateUserWithFid(fid: string, username: string, displayNam
 
 
 export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url);
-  const walletAddress = searchParams.get('walletAddress');
   const headers = req.headers;
   const minikitFid = headers.get('x-minikit-user-fid');
+  const minikitUsername = headers.get('x-minikit-user-username');
+  const minikitDisplayName = headers.get('x-minikit-user-displayname');
+  const minikitPfpUrl = headers.get('x-minikit-user-pfpurl');
 
+  console.log('BACKEND_RECEIVED_HEADERS:', {
+    minikitFid,
+    minikitUsername,
+    minikitDisplayName,
+    minikitPfpUrl,
+  });
+
+  const { searchParams } = new URL(req.url);
+  const walletAddress = searchParams.get('walletAddress');
+  
   if (!walletAddress) {
     return NextResponse.json({ error: 'walletAddress is required' }, { status: 400 });
   }
