@@ -20,6 +20,7 @@ async function findOrCreateUserWithFid(fid: string, username: string, displayNam
   }
 
   // If user does not exist, we need their full profile for custody_address
+  console.log('ATTEMPTING_NEYNAR_CALL', { fid });
   const neynarClient = new NeynarAPIClient({ apiKey: process.env.NEYNAR_API_KEY as string });
   const result = await neynarClient.fetchBulkUsers({ fids: [Number(fid)] });
   const fullProfile = result.users[0];
