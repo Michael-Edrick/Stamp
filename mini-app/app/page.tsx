@@ -113,6 +113,18 @@ export default function HomePage() {
   const [isComposeModalOpen, setComposeModalOpen] = useState(false);
   const [hasAttemptedFetch, setHasAttemptedFetch] = useState(false);
 
+  const logToVercel = useCallback(async (message: string, data: object = {}) => {
+    try {
+      await fetch('/api/log-client-data', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message, ...data }),
+      });
+    } catch (error) {
+      console.error('Failed to send custom client log:', error);
+    }
+  }, []);
+
   useEffect(() => {
     // Timeout to handle regular browser case where isFrameReady never becomes true
     const timer = setTimeout(() => {
@@ -238,19 +250,18 @@ export default function HomePage() {
 
     // SUCCESS PATH: If the MiniKit user data is here, fetch immediately.
     if (minikitUser?.fid) {
-      console.log("DEBUG: MiniKit user found. Fetching data immediately.");
+      logToVercel("SUCCESS_PATH_TAKEN", { minikitUser });
       fetchData();
       setHasAttemptedFetch(true);
       return; // Stop.
     }
 
     // FALLBACK PATH: If no MiniKit user, start a 5-second timer.
-    console.log("DEBUG: MiniKit user not found. Starting 5-second fallback timer.");
     const fallbackTimer = setTimeout(() => {
       // Re-check the flag inside the timer. If the user data arrived while waiting,
       // the other part of this hook would have already run and set the flag.
       if (!hasAttemptedFetch) {
-        console.log("DEBUG: 5-second timer finished. Fetching data for browser fallback.");
+        logToVercel("FALLBACK_PATH_TAKEN", { minikitUserAtTimeout: minikit?.context?.user });
         fetchData();
         setHasAttemptedFetch(true);
       }
@@ -261,7 +272,9 @@ export default function HomePage() {
     return () => {
       clearTimeout(fallbackTimer);
     };
-  }, [isConnected, address, minikit?.context?.user, hasAttemptedFetch, fetchData]);
+    // By adding fetchData and logToVercel to the dependencies, we ensure this hook
+    // re-runs when they are redefined, which is crucial for correctness.
+  }, [isConnected, address, minikit?.context?.user, hasAttemptedFetch, fetchData, logToVercel]);
 
   useEffect(() => {
     // Reset the fetch flag if the user disconnects.
