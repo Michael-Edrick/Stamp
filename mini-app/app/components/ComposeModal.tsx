@@ -14,6 +14,7 @@ import { messageEscrowABI, messageEscrowAddress, usdcContractAddress } from '@/l
 import { parseUnits } from 'viem';
 import { erc20Abi } from 'viem';
 import PaymentModal from './PaymentModal';
+import { PaperAirplaneIcon } from '@heroicons/react/24/solid';
 
 interface ComposeModalProps {
   isOpen: boolean;
@@ -198,7 +199,7 @@ const ComposeModal = ({ isOpen, onClose, currentUser }: ComposeModalProps) => {
         fetch('/api/messages/send', {
             method: 'POST',
             headers: { 
-                'Content-Type': 'application/json',
+                 'Content-Type': 'application/json',
                 'x-wallet-address': currentUser!.walletAddress!,
             },
             body: JSON.stringify({
@@ -210,6 +211,17 @@ const ComposeModal = ({ isOpen, onClose, currentUser }: ComposeModalProps) => {
             }),
         }).then(res => {
             if (res.ok) {
+                // Fire-and-forget the Farcaster cast notification
+                if (recipientDbUserRef.current?.username) {
+                    fetch('/api/cast', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ recipientUsername: recipientDbUserRef.current.username }),
+                    }).catch(castError => {
+                        console.error("Failed to submit Farcaster cast:", castError);
+                        // We don't alert the user here as the primary message was successful.
+                    });
+                }
                 router.push(`/chat/${recipientDbUserRef.current!.id}`);
             } else {
                 throw new Error('Failed to confirm transaction with backend.');
@@ -229,6 +241,8 @@ const ComposeModal = ({ isOpen, onClose, currentUser }: ComposeModalProps) => {
   }, [approveError, sendMessageError, isMessageError]);
 
   const isProcessingTx = isApproving || isConfirmingApproval || isSendingMessage || isConfirmingMessage;
+
+  const isReadyToSend = selectedUser && message.trim() !== '';
 
   return (
     <>
@@ -259,56 +273,69 @@ const ComposeModal = ({ isOpen, onClose, currentUser }: ComposeModalProps) => {
             leaveTo="translate-y-full"
           >
             <div className="absolute bottom-0 h-[85%] w-full">
-              <div className="flex h-full flex-col overflow-y-scroll bg-white shadow-xl rounded-t-2xl p-4">
+              <div className="flex h-full flex-col bg-white shadow-xl rounded-t-2xl">
+                
+                {/* Single Header Bar */}
+                <div className="flex items-center p-4 border-b border-gray-200 space-x-2">
+                    <button
+                        onClick={onClose}
+                        className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200"
+                    >
+                        <XMarkIcon className="h-5 w-5 text-gray-600" />
+                    </button>
 
-                <div className="relative flex-1 flex flex-col">
-                  <div className="py-2">
-                      <div className="relative">
-                          <div className="flex items-center rounded-full bg-gray-100 px-4 py-2">
-                              {selectedUser ? (
-                                  <button onClick={handleClearRecipient} className="pr-2">
-                                      <XMarkIcon className="h-5 w-5 text-gray-500" />
-                                  </button>
-                              ) : (
-                                  <span className="text-gray-500 pr-2">To:</span>
-                              )}
-                              {selectedUser ? (
-                                  <div className="flex items-center">
-                                      <img src={selectedUser.pfp_url} alt={selectedUser.username} className="w-6 h-6 rounded-full mr-2" />
-                                      <span className="font-semibold">{selectedUser.display_name}</span>
-                                      <span className="text-gray-500 ml-1">@{selectedUser.username}</span>
-                                  </div>
-                              ) : (
-                                  <input
-                                      type="text"
-                                      placeholder="@..."
-                                      value={searchTerm}
-                                      onChange={(e) => setSearchTerm(e.target.value)}
-                                      className="w-full bg-transparent text-gray-900 placeholder-gray-400 focus:outline-none text-base"
-                                  />
-                              )}
-                          </div>
-                          {searchResults.length > 0 && (
-                              <div className="absolute mt-1 w-full rounded-md bg-white shadow-lg z-10">
-                                  <ul className="max-h-60 overflow-auto rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm">
-                                  {searchResults.map((user) => (
-                                      <li
-                                          key={user.fid}
-                                          onClick={() => handleSelectUser(user)}
-                                          className="relative cursor-pointer select-none py-2 pl-3 pr-9 text-gray-900 hover:bg-gray-100"
-                                      >
-                                          <div className="flex items-center">
-                                              <img src={user.pfp_url} alt={user.username} className="h-8 w-8 rounded-full" />
-                                              <span className="ml-3 block truncate font-semibold">{user.display_name}</span>
-                                              <span className="ml-2 truncate text-gray-500">@{user.username}</span>
-                                          </div>
-                                      </li>
-                                  ))}
-                                  </ul>
-                              </div>
-                          )}
-                      </div>
-                  </div>
+                    <div className="flex-1 flex items-center rounded-full bg-gray-100 px-4 py-2 relative">
+                        {selectedUser ? (
+                            <button onClick={handleClearRecipient} className="flex items-center w-full text-left">
+                                <img src={selectedUser.pfp_url} alt={selectedUser.username} className="w-6 h-6 rounded-full mr-2" />
+                                <span className="font-semibold text-sm">{selectedUser.display_name}</span>
+                                <span className="text-gray-500 ml-1 text-sm">@{selectedUser.username}</span>
+                            </button>
+                        ) : (
+                            <>
+                                <span className="text-gray-500 pr-2">To:</span>
+                                <input
+                                    type="text"
+                                    placeholder="@..."
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    className="w-full bg-transparent text-gray-900 placeholder-gray-400 focus:outline-none text-base"
+                                />
+                            </>
+                        )}
+                        {searchResults.length > 0 && (
+                            <div className="absolute top-full mt-1 w-full rounded-md bg-white shadow-lg z-10">
+                                <ul className="max-h-60 overflow-auto rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm">
+                                {searchResults.map((user) => (
+                                    <li
+                                        key={user.fid}
+                                        onClick={() => handleSelectUser(user)}
+                                        className="relative cursor-pointer select-none py-2 pl-3 pr-9 text-gray-900 hover:bg-gray-100"
+                                    >
+                                        <div className="flex items-center">
+                                            <img src={user.pfp_url} alt={user.username} className="h-8 w-8 rounded-full" />
+                                            <span className="ml-3 block truncate font-semibold">{user.display_name}</span>
+                                            <span className="ml-2 truncate text-gray-500">@{user.username}</span>
+                                        </div>
+                                    </li>
+                                ))}
+                                </ul>
+                            </div>
+                        )}
+                    </div>
+
+                    <button
+                        onClick={handleSendMessage}
+                        disabled={!isReadyToSend}
+                        className={`p-2 rounded-full transition-colors ${
+                            isReadyToSend ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-400'
+                        }`}
+                        >
+                        <PaperAirplaneIcon className="w-6 h-6 -rotate-45" />
+                    </button>
+                </div>
+
+                <div className="relative flex-1 flex flex-col px-4">
                   <textarea
                     placeholder={selectedUser ? `Message @${selectedUser.username}...` : "Start typing to find a user..."}
                     className="flex-1 w-full resize-none pt-2 text-lg text-gray-900 placeholder-gray-400 focus:outline-none"
