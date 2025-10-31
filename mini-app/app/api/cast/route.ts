@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
     const app_link = "https://app.stampme.xyz";
     const castText = `Hey @${recipientUsername}! You've received a new paid message on StampMe. Check your inbox to read it and claim your funds: ${app_link}`;
     
-    const castResponse = await neynarClient.publishCast(signerUuid, { text: castText });
+    const castResponse = await neynarClient.publishCast({ signerUuid, text: castText });
 
     return NextResponse.json({ success: true, message: 'Cast submitted successfully via Neynar', data: castResponse }, { status: 200 });
 
