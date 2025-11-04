@@ -67,16 +67,16 @@ export default function ChatPage() {
   const optimisticIdRef = useRef<string | null>(null);
 
 
-  const { data: approveHash, writeContract: approve, isPending: isApproving, error: approveError } = useWriteContract();
-  const { data: sendMessageHash, writeContract: sendMessage, isPending: isSendingMessage, error: sendMessageError } = useWriteContract();
+  const { data: approveHash, writeContract: approve, isPending: isApproving, error: approveError, reset: resetApprove } = useWriteContract();
+  const { data: sendMessageHash, writeContract: sendMessage, isPending: isSendingMessage, error: sendMessageError, reset: resetSendMessage } = useWriteContract();
 
-  const { isLoading: isConfirmingApproval, isSuccess: isApprovalConfirmed } = 
+  const { isLoading: isConfirmingApproval, isSuccess: isApprovalConfirmed, error: approveReceiptError } = 
     useWaitForTransactionReceipt({ hash: approveHash });
 
-  const { isLoading: isConfirmingMessage, isSuccess: isMessageConfirmed, isError: isMessageError } =
+  const { isLoading: isConfirmingMessage, isSuccess: isMessageConfirmed, isError: isMessageError, error: sendMessageReceiptError } =
     useWaitForTransactionReceipt({ hash: sendMessageHash });
 
-  const { data: refundHash, writeContract: claimRefund, isPending: isClaimingRefund, error: refundError } = useWriteContract();
+  const { data: refundHash, writeContract: claimRefund, isPending: isClaimingRefund, error: refundError, reset: resetRefund } = useWriteContract();
   
   const { isLoading: isConfirmingRefund, isSuccess: isRefundConfirmed } =
     useWaitForTransactionReceipt({ hash: refundHash });
@@ -173,7 +173,11 @@ export default function ChatPage() {
 
     } catch (error) {
       console.error('Error saving message:', error);
-      alert('Failed to save message. Please try again.');
+      setInfoModalContent({
+        title: "Error",
+        message: "Failed to save message. Please try again."
+      });
+      setInfoModalOpen(true);
     }
   };
 
@@ -231,7 +235,11 @@ export default function ChatPage() {
 
   const handleSendMessage = async () => {
     if (!selfAddress) {
-      alert("Could not identify sender. Please reconnect your wallet and try again.");
+      setInfoModalContent({
+        title: "Wallet Not Connected",
+        message: "Could not identify sender. Please reconnect your wallet and try again."
+      });
+      setInfoModalOpen(true);
       return;
     }
 
@@ -274,7 +282,11 @@ export default function ChatPage() {
 
     } catch (error) {
       console.error("Sending message failed:", error);
-      alert((error as Error).message);
+      setInfoModalContent({
+        title: "Error Sending Message",
+        message: (error as Error).message
+      });
+      setInfoModalOpen(true);
       setMessage(content);
     } finally {
       setIsSending(false);
@@ -292,7 +304,11 @@ export default function ChatPage() {
 
     const meUser = currentUser;
     if (!meUser) {
-      alert("Cannot send message: current user not loaded.");
+      setInfoModalContent({
+        title: "Error",
+        message: "Cannot send message: current user not loaded."
+      });
+      setInfoModalOpen(true);
       return;
     }
 
@@ -335,7 +351,11 @@ export default function ChatPage() {
         });
     } catch (error) {
         console.error("Approval failed to start:", error);
-        alert((error as Error).message);
+        setInfoModalContent({
+            title: "Approval Failed",
+            message: (error as Error).message
+        });
+        setInfoModalOpen(true);
         setConversation(prev => {
             if (!prev) return null;
             return { ...prev, messages: prev.messages.filter(m => m.id !== optimisticIdRef.current) };
@@ -409,7 +429,11 @@ export default function ChatPage() {
             }
         }).catch(error => {
             console.error("Backend refund confirmation failed:", error);
-            alert("Your refund was successful on-chain, but we failed to update it in our system. Please contact support.");
+            setInfoModalContent({
+                title: 'Update Failed',
+                message: "Your refund was successful on-chain, but we failed to update it in our system. Please contact support."
+            });
+            setInfoModalOpen(true);
         }).finally(() => {
             optimisticIdRef.current = null;
             setOpenMenuId(null);
@@ -450,7 +474,11 @@ export default function ChatPage() {
             }
         }).catch(error => {
             console.error("Backend confirmation failed:", error);
-            alert("Your payment was successful on-chain, but we failed to update it in our system. Please contact support.");
+            setInfoModalContent({
+                title: 'Update Failed',
+                message: "Your payment was successful on-chain, but we failed to update it in our system. Please contact support."
+            });
+            setInfoModalOpen(true);
         }).finally(() => {
             optimisticIdRef.current = null;
             onChainMessageIdRef.current = null;
@@ -461,9 +489,26 @@ export default function ChatPage() {
   }, [isMessageConfirmed, sendMessageHash]);
 
   useEffect(() => {
-    const transactionFailed = approveError || sendMessageError || (sendMessageHash && isMessageError);
+    const transactionFailed = approveError || sendMessageError || (sendMessageHash && (approveReceiptError || sendMessageReceiptError)) || refundError;
     if (transactionFailed) {
-      alert(`Transaction failed: ${approveError?.message || sendMessageError?.message || 'The message transaction failed.'}`);
+        const getErrorMessage = () => {
+            const error = approveError || sendMessageError || refundError || approveReceiptError || sendMessageReceiptError;
+            if (error?.message) {
+                console.log("Raw transaction error:", error.message); // Log the raw error
+                if (error.message.includes('insufficient funds')) {
+                    return "Transaction failed due to insufficient funds. Please ensure you have enough tokens for the transaction and ETH/base for gas fees.";
+                }
+                if (error.message.includes('rejected')) {
+                    return "The transaction was rejected in your wallet.";
+                }
+            }
+            return "An error occured while processing the transaction. Please check your wallet and token. ";
+        };
+        setInfoModalContent({
+            title: "Transaction Failed",
+            message: getErrorMessage()
+        });
+        setInfoModalOpen(true);
       
       if (optimisticIdRef.current) {
         setConversation(prev => {
@@ -477,7 +522,7 @@ export default function ChatPage() {
       pendingMessageContentRef.current = null;
       pendingAmountRef.current = null;
     }
-  }, [approveError, sendMessageError, isMessageError, sendMessageHash]);
+  }, [approveError, sendMessageError, isMessageError, sendMessageHash, refundError, approveReceiptError, sendMessageReceiptError]);
 
 
   if (isLoading) {
@@ -701,7 +746,12 @@ export default function ChatPage() {
 
       <InfoModal 
         isOpen={isInfoModalOpen}
-        onClose={() => setInfoModalOpen(false)}
+        onClose={() => {
+            setInfoModalOpen(false);
+            resetApprove();
+            resetSendMessage();
+            resetRefund();
+        }}
         title={infoModalContent.title}
         message={infoModalContent.message}
       />

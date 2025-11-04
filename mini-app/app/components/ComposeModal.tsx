@@ -15,6 +15,7 @@ import { parseUnits } from 'viem';
 import { erc20Abi } from 'viem';
 import PaymentModal from './PaymentModal';
 import { PaperAirplaneIcon } from '@heroicons/react/24/solid';
+import InfoModal from './InfoModal';
 
 interface ComposeModalProps {
   isOpen: boolean;
@@ -33,6 +34,8 @@ const ComposeModal = ({ isOpen, onClose, currentUser }: ComposeModalProps) => {
   const [message, setMessage] = useState('');
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [isSendingTriggered, setIsSendingTriggered] = useState(false);
+  const [isInfoModalOpen, setInfoModalOpen] = useState(false);
+  const [infoModalContent, setInfoModalContent] = useState({ title: '', message: '' });
   const router = useRouter();
 
   const [debouncedQuery] = useDebounce(searchTerm, 300);
@@ -42,10 +45,10 @@ const ComposeModal = ({ isOpen, onClose, currentUser }: ComposeModalProps) => {
   const onChainMessageIdRef = useRef<string | null>(null);
   const pendingAmountRef = useRef<number | null>(null);
 
-  const { data: approveHash, writeContract: approve, isPending: isApproving, error: approveError } = useWriteContract();
-  const { data: sendMessageHash, writeContract: sendMessage, isPending: isSendingMessage, error: sendMessageError } = useWriteContract();
-  const { isLoading: isConfirmingApproval, isSuccess: isApprovalConfirmed } = useWaitForTransactionReceipt({ hash: approveHash });
-  const { isLoading: isConfirmingMessage, isSuccess: isMessageConfirmed, isError: isMessageError } = useWaitForTransactionReceipt({ hash: sendMessageHash });
+  const { data: approveHash, writeContract: approve, isPending: isApproving, error: approveError, reset: resetApprove } = useWriteContract();
+  const { data: sendMessageHash, writeContract: sendMessage, isPending: isSendingMessage, error: sendMessageError, reset: resetSendMessage } = useWriteContract();
+  const { isLoading: isConfirmingApproval, isSuccess: isApprovalConfirmed, error: approveReceiptError } = useWaitForTransactionReceipt({ hash: approveHash });
+  const { isLoading: isConfirmingMessage, isSuccess: isMessageConfirmed, isError: isMessageError, error: sendMessageReceiptError } = useWaitForTransactionReceipt({ hash: sendMessageHash });
 
   useEffect(() => {
     if (!isOpen) {
@@ -140,7 +143,11 @@ const ComposeModal = ({ isOpen, onClose, currentUser }: ComposeModalProps) => {
 
     } catch (error) {
       console.error("Error sending message:", error);
-      alert((error as Error).message || "An error occurred.");
+      setInfoModalContent({
+        title: 'Error',
+        message: (error as Error).message || "An unexpected error occurred. Please try again."
+      });
+      setInfoModalOpen(true);
     } finally {
       setIsSending(false);
     }
@@ -228,17 +235,39 @@ const ComposeModal = ({ isOpen, onClose, currentUser }: ComposeModalProps) => {
             }
         }).catch(error => {
             console.error("Backend confirmation failed:", error);
-            alert("Payment was successful, but we failed to update our system. Please contact support.");
+            setInfoModalContent({
+                title: 'Confirmation Failed',
+                message: "Payment was successful, but we failed to update our system. Please contact support."
+            });
+            setInfoModalOpen(true);
         });
     }
   }, [isMessageConfirmed, sendMessageHash, currentUser, router]);
 
   useEffect(() => {
-    const transactionFailed = approveError || sendMessageError || isMessageError;
+    const transactionFailed = approveError || sendMessageError || approveReceiptError || sendMessageReceiptError;
     if (transactionFailed) {
-      alert(`Transaction failed: ${approveError?.message || sendMessageError?.message || 'The message transaction failed.'}`);
+      const getErrorMessage = () => {
+        const error = approveError || sendMessageError || approveReceiptError || sendMessageReceiptError;
+        console.log("Raw transaction error object:", error); // Log the entire error object
+        if (error?.message) {
+          if (error.message.includes('insufficient funds')) {
+            return "Transaction failed due to insufficient funds. Please ensure you have enough USDC for the message and ETH for gas fees.";
+          }
+          if (error.message.includes('rejected')) {
+            return "The transaction was rejected in your wallet.";
+          }
+        }
+        return "An error occured while processing the transaction. Please check your wallet and token. ";
+      };
+      
+      setInfoModalContent({
+        title: "Transaction Failed",
+        message: getErrorMessage()
+      });
+      setInfoModalOpen(true);
     }
-  }, [approveError, sendMessageError, isMessageError]);
+  }, [approveError, sendMessageError, isMessageError, approveReceiptError, sendMessageReceiptError]);
 
   const isProcessingTx = isApproving || isConfirmingApproval || isSendingMessage || isConfirmingMessage;
 
@@ -377,6 +406,17 @@ const ComposeModal = ({ isOpen, onClose, currentUser }: ComposeModalProps) => {
           </div>
         </div>
       )}
+
+      <InfoModal 
+        isOpen={isInfoModalOpen}
+        onClose={() => {
+            setInfoModalOpen(false)
+            resetApprove();
+            resetSendMessage();
+        }}
+        title={infoModalContent.title}
+        message={infoModalContent.message}
+      />
     </>
   );
 };
