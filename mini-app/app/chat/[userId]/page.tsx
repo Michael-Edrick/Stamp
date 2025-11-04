@@ -672,6 +672,15 @@ export default function ChatPage() {
                 }
               }}
             />
+            <button
+                onClick={handleSendMessage}
+                disabled={!message.trim() || isSending}
+                className={`p-2 rounded-full transition-colors ml-2 ${
+                    message.trim() ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-400'
+                }`}
+            >
+                <PaperAirplaneIcon className="w-6 h-6 -rotate-45" />
+            </button>
         </div>
       </footer>
       
