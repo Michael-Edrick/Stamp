@@ -317,7 +317,7 @@ const ComposeModal = ({ isOpen, onClose, currentUser }: ComposeModalProps) => {
                         {selectedUser ? (
                             <button onClick={handleClearRecipient} className="flex items-center w-full text-left">
                                 <img src={selectedUser.pfp_url} alt={selectedUser.username} className="w-6 h-6 rounded-full mr-2" />
-                                <span className="font-semibold text-sm">{selectedUser.display_name}</span>
+                                <span className="font-semibold text-sm text-gray-900">{selectedUser.display_name}</span>
                                 <span className="text-gray-500 ml-1 text-sm">@{selectedUser.username}</span>
                             </button>
                         ) : (

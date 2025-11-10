@@ -575,124 +575,155 @@ export default function ChatPage() {
                 ref={bubbleRef}
                 className={`max-w-[80%] rounded-2xl bg-white p-4 text-gray-800 relative break-words`}
               >
-                {isSender && (
-                  <div className="absolute top-1 left-1">
-                      <Menu as="div" className="relative inline-block text-left">
-                        <div>
-                          <Menu.Button
-                            onClick={(e) => {
-                              const rect = e.currentTarget.getBoundingClientRect();
-                              const isPaidMessage = msg.amount && msg.amount > 0;
-                              const isPendingReply = msg.status === 'SENT';
-                              const canRefundThisMessage = isSender && isPaidMessage && isPendingReply;
-
-                              setMenuPosition({
-                                top: rect.top - (canRefundThisMessage ? 80 : 52),
-                                left: rect.left - 5,
-                              });
-                            }}
-                            className="p-1 rounded-full hover:bg-gray-100"
-                          >
-                            <EllipsisHorizontalIcon
-                              className="w-4 h-4 text-gray-400"
-                              aria-hidden="true"
-                            />
-                          </Menu.Button>
-                        </div>
-                        <Transition
-                          as={Fragment}
-                          enter="transition ease-out duration-100"
-                          enterFrom="transform opacity-0 scale-95"
-                          enterTo="transform opacity-100 scale-100"
-                          leave="transition ease-in duration-75"
-                          leaveFrom="transform opacity-100 scale-100"
-                          leaveTo="transform opacity-0 scale-95"
-                        >
-                          <Menu.Items
-                            style={{ top: `${menuPosition.top}px`, left: `${menuPosition.left}px` }}
-                            className="fixed w-56 origin-bottom-left rounded-md bg-white ring-1 ring-black/5 focus:outline-none"
-                          >
-                            <div className="px-1 py-1 ">
-                              <Menu.Item>
-                                {({ active }) => (
-                                  <button
-                                    onClick={() => {
-                                      setEditingMessageId(msg.id);
-                                      setEditingContent(msg.content);
-                                    }}
-                                    className={`${
-                                      active ? 'bg-gray-100' : ''
-                                    } group flex w-full items-center rounded-md px-2 py-2 text-sm text-gray-900`}
-                                  >
-                                    Edit message
-                                  </button>
-                                )}
-                              </Menu.Item>
-                              {canRefund && msg.onChainMessageId && (
-                                <Menu.Item>
-                                  {({ active }) => (
-                                    <button
-                                       onClick={() => {
-                                        if (msg.onChainMessageId) {
-                                            optimisticIdRef.current = msg.id;
-                                            handleClaimRefund(msg.id, msg.onChainMessageId)
-                                        }
-                                      }}
-                                      className={`${
-                                        active ? 'bg-gray-100' : ''
-                                      } group flex w-full items-center rounded-md px-2 py-2 text-sm text-red-600`}
-                                    >
-                                      Unsend stamp and withdraw ${msg.amount}
-                                    </button>
-                                  )}
-                                </Menu.Item>
-                              )}
-                            </div>
-                          </Menu.Items>
-                        </Transition>
-                      </Menu>
-                    </div>
-                  )}
-                  
-                  {msg.amount && msg.amount > 0 ? (
-                    <div className="flex flex-col items-center">
-                      <div className="mb-2">
-                        <StampAvatar
-                          profile={senderProfile || {}}
-                          amount={msg.amount}
-                          className="w-32 h-32"
-                          style={{ transform: 'rotate(5.38deg)' }}
+                {editingMessageId === msg.id ? (
+                    <div className="flex flex-col">
+                        <textarea
+                            value={editingContent}
+                            onChange={(e) => setEditingContent(e.target.value)}
+                            className="w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500"
+                            autoFocus
                         />
-                </div>
-                <p className="text-sm">{msg.content}</p>
-                    </div>
-                  ) : (
-                    <>
-                      <div
-                        className={`flex justify-between items-center mb-1 ${
-                          isSender ? "pt-4" : ""
-                        }`}
-                      >
-                        <div className="flex items-center">
-                          <p className="text-sm font-bold">{senderProfile?.name}</p>
-                          <p className="ml-2 text-xs text-gray-500">
-                            @{senderProfile?.username}
-                          </p>
+                        <div className="flex justify-end space-x-2 mt-2">
+                            <button 
+                                onClick={() => {
+                                    setEditingMessageId(null);
+                                    setEditingContent('');
+                                    setOpenMenuId(null);
+                                }} 
+                                className="px-3 py-1 text-sm rounded-md text-gray-700 bg-gray-100 hover:bg-gray-200"
+                            >
+                                Cancel
+                            </button>
+                            <button 
+                                onClick={handleSaveEdit} 
+                                className="px-3 py-1 text-sm rounded-md text-white bg-blue-500 hover:bg-blue-600"
+                            >
+                                Save
+                            </button>
                         </div>
-                      </div>
-                      <p className="text-sm">{msg.content}</p>
-                    </>
-                )}
-              </div>
-              {isSender && (
-                <CustomAvatar
-                  profile={currentUser || null}
-                  className="w-8 h-8 rounded-full"
-                />
-              )}
-            </div>
-          );
-        })}
+                    </div>
+                ) : (
+                    <>
+                        {isSender && (
+                          <div className="absolute top-1 left-1">
+                              <Menu as="div" className="relative inline-block text-left">
+                                <div>
+                                  <Menu.Button
+                                    onClick={(e) => {
+                                      const rect = e.currentTarget.getBoundingClientRect();
+                                      const isPaidMessage = msg.amount && msg.amount > 0;
+                                      const isPendingReply = msg.status === 'SENT';
+                                      const canRefundThisMessage = isSender && isPaidMessage && isPendingReply;
+
+                                      setMenuPosition({
+                                        top: rect.top - (canRefundThisMessage ? 80 : 52),
+                                        left: rect.left - 5,
+                                      });
+                                    }}
+                                    className="p-1 rounded-full hover:bg-gray-100"
+                                  >
+                                    <EllipsisHorizontalIcon
+                                      className="w-4 h-4 text-gray-400"
+                                      aria-hidden="true"
+                                    />
+                                  </Menu.Button>
+                                </div>
+                                <Transition
+                                  as={Fragment}
+                                  enter="transition ease-out duration-100"
+                                  enterFrom="transform opacity-0 scale-95"
+                                  enterTo="transform opacity-100 scale-100"
+                                  leave="transition ease-in duration-75"
+                                  leaveFrom="transform opacity-100 scale-100"
+                                  leaveTo="transform opacity-0 scale-95"
+                                >
+                                  <Menu.Items
+                                    style={{ top: `${menuPosition.top}px`, left: `${menuPosition.left}px` }}
+                                    className="fixed w-56 origin-bottom-left rounded-md bg-white ring-1 ring-black/5 focus:outline-none"
+                                  >
+                                    <div className="px-1 py-1 ">
+                                      <Menu.Item>
+                                        {({ active }) => (
+                                          <button
+                                            onClick={() => {
+                                              setEditingMessageId(msg.id);
+                                              setEditingContent(msg.content);
+                                            }}
+                                            className={`${
+                                              active ? 'bg-gray-100' : ''
+                                            } group flex w-full items-center rounded-md px-2 py-2 text-sm text-gray-900`}
+                                          >
+                                            Edit message
+                                          </button>
+                                        )}
+                                      </Menu.Item>
+                                      {canRefund && msg.onChainMessageId && (
+                                        <Menu.Item>
+                                          {({ active }) => (
+                                            <button
+                                               onClick={() => {
+                                                if (msg.onChainMessageId) {
+                                                    optimisticIdRef.current = msg.id;
+                                                    handleClaimRefund(msg.id, msg.onChainMessageId)
+                                                }
+                                              }}
+                                              className={`${
+                                                active ? 'bg-gray-100' : ''
+                                              } group flex w-full items-center rounded-md px-2 py-2 text-sm text-red-600`}
+                                            >
+                                              Unsend stamp and withdraw ${msg.amount}
+                                            </button>
+                                          )}
+                                        </Menu.Item>
+                                      )}
+                                    </div>
+                                  </Menu.Items>
+                                </Transition>
+                              </Menu>
+                            </div>
+                          )}
+                          
+                          {msg.amount && msg.amount > 0 ? (
+                            <div className="flex flex-col items-center">
+                              <div className="mb-2">
+                                <StampAvatar
+                                  profile={senderProfile || {}}
+                                  amount={msg.amount}
+                                  className="w-32 h-32"
+                                  style={{ transform: 'rotate(5.38deg)' }}
+                                />
+                        </div>
+                        <p className="text-sm">{msg.content}</p>
+                            </div>
+                          ) : (
+                            <>
+                              <div
+                                className={`flex justify-between items-center mb-1 ${
+                                  isSender ? "pt-4" : ""
+                                }`}
+                              >
+                                <div className="flex items-center">
+                                  <p className="text-sm font-bold">{senderProfile?.name}</p>
+                                  <p className="ml-2 text-xs text-gray-500">
+                                    @{senderProfile?.username}
+                                  </p>
+                                </div>
+                              </div>
+                              <p className="text-sm">{msg.content}</p>
+                            </>
+                        )}
+                        </>
+                    )}
+                  </div>
+                  {isSender && (
+                    <CustomAvatar
+                      profile={currentUser || null}
+                      className="w-8 h-8 rounded-full"
+                    />
+                  )}
+                </div>
+              );
+            })}
       </main>
       
       <footer className="p-3 bg-transparent">
