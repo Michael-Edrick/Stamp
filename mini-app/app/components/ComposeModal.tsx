@@ -10,7 +10,8 @@ import { useDebounce } from 'use-debounce';
 import { useRouter } from 'next/navigation';
 import { usePrivy, useWallets } from "@privy-io/react-auth";
 import { useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
-import { messageEscrowABI, messageEscrowAddress, usdcContractAddress } from '@/lib/contract';
+import { messageEscrowABI } from '@/lib/contract';
+import { CONFIG } from '@/lib/config';
 import { parseUnits } from 'viem';
 import { erc20Abi } from 'viem';
 import PaymentModal from './PaymentModal';
@@ -163,10 +164,10 @@ const ComposeModal = ({ isOpen, onClose, currentUser }: ComposeModalProps) => {
     try {
         const amountInWei = parseUnits(amount.toString(), 18);
         approve({
-          address: usdcContractAddress,
+          address: CONFIG.usdcContractAddress as `0x${string}`,
           abi: erc20Abi,
           functionName: 'approve',
-          args: [messageEscrowAddress, amountInWei]
+          args: [CONFIG.messageEscrowAddress as `0x${string}`, amountInWei]
         });
     } catch (error) {
         console.error("Approval failed to start:", error);
@@ -188,7 +189,7 @@ const ComposeModal = ({ isOpen, onClose, currentUser }: ComposeModalProps) => {
       const expiryDuration = BigInt(172800);
       
       sendMessage({
-        address: messageEscrowAddress,
+        address: CONFIG.messageEscrowAddress as `0x${string}`,
         abi: messageEscrowABI,
         functionName: 'sendMessage',
         args: [

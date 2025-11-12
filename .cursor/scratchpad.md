@@ -205,3 +205,43 @@ The `ComposeModal` has been successfully updated to match the new design, provid
 - [x] Debug and fix the "New User" creation bug for Farcaster logins.
 - [x] Restore the profile button and other header UI elements.
 - [x] Redesign and implement the "Compose Message" modal UI.
+
+---
+
+# Mainnet Deployment Strategy
+
+**Status: Planning**
+
+## Background and Motivation
+The application is currently running on the Base Sepolia testnet. The next major milestone is to deploy the application to the Base mainnet, allowing for real-user interaction with real funds. This requires a robust, secure, and maintainable deployment strategy that clearly separates the test and production environments. Based on user requirements for managing Farcaster mini-app testing on Vercel's free tier, this will be achieved by creating a separate, dedicated repository for the mainnet codebase.
+
+## High-level Task Breakdown
+
+*   **Task 1: Implement Environment-Aware Configuration**
+    *   **Action:** Create a central configuration file (e.g., `mini-app/lib/config.ts`) that reads `process.env.NEXT_PUBLIC_NETWORK`.
+    *   **Details:** Based on whether the variable is `'mainnet'` or `'testnet'`, this file will export the correct contract addresses (`MessageEscrow`, `USDC`), chain ID, and any other environment-specific settings. This ensures the codebase remains the same for all environments.
+    *   **Success Criteria:** The application's blockchain configuration can be switched between testnet and mainnet solely by changing an environment variable.
+
+*   **Task 2: Deploy Smart Contracts to Mainnet**
+    *   **Action:** Deploy the `MessageEscrow.sol` contract to the Base mainnet.
+    *   **Details:** This will require running the deployment scripts targeted at the Base mainnet. We will obtain new, official contract addresses for the production environment and will need to use the official Base USDC token address.
+    *   **Success Criteria:** The contract is live on Base mainnet, and we have the final production contract addresses.
+
+*   **Task 3: Provision Production Database**
+    *   **Action:** Set up a new, dedicated database instance for the production environment.
+    *   **Details:** This ensures a complete separation of user data between the test and live applications, which is critical for security and data integrity. The new database connection string will be set as the `DATABASE_URL` in the production environment.
+    *   **Success Criteria:** A new, empty, and accessible database for mainnet is ready.
+
+*   **Task 4: Create a Dedicated Mainnet Repository**
+    *   **Action:** Clone the current repository to create a new, separate repository for the mainnet application.
+    *   **Details:** This new repository will be the source of truth for the production deployment. The existing repository will continue to serve as the testnet environment.
+    *   **Success Criteria:** A new GitHub repository for the mainnet codebase is created and accessible.
+    *   **Note on Maintenance:** It will be critical to establish a strict manual process for keeping the two repositories in sync. Any bug fixes or features applied to the testnet repo must be carefully ported to the mainnet repo to prevent them from diverging.
+
+*   **Task 5: Configure a New Vercel Project for Mainnet**
+    *   **Action:** Create a new Vercel project and connect it to the new mainnet GitHub repository.
+    *   **Details:**
+        1.  The new Vercel project will be configured with the production environment variables (mainnet database URL, mainnet contract addresses, `NEXT_PUBLIC_NETWORK='mainnet'`).
+        2.  The `main` branch of the new repository will be set as the Production Branch.
+        3.  The existing Vercel project will remain connected to the original testnet repository.
+    *   **Success Criteria:** We have two distinct Vercel deployments: one for production connected to the mainnet repository, and one for testing connected to the testnet repository.

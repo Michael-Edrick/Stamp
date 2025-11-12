@@ -6,7 +6,8 @@ import { sendPaidMessageNotification } from "@/lib/notification-client";
 import { createWalletClient, http, createPublicClient } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { baseSepolia } from "viem/chains";
-import { messageEscrowABI, messageEscrowAddress } from "@/lib/contract";
+import { messageEscrowABI } from "@/lib/contract";
+import { CONFIG } from "@/lib/config";
 // No longer importing getFarcasterUser
 
 // Function to get or create a conversation between two users
@@ -174,17 +175,17 @@ export async function POST(req: NextRequest) {
             
             const walletClient = createWalletClient({
                 account,
-                chain: baseSepolia,
+                chain: CONFIG.chain,
                 transport: http(process.env.BASE_SEPOLIA_RPC_URL),
             });
             const publicClient = createPublicClient({
-                chain: baseSepolia,
+                chain: CONFIG.chain,
                 transport: http(process.env.BASE_SEPOLIA_RPC_URL),
             });
 
             const { request } = await publicClient.simulateContract({
                 account,
-                address: messageEscrowAddress,
+                address: CONFIG.messageEscrowAddress as `0x${string}`,
                 abi: messageEscrowABI,
                 functionName: 'releaseFunds',
                 args: [lastMessageFromOtherUser.onChainMessageId as `0x${string}`],

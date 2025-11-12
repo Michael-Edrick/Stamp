@@ -16,7 +16,8 @@ import CustomAvatar from "@/app/components/CustomAvatar";
 import { useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { readContract } from '@wagmi/core'
 import { config } from '@/lib/wagmi'
-import { messageEscrowABI, messageEscrowAddress, usdcContractAddress } from '@/lib/contract';
+import { messageEscrowABI } from '@/lib/contract';
+import { CONFIG } from '@/lib/config';
 import { parseUnits, bytesToHex, formatUnits } from 'viem';
 import { erc20Abi } from 'viem';
 import PaymentModal from '@/app/components/PaymentModal';
@@ -193,7 +194,7 @@ export default function ChatPage() {
 
     try {
       const messageData = await readContract(config, {
-        address: messageEscrowAddress,
+        address: CONFIG.messageEscrowAddress as `0x${string}`,
         abi: messageEscrowABI,
         functionName: 'messages',
         args: [onChainMessageId as `0x${string}`],
@@ -217,7 +218,7 @@ export default function ChatPage() {
 
       optimisticIdRef.current = messageId;
       claimRefund({
-        address: messageEscrowAddress,
+        address: CONFIG.messageEscrowAddress as `0x${string}`,
         abi: messageEscrowABI,
         functionName: 'claimRefund',
         args: [onChainMessageId as `0x${string}`]
@@ -344,10 +345,10 @@ export default function ChatPage() {
     try {
         const amountInWei = parseUnits(amount.toString(), 18);
         approve({
-          address: usdcContractAddress,
+          address: CONFIG.usdcContractAddress as `0x${string}`,
           abi: erc20Abi,
           functionName: 'approve',
-          args: [messageEscrowAddress, amountInWei]
+          args: [CONFIG.messageEscrowAddress as `0x${string}`, amountInWei]
         });
     } catch (error) {
         console.error("Approval failed to start:", error);
@@ -377,7 +378,7 @@ export default function ChatPage() {
       const expiryDuration = BigInt(172800);
       
       sendMessage({
-        address: messageEscrowAddress,
+        address: CONFIG.messageEscrowAddress as `0x${string}`,
         abi: messageEscrowABI,
         functionName: 'sendMessage',
         args: [
