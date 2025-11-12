@@ -152,3 +152,56 @@ Despite having a valid `farcaster.json` manifest, sharing the app's URL in the B
 The failure of the `generateMetadata` function to execute correctly on the server is the root cause. This is almost certainly due to a conflict in the `providers.tsx` file, where the complex nesting of client-side providers (Wagmi, NextAuth) is preventing Next.js from server-rendering the necessary metadata tags. The link scraper sees no frame tags and correctly treats the URL as a regular webpage.
 
 The next step is to refactor `providers.tsx` to resolve this conflict.
+
+---
+
+# Farcaster Login Flow Debugging
+
+**Status: Completed**
+
+## Background and Motivation
+When logging in from a Farcaster-native environment (like the Base app), some users were having a blank "New User" profile created instead of being logged into their existing account. This was caused by a frontend race condition that was fixed, but a final backend error was preventing successful login.
+
+## Analysis and Findings
+1.  **Frontend Race Condition:** The initial problem was a race condition in `app/page.tsx`. The app was calling the backend to fetch the user *after* the wallet was connected but *before* the Farcaster `useMiniKit` hook had provided the user's Farcaster identity. This caused the frontend to make an unauthenticated request, leading the backend to create a new user.
+2.  **Solution (Frontend):** The race condition was resolved by implementing a robust `useEffect` hook with a 5-second timeout. The app now waits for the Farcaster user data to arrive. If it does, it proceeds immediately (Success Path). If it doesn't arrive within 5 seconds, it assumes a regular browser environment and proceeds (Fallback Path). This ensures the frontend logic is correct.
+3.  **Backend `401 Unauthorized` Error:** After fixing the frontend, logins were still failing. The final issue was a `401 Unauthorized` error when the backend tried to call the Neynar API.
+4.  **Root Cause (Backend):** The `NEYNAR_API_KEY` environment variable stored in Vercel had expired. Updating the key to a valid one resolved the `401` error.
+
+## Conclusion
+The entire end-to-end login flow is now fixed. The frontend correctly waits for Farcaster data, and the backend is correctly authenticated with the Neynar API.
+
+## Lessons
+*   When debugging a `401 Unauthorized` error from an external API, the first step should always be to verify that the API key is correct, valid, and has been correctly configured in the environment variables.
+*   React `useEffect` dependency arrays can be tricky. When a `useCallback` function is a dependency, ensure that its own dependency array is correct, otherwise, the `useEffect` may not re-run when expected.
+*   Complex race conditions on the frontend can be reliably solved with a timeout-based fallback mechanism.
+
+## Project Status Board
+- [x] Debug and fix the "New User" creation bug for Farcaster logins.
+- [x] Restore the profile button and other header UI elements.
+
+## Executor's Feedback or Assistance Requests
+*All tasks related to the login flow are now complete. The application is stable and ready for the next set of improvements.*
+
+---
+
+# Compose Modal UI/UX Improvement
+
+**Status: Completed**
+
+## Background and Motivation
+The user wanted to improve the UI/UX of the "Compose Message" modal. The original implementation required the user to press "Enter" to send and lacked clear visual feedback. The goal was to implement a design with a dedicated, state-aware "Send" button.
+
+## Analysis and Implementation
+1.  **Added a "Send" Button:** A new button with a paper airplane icon was added to the modal. This replaced the reliance on the "Enter" key as the only way to send a message.
+2.  **State-Aware Logic:** The button's state is conditionally controlled. It is disabled and styled in gray when either a recipient has not been selected or the message body is empty. It becomes enabled and styled in blue as soon as both conditions are met, providing clear visual feedback to the user that they can now send the message.
+3.  **Layout Refinements:** The button was initially placed inside the recipient input field. Based on user feedback, it was relocated to be part of a single, unified header bar, creating a cleaner layout with the "Close" button on the left, the recipient input in the middle, and the "Send" button on the right.
+4.  **Icon Polish:** As a final touch, the paper airplane icon was rotated -45 degrees to point towards the top-right, giving it a more dynamic and active feel.
+
+## Conclusion
+The `ComposeModal` has been successfully updated to match the new design, providing a more intuitive and visually appealing user experience for sending new messages.
+
+## Project Status Board
+- [x] Debug and fix the "New User" creation bug for Farcaster logins.
+- [x] Restore the profile button and other header UI elements.
+- [x] Redesign and implement the "Compose Message" modal UI.
