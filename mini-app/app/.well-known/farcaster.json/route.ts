@@ -1,48 +1,51 @@
-
-
-function withValidProperties(
-  properties: Record<string, undefined | string | string[]>,
-) {
-  return Object.fromEntries(
-    Object.entries(properties).filter(([key, value]) => {
-      if (Array.isArray(value)) {
-        return value.length > 0;
-      }
-      return !!value;
-    }),
-  );
-}
+import { NextResponse } from 'next/server';
 
 export async function GET() {
-  const URL = process.env.NEXT_PUBLIC_URL || 'https://stamp-me.vercel.app';
+  // Account Association from env
+  const accountAssociationHeader = process.env.FARCASTER_HEADER;
+  const accountAssociationPayload = process.env.FARCASTER_PAYLOAD;
+  const accountAssociationSignature = process.env.FARCASTER_SIGNATURE;
 
-  return Response.json({
-    accountAssociation: {
-      header: "eyJmaWQiOjExMDc3ODksInR5cGUiOiJhdXRoIiwia2V5IjoiMHgzNDZCMERjY0M3YjZCNmVkN0IzRTQ3NENiNjc0Mjk3NkY4NEQxMjk1In0",
-      payload: "eyJkb21haW4iOiJzdGFtcC1tZS52ZXJjZWwuYXBwIn0",
-      signature: "TCxSA7kk16cAaU3F1RLo/mTgeyf5PLx6ROF/HlCj0wZDdDA0TISgR4NI2EJEqHdvLx1Nhl3yrUDhaBgkqNSapRw=",
+  // Frame details from env
+  const appUrl = process.env.NEXT_PUBLIC_URL;
+  const appIcon = process.env.NEXT_PUBLIC_APP_ICON;
+  const appSubtitle = process.env.NEXT_PUBLIC_APP_SUBTITLE;
+  const appDescription = process.env.NEXT_PUBLIC_APP_DESCRIPTION;
+  const appSplashImage = process.env.NEXT_PUBLIC_APP_SPLASH_IMAGE;
+  const appSplashBackgroundColor = process.env.NEXT_PUBLIC_SPLASH_BACKGROUND_COLOR;
+  const appPrimaryCategory = process.env.NEXT_PUBLIC_APP_PRIMARY_CATEGORY;
+
+  // Check for mandatory variables
+  if (!accountAssociationSignature || !accountAssociationHeader || !accountAssociationPayload || !appUrl) {
+    console.error("One or more required Farcaster environment variables are not set.");
+    return NextResponse.json({ error: "Server configuration error: Missing Farcaster configuration." }, { status: 500 });
+  }
+
+  const farcasterJson = {
+    "frame": {
+      "name": "StampMe",
+      "version": "1",
+      "iconUrl": appIcon,
+      "homeUrl": appUrl,
+      "imageUrl": `${appUrl}/hero.png`, // Constructing from base URL
+      "splashImageUrl": appSplashImage,
+      "splashBackgroundColor": appSplashBackgroundColor,
+      "webhookUrl": `${appUrl}/api/webhook`, // Constructing from base URL
+      "subtitle": appSubtitle,
+      "description": appDescription,
+      "primaryCategory": appPrimaryCategory,
+      "tags": [
+        "social",
+        "messaging",
+        "community"
+      ]
     },
-    frame: withValidProperties({
-      version: "1",
-      name: process.env.NEXT_PUBLIC_ONCHAINKIT_PROJECT_NAME,
-      subtitle: process.env.NEXT_PUBLIC_APP_SUBTITLE,
-      description: process.env.NEXT_PUBLIC_APP_DESCRIPTION,
-      screenshotUrls: [],
-      iconUrl: process.env.NEXT_PUBLIC_APP_ICON,
-      splashImageUrl: process.env.NEXT_PUBLIC_APP_SPLASH_IMAGE,
-      splashBackgroundColor: process.env.NEXT_PUBLIC_SPLASH_BACKGROUND_COLOR,
-      homeUrl: URL,
-      webhookUrl: `${URL}/api/webhook`,
-      primaryCategory: process.env.NEXT_PUBLIC_APP_PRIMARY_CATEGORY,
-      tags: [],
-      heroImageUrl: process.env.NEXT_PUBLIC_APP_HERO_IMAGE,
-      tagline: process.env.NEXT_PUBLIC_APP_TAGLINE,
-      ogTitle: process.env.NEXT_PUBLIC_APP_OG_TITLE,
-      ogDescription: process.env.NEXT_PUBLIC_APP_OG_DESCRIPTION,
-      ogImageUrl: process.env.NEXT_PUBLIC_APP_OG_IMAGE,
-    }),
-    baseBuilder: {
-      allowedAddresses: ["0xb33115C3695C6eF84c90E74305544b17885254D1"]
-    },
-  });
+    "accountAssociation": {
+      "header": accountAssociationHeader,
+      "payload": accountAssociationPayload,
+      "signature": accountAssociationSignature
+    }
+  };
+
+  return NextResponse.json(farcasterJson);
 }
