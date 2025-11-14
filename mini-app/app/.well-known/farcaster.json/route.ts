@@ -9,6 +9,7 @@ export async function GET() {
   // Frame details from env
   const appUrl = process.env.NEXT_PUBLIC_URL;
   const appIcon = process.env.NEXT_PUBLIC_APP_ICON;
+  const appName = process.env.NEXT_PUBLIC_ONCHAINKIT_PROJECT_NAME;
   const appSubtitle = process.env.NEXT_PUBLIC_APP_SUBTITLE;
   const appDescription = process.env.NEXT_PUBLIC_APP_DESCRIPTION;
   const appSplashImage = process.env.NEXT_PUBLIC_APP_SPLASH_IMAGE;
@@ -29,7 +30,7 @@ export async function GET() {
 
   const farcasterJson = {
     "frame": {
-      "name": "StampMe",
+      "name": appName,
       "version": "1",
       "iconUrl": appIcon,
       "homeUrl": appUrl,
