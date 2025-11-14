@@ -5,7 +5,7 @@ import { NextRequest } from "next/server";
 import { sendPaidMessageNotification } from "@/lib/notification-client";
 import { createWalletClient, http, createPublicClient } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { baseSepolia } from "viem/chains";
+import { base, baseSepolia } from "viem/chains";
 import { messageEscrowABI } from "@/lib/contract";
 import { CONFIG } from "@/lib/config";
 // No longer importing getFarcasterUser
@@ -173,14 +173,21 @@ export async function POST(req: NextRequest) {
             // Ensure the private key is in the correct hex format.
             const account = privateKeyToAccount(`0x${deployerPrivateKey}`);
             
+            const network = process.env.NEXT_PUBLIC_NETWORK || 'testnet';
+            const rpcUrl = network === 'mainnet' ? process.env.BASE_MAINNET_RPC_URL : process.env.BASE_SEPOLIA_RPC_URL;
+
+            if (!rpcUrl) {
+              throw new Error(`RPC URL for ${network} is not configured.`);
+            }
+
             const walletClient = createWalletClient({
                 account,
                 chain: CONFIG.chain,
-                transport: http(process.env.BASE_SEPOLIA_RPC_URL),
+                transport: http(rpcUrl),
             });
             const publicClient = createPublicClient({
                 chain: CONFIG.chain,
-                transport: http(process.env.BASE_SEPOLIA_RPC_URL),
+                transport: http(rpcUrl),
             });
 
             const { request } = await publicClient.simulateContract({
