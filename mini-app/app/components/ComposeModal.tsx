@@ -309,17 +309,19 @@ const ComposeModal = ({ isOpen, onClose, currentUser }: ComposeModalProps) => {
                 <div className="flex items-center p-4 border-b border-gray-200 space-x-2">
                     <button
                         onClick={onClose}
-                        className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200"
+                        className="flex-shrink-0 h-8 w-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200"
                     >
                         <XMarkIcon className="h-5 w-5 text-gray-600" />
                     </button>
 
-                    <div className="flex-1 flex items-center rounded-full bg-gray-100 px-4 py-2 relative">
+                    <div className="flex-1 flex items-center rounded-full bg-gray-100 px-4 py-2 relative min-w-0">
                         {selectedUser ? (
-                            <button onClick={handleClearRecipient} className="flex items-center w-full text-left">
-                                <img src={selectedUser.pfp_url} alt={selectedUser.username} className="w-6 h-6 rounded-full mr-2" />
-                                <span className="font-semibold text-sm text-gray-900">{selectedUser.display_name}</span>
-                                <span className="text-gray-500 ml-1 text-sm">@{selectedUser.username}</span>
+                            <button onClick={handleClearRecipient} className="flex items-center w-full text-left min-w-0">
+                                <img src={selectedUser.pfp_url} alt={selectedUser.username} className="w-6 h-6 rounded-full mr-2 flex-shrink-0" />
+                                <div className="flex-1 min-w-0">
+                                    <span className="font-semibold text-sm text-gray-900 block truncate">{selectedUser.display_name}</span>
+                                    <span className="text-gray-500 text-sm block truncate">@{selectedUser.username}</span>
+                                </div>
                             </button>
                         ) : (
                             <>
@@ -357,7 +359,7 @@ const ComposeModal = ({ isOpen, onClose, currentUser }: ComposeModalProps) => {
                     <button
                         onClick={handleSendMessage}
                         disabled={!isReadyToSend}
-                        className={`p-2 rounded-full transition-colors ${
+                        className={`p-2 rounded-full transition-colors flex-shrink-0 flex items-center justify-center ${
                             isReadyToSend ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-400'
                         }`}
                         >
