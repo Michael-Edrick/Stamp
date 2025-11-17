@@ -19,12 +19,6 @@ export async function GET() {
   // Check for mandatory variables
   if (!accountAssociationSignature || !accountAssociationHeader || !accountAssociationPayload || !appUrl) {
     console.error("One or more required Farcaster environment variables are not set.");
-    // For debugging, let's log which one is missing
-    if (!accountAssociationSignature) console.error("FARCASTER_SIGNATURE is missing");
-    if (!accountAssociationHeader) console.error("FARCASTER_HEADER is missing");
-    if (!accountAssociationPayload) console.error("FARCASTER_PAYLOAD is missing");
-    if (!appUrl) console.error("NEXT_PUBLIC_URL is missing");
-    
     return NextResponse.json({ error: "Server configuration error: Missing Farcaster configuration." }, { status: 500 });
   }
 
