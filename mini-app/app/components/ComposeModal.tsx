@@ -162,7 +162,7 @@ const ComposeModal = ({ isOpen, onClose, currentUser }: ComposeModalProps) => {
     setIsSendingTriggered(false);
 
     try {
-        const amountInWei = parseUnits(amount.toString(), 18);
+        const amountInWei = parseUnits(amount.toString(), 6);
         approve({
           address: CONFIG.usdcContractAddress as `0x${string}`,
           abi: erc20Abi,
@@ -195,7 +195,7 @@ const ComposeModal = ({ isOpen, onClose, currentUser }: ComposeModalProps) => {
         args: [
           recipientDbUserRef.current.walletAddress as `0x${string}`,
           onChainMessageIdRef.current as `0x${string}`,
-          parseUnits(amountForTx.toString(), 18),
+          parseUnits(amountForTx.toString(), 6),
           expiryDuration,
         ]
       });
