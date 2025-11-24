@@ -1,7 +1,7 @@
 import { base, baseSepolia } from 'wagmi/chains'
 
 const TESTNET_CONFIG = {
-  usdcContractAddress: '0x6051912FC68729aa994989C8B23666AFfC890204',
+  usdcContractAddress: '0xEa8e15C210Ac3B27D1c33DD3907870eeD16E5F16',
   messageEscrowAddress: '0x90A1abbCdf2597c3672fCFD52Bfc6507Dd5EB130',
   chain: baseSepolia,
 }
