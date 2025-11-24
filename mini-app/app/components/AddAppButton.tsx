@@ -1,41 +1,37 @@
 "use client";
 
 import { useAddFrame, useMiniKit } from '@coinbase/onchainkit/minikit';
+import { useEffect, useState } from 'react';
 
 export default function AddAppButton() {
   const addFrame = useAddFrame();
   const { context } = useMiniKit();
+  const [hasBeenPrompted, setHasBeenPrompted] = useState(false);
 
-  // Return null if we are not in the Base App or the app is already added.
-  // We'll need to figure out how to reliably detect the Base App environment.
-  // For now, we'll assume a property like `context.client.isBaseApp` might exist.
-  // And based on the docs, we can check `context.client.added`.
-  if (context?.client?.added) {
-    return null;
-  }
+  useEffect(() => {
+    // Check if the client context is available, if the app has not been added,
+    // and if we haven't already prompted the user in this session.
+    if (context?.client && !context.client.added && !hasBeenPrompted) {
+      
+      const showPrompt = async () => {
+        setHasBeenPrompted(true); // Ensure we only prompt once per session
+        try {
+          const result = await addFrame();
+          if (result) {
+            console.log('App saved successfully:', result.url);
+          } else {
+            console.log('User cancelled or app was already added.');
+          }
+        } catch (error) {
+          console.error('Failed to save app:', error);
+        }
+      };
 
-  const handleSave = async () => {
-    try {
-      const result = await addFrame();
-      if (result) {
-        // We can add analytics or save the notification token here later.
-        console.log('App saved successfully:', result.url);
-      } else {
-        console.log('User cancelled or app was already added.');
-      }
-    } catch (error) {
-      console.error('Failed to save app:', error);
+      showPrompt();
     }
-  };
+  }, [context, addFrame, hasBeenPrompted]);
 
-  return (
-    <div className="p-4 w-full max-w-md mx-auto">
-        <button 
-            onClick={handleSave}
-            className="w-full bg-blue-500 text-white font-semibold py-3 px-4 rounded-xl hover:bg-blue-600 transition-colors"
-        >
-            Add to Base for quick access
-        </button>
-    </div>
-  );
+  // This component no longer renders a visible button.
+  // Its only purpose is to trigger the prompt.
+  return null;
 }
