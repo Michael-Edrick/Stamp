@@ -12,6 +12,7 @@ import { NetworkSwitcher } from '@/app/components/NetworkSwitcher';
 import Inbox from '@/app/components/Inbox';
 import Image from 'next/image';
 import ComposeModal from './components/ComposeModal';
+import AddAppButton from '@/app/components/AddAppButton';
 
 // Local type definition to avoid import issues with the SDK
 type NeynarUser = {
@@ -241,6 +242,7 @@ export default function HomePage() {
   }, [isConnected, address, minikit?.context?.user, hasAttemptedFetch, fetchData]);
 
   useEffect(() => {
+    console.log('OnchainKit Context:', minikit?.context);
     // Reset the fetch flag if the user disconnects.
     if (!isConnected) {
       setHasAttemptedFetch(false);
@@ -333,6 +335,7 @@ export default function HomePage() {
               )}
           </div>
       </header>
+      <AddAppButton />
       <main className="w-full max-w-md mx-auto px-4 flex-1 overflow-y-auto">
         {renderContent()}
       </main>
