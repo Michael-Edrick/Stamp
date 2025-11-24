@@ -10,7 +10,7 @@ export default function AddAppButton() {
   // We'll need to figure out how to reliably detect the Base App environment.
   // For now, we'll assume a property like `context.client.isBaseApp` might exist.
   // And based on the docs, we can check `context.client.added`.
-  if (!context?.client?.isBaseApp || context?.client?.added) {
+  if (context?.client?.added) {
     return null;
   }
 
