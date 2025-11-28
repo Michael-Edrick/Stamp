@@ -435,6 +435,8 @@ const ComposeModal = ({ isOpen, onClose, currentUser }: ComposeModalProps) => {
             router.push(`/chat/${recipientDbUserRef.current!.id}`);
             onClose(); // Close the main compose modal as well
         }}
+        amount={pendingAmountRef.current || 0}
+        recipientUsername={recipientDbUserRef.current?.username || ''}
       />
     </>
   );
