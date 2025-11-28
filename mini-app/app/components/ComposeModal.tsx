@@ -17,6 +17,7 @@ import { erc20Abi } from 'viem';
 import PaymentModal from './PaymentModal';
 import { PaperAirplaneIcon } from '@heroicons/react/24/solid';
 import InfoModal from './InfoModal';
+import SuccessModal from './SuccessModal';
 
 interface ComposeModalProps {
   isOpen: boolean;
@@ -37,6 +38,7 @@ const ComposeModal = ({ isOpen, onClose, currentUser }: ComposeModalProps) => {
   const [isSendingTriggered, setIsSendingTriggered] = useState(false);
   const [isInfoModalOpen, setInfoModalOpen] = useState(false);
   const [infoModalContent, setInfoModalContent] = useState({ title: '', message: '' });
+  const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
   const router = useRouter();
 
   const [debouncedQuery] = useDebounce(searchTerm, 300);
@@ -230,7 +232,8 @@ const ComposeModal = ({ isOpen, onClose, currentUser }: ComposeModalProps) => {
                         // We don't alert the user here as the primary message was successful.
                     });
                 }
-                router.push(`/chat/${recipientDbUserRef.current!.id}`);
+                // router.push(`/chat/${recipientDbUserRef.current!.id}`);
+                setIsSuccessModalOpen(true);
             } else {
                 throw new Error('Failed to confirm transaction with backend.');
             }
@@ -419,6 +422,19 @@ const ComposeModal = ({ isOpen, onClose, currentUser }: ComposeModalProps) => {
         }}
         title={infoModalContent.title}
         message={infoModalContent.message}
+      />
+
+      <SuccessModal 
+        isOpen={isSuccessModalOpen}
+        onClose={() => {
+            setIsSuccessModalOpen(false);
+            onClose(); // Close the main compose modal as well
+        }}
+        onNavigate={() => {
+            setIsSuccessModalOpen(false);
+            router.push(`/chat/${recipientDbUserRef.current!.id}`);
+            onClose(); // Close the main compose modal as well
+        }}
       />
     </>
   );
