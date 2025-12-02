@@ -245,3 +245,33 @@ The application is currently running on the Base Sepolia testnet. The next major
         2.  The `main` branch of the new repository will be set as the Production Branch.
         3.  The existing Vercel project will remain connected to the original testnet repository.
     *   **Success Criteria:** We have two distinct Vercel deployments: one for production connected to the mainnet repository, and one for testing connected to the testnet repository.
+
+---
+
+# Success Modal Redesign
+
+**Status: Planning**
+
+## Background and Motivation
+The user wants to replace the current generic success pop-up with a more visually appealing and branded modal that matches a provided mockup. This new design will feature a dynamic postcard image, displaying the amount of money sent and the recipient's username, all over a blurred background. A dedicated `SuccessModal` component will be created to encapsulate this new design, leaving the existing `InfoModal` untouched.
+
+## High-level Task Breakdown
+
+*   **Task 1: Redesign the `SuccessModal` Component**
+    *   **Action:** Modify `mini-app/app/components/SuccessModal.tsx`.
+    *   **Details:**
+        1.  Add `amount: number` and `recipientUsername: string` to the component's props to accept the dynamic data.
+        2.  Update the modal's backdrop style to include a `backdrop-blur` CSS filter.
+        3.  Use the `postcard-frame.png` image from the `/public` directory as the centerpiece of the modal.
+        4.  Create a container with the postcard as a background and use CSS `position: absolute` to overlay the amount and username text on top of it, matching the layout in your mockup.
+        5.  The existing "Finish" button will be styled to match the mockup, and a placeholder for the "Share" button will be considered in the layout.
+    *   **Success Criteria:** The `SuccessModal` component is visually redesigned to match the mockup, including the postcard image, dynamic text, and blurred background.
+
+*   **Task 2: Integrate the Redesigned Modal into the `ComposeModal`**
+    *   **Action:** Modify `mini-app/app/components/ComposeModal.tsx`.
+    *   **Details:** When a paid message is sent successfully, retrieve the `amount` from `pendingAmountRef` and the `recipientUsername` from `recipientDbUserRef` and pass them as props to the redesigned `<SuccessModal />`.
+    *   **Success Criteria:** When a paid message is sent, the new, beautifully designed success pop-up appears, displaying the correct amount and recipient username.
+
+## Project Status Board
+- [ ] Task 1: Redesign the `SuccessModal` Component
+- [ ] Task 2: Integrate the Redesigned Modal into the `ComposeModal`

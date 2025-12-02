@@ -90,10 +90,10 @@ const SuccessModal: React.FC<SuccessModalProps> = ({ isOpen, onClose, onNavigate
                       <span className="text-2xl font-bold text-white">${amount}</span>
                     </div>
                     <div 
-                      className="absolute whitespace-nowrap"
-                      style={{ top: '65%', left: '70%', transform: 'translateX(-50%) rotate(-5.42deg)' }}
+                      className="absolute"
+                      style={{ top: '65%', right: '5%', transform: 'rotate(-5.42deg)' }}
                     >
-                       <span className={`text-lg font-semibold ${badScript.className}`}>Hey @{recipientUsername}</span>
+                       <span className={`block max-w-[165px] truncate text-lg font-semibold ${badScript.className}`}>Hey @{recipientUsername}</span>
                     </div>
                   </div>
                 </div>
