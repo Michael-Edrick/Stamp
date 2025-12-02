@@ -273,5 +273,5 @@ The user wants to replace the current generic success pop-up with a more visuall
     *   **Success Criteria:** When a paid message is sent, the new, beautifully designed success pop-up appears, displaying the correct amount and recipient username.
 
 ## Project Status Board
-- [ ] Task 1: Redesign the `SuccessModal` Component
+- [x] Fix long usernames in `SuccessModal` by implementing a hybrid approach (right-align and truncate).
 - [ ] Task 2: Integrate the Redesigned Modal into the `ComposeModal`
