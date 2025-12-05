@@ -46,17 +46,13 @@ const SuccessModal: React.FC<SuccessModalProps> = ({ isOpen, onClose, onNavigate
   }, [isOpen]);
 
   const handleShare = () => {
-    const appName = process.env.NEXT_PUBLIC_ONCHAINKIT_PROJECT_NAME || 'ReachMe';
-    const appUrl = process.env.NEXT_PUBLIC_URL;
+    const appName = process.env.NEXT_PUBLIC_ONCHAINKIT_PROJECT_NAME || 'Stamp';
+    const appUrl: string = process.env.NEXT_PUBLIC_URL || '';
     
-    const text = `I just sent ${amount} USDC to @${recipientUsername} on ${appName}!`;
-    
-    const castOptions: { text: string; embeds?: string[] } = { text };
-    if (appUrl) {
-      castOptions.embeds = [appUrl];
-    }
-    
-    composeCast(castOptions);
+    composeCast({
+      text: `I just sent ${amount} USDC to @${recipientUsername} on ${appName}!`,
+      embeds: [appUrl],
+    });
   };
 
   return (
