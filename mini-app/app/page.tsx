@@ -311,7 +311,7 @@ export default function HomePage() {
                       {address ? `${address.slice(0, 6)}...${address.slice(-4)}` : '...'}
                     </span>
                   </div> */}
-                  <NetworkSwitcher />
+                  {/* <NetworkSwitcher /> */}
                   {/* <button 
                     onClick={() => disconnect()} 
                     className="bg-red-500 text-white p-2 rounded-full text-xs font-semibold hover:bg-red-600 transition-colors"
