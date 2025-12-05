@@ -4,6 +4,7 @@ import Image from 'next/image';
 import { Bad_Script } from 'next/font/google';
 import Confetti from 'react-confetti';
 import { useWindowSize } from 'react-use';
+import { useComposeCast } from '@coinbase/onchainkit/minikit';
 
 // Configure the font
 const badScript = Bad_Script({
@@ -24,6 +25,7 @@ const SuccessModal: React.FC<SuccessModalProps> = ({ isOpen, onClose, onNavigate
   const timeframe = "48 hours"; 
   const { width, height } = useWindowSize();
   const [showConfetti, setShowConfetti] = useState(false);
+  const { composeCast } = useComposeCast();
 
   useEffect(() => {
     if (isOpen) {
@@ -42,6 +44,20 @@ const SuccessModal: React.FC<SuccessModalProps> = ({ isOpen, onClose, onNavigate
       return () => clearTimeout(timer);
     }
   }, [isOpen]);
+
+  const handleShare = () => {
+    const appName = process.env.NEXT_PUBLIC_ONCHAINKIT_PROJECT_NAME || 'ReachMe';
+    const appUrl = process.env.NEXT_PUBLIC_URL;
+    
+    const text = `I just sent ${amount} USDC to @${recipientUsername} on ${appName}!`;
+    
+    const castOptions: { text: string; embeds?: string[] } = { text };
+    if (appUrl) {
+      castOptions.embeds = [appUrl];
+    }
+    
+    composeCast(castOptions);
+  };
 
   return (
     <Transition appear show={isOpen} as={Fragment}>
@@ -108,7 +124,7 @@ const SuccessModal: React.FC<SuccessModalProps> = ({ isOpen, onClose, onNavigate
                   <button
                     type="button"
                     className="w-full inline-flex justify-center rounded-full border border-transparent bg-blue-500 px-4 py-3 text-base font-semibold text-white hover:bg-blue-600 focus:outline-none"
-                    onClick={() => { /* Share functionality to be added later */ }}
+                    onClick={handleShare}
                   >
                     Share
                   </button>
