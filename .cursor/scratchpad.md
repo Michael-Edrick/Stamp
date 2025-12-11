@@ -292,3 +292,48 @@ The user wanted to replace the current generic success pop-up with a more visual
 - [x] Task 3: Add Custom Font
 - [x] Task 4: Implement Celebratory Effects
 - [x] Task 5: Activate the "Share" Button
+
+---
+
+# Inbox & Stamp UI Polish
+
+**Status: Completed**
+
+## Background and Motivation
+The user requested a series of visual refinements to the inbox list and the paid message "stamp" to improve clarity, aesthetics, and handle edge cases like long usernames gracefully.
+
+## High-level Task Breakdown
+
+*   **Task 1: Replace Username with Initials on Stamp**
+    *   **Action:** Modify the `StampAvatar` component.
+    *   **Details:** The component was updated to accept a user's full display name, from which it generates and displays initials (e.g., "Danielle Michelle" -> "DM") instead of the full username. This was applied to stamps in both the inbox and chat views for consistency.
+    *   **Success Criteria:** All stamps correctly show the sender's initials.
+
+*   **Task 2: Add Designer-Approved Effects to Stamp**
+    *   **Action:** Modify the `StampAvatar` component.
+    *   **Details:** Two effects from the Figma design were applied to the user's profile picture within the stamp:
+        1.  A `linear-gradient(0deg, rgba(185, 185, 185, 0.1), rgba(185, 185, 185, 0.1))` overlay.
+        2.  A "monotone noise" effect using a custom SVG filter to add texture, with the color `#A04B00` at `32%` opacity.
+    *   **Success Criteria:** The stamp's visual effects perfectly match the Figma design specifications.
+
+*   **Task 3: Implement Dynamic Username Truncation in Inbox**
+    *   **Action:** Create a new `TruncatedUsername` component and integrate it into `Inbox.tsx`.
+    *   **Details:** To handle long usernames that could break the layout, a new component was built. This component uses a hybrid approach:
+        1.  CSS Flexbox is used to determine the available space for the username.
+        2.  A `useLayoutEffect` hook in React measures the component's rendered width.
+        3.  If the component detects that its content is overflowing, it uses JavaScript to reformat the username string into a `start...end` format (e.g., `airialmanage...eth`).
+    *   **Success Criteria:** Long usernames in the inbox list are now gracefully and dynamically truncated, preventing any layout overflow issues.
+
+*   **Task 4: Refine Paid Message Card Layout**
+    *   **Action:** Modify the `Inbox.tsx` component.
+    *   **Details:**
+        1.  The horizontal `<hr>` divider was removed from the paid message card for a cleaner look.
+        2.  The "Reply to... to collect..." text was wrapped in a smaller, white, pill-shaped container.
+        3.  The layout was updated using Flexbox to push this new button to the bottom of the card, ensuring a consistent and clean visual hierarchy.
+    *   **Success Criteria:** The paid message card's call-to-action button is correctly styled and positioned at the bottom of the card.
+
+## Project Status Board
+- [x] Task 1: Replace Username with Initials on Stamp
+- [x] Task 2: Add Designer-Approved Effects to Stamp
+- [x] Task 3: Implement Dynamic Username Truncation in Inbox
+- [x] Task 4: Refine Paid Message Card Layout

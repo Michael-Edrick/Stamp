@@ -82,20 +82,22 @@ export default function Inbox() {
 
           if (isPaidMessageToClaim) {
             return (
-              <Link href={href} key={convo.id} className="block bg-[#ECECEC] p-4 rounded-2xl shadow-sm border border-gray-200 hover:bg-gray-200 transition-colors relative min-h-40">
+              <Link href={href} key={convo.id} className="block bg-[#ECECEC] p-4 rounded-2xl shadow-sm border border-gray-200 hover:bg-gray-200 transition-colors relative min-h-[132px] flex flex-col">
                 {/* Layer 1: Content */}
-                <div>
+                <div className="flex-1 flex flex-col justify-between">
                   {/* Top part: User info and message */}
-                  <div className="flex items-start space-x-4 pr-28"> {/* Padding to avoid stamp */}
-                    <CustomAvatar profile={otherParticipant} className="w-10 h-10 rounded-full mt-1" />
-                    <div className="flex-1 overflow-hidden">
-                      <div className="flex items-baseline">
-                        <span className="font-bold text-gray-900 flex-shrink-0">{otherParticipant.name || "Anonymous"}</span>
-                        <TruncatedUsername username={otherParticipant.username} />
+                  <div>
+                    <div className="flex items-start space-x-4 pr-28"> {/* Padding to avoid stamp */}
+                      <CustomAvatar profile={otherParticipant} className="w-10 h-10 rounded-full mt-1" />
+                      <div className="flex-1 overflow-hidden">
+                        <div className="flex items-baseline">
+                          <span className="font-bold text-gray-900 flex-shrink-0">{otherParticipant.name || "Anonymous"}</span>
+                          <TruncatedUsername username={otherParticipant.username} />
+                        </div>
+                        <p className="text-gray-600 mt-1 truncate">
+                          {lastMessage.content}
+                        </p>
                       </div>
-                      <p className="text-gray-600 mt-1 truncate">
-                        {lastMessage.content}
-                      </p>
                     </div>
                   </div>
 
@@ -104,13 +106,14 @@ export default function Inbox() {
                     <div className="w-3 h-3 bg-blue-500 rounded-full flex-shrink-0 self-center" />
                   )} */}
 
-                  {/* Divider */}
-                  <hr className="my-3 border-gray-300" />
-
                   {/* Bottom part: Reply text */}
-                  <p className="text-gray-800 text-sm"> {/* Align with text above */}
-                    Reply to {otherParticipant.name} to collect ${lastMessage.amount}.
-                  </p>
+                  <div>
+                    <div className="inline-block bg-white rounded-full px-3 py-1">
+                      <p className="text-gray-800 text-xs">
+                        Reply to {otherParticipant.name} to collect ${lastMessage.amount}.
+                      </p>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Layer 2: Stamp */}
@@ -122,7 +125,7 @@ export default function Inbox() {
                     }}
                     displayName={otherParticipant.name}
                     amount={lastMessage.amount!}
-                    className="w-32 h-32"
+                    className="w-31 h-31"
                     style={{ transform: 'rotate(5.38deg)' }}
                   />
                 </div>
