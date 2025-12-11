@@ -689,6 +689,7 @@ export default function ChatPage() {
                               <div className="mb-2">
                                 <StampAvatar
                                   profile={senderProfile || {}}
+                                  displayName={senderProfile?.name}
                                   amount={msg.amount}
                                   className="w-32 h-32"
                                   style={{ transform: 'rotate(5.38deg)' }}

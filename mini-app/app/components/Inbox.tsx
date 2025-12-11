@@ -119,6 +119,7 @@ export default function Inbox() {
                       image: otherParticipant.image,
                       username: otherParticipant.username
                     }}
+                    displayName={otherParticipant.name}
                     amount={lastMessage.amount!}
                     className="w-32 h-32"
                     style={{ transform: 'rotate(5.38deg)' }}
