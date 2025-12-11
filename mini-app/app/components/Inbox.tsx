@@ -7,6 +7,7 @@ import CustomAvatar from "@/app/components/CustomAvatar";
 import { User, Message, Conversation as PrismaConversation } from "@prisma/client";
 import useSWR from "swr";
 import StampAvatar from './StampAvatar';
+import TruncatedUsername from './TruncatedUsername';
 
 interface ConversationWithDetails extends PrismaConversation {
   participants: Partial<User>[];
@@ -89,8 +90,8 @@ export default function Inbox() {
                     <CustomAvatar profile={otherParticipant} className="w-10 h-10 rounded-full mt-1" />
                     <div className="flex-1 overflow-hidden">
                       <div className="flex items-baseline">
-                        <span className="font-bold text-gray-900">{otherParticipant.name || "Anonymous"}</span>
-                        <span className="text-sm text-gray-500 ml-2">@{otherParticipant.username}</span>
+                        <span className="font-bold text-gray-900 flex-shrink-0">{otherParticipant.name || "Anonymous"}</span>
+                        <TruncatedUsername username={otherParticipant.username} />
                       </div>
                       <p className="text-gray-600 mt-1 truncate">
                         {lastMessage.content}
@@ -135,8 +136,8 @@ export default function Inbox() {
               <div className="flex-1 overflow-hidden">
                 <div className="flex justify-between items-center">
                   <div className="flex items-baseline">
-                    <span className="font-bold text-gray-900">{otherParticipant.name || "Anonymous"}</span>
-                    <span className="text-sm text-gray-500 ml-2">@{otherParticipant.username}</span>
+                    <span className="font-bold text-gray-900 flex-shrink-0">{otherParticipant.name || "Anonymous"}</span>
+                    <TruncatedUsername username={otherParticipant.username} />
                   </div>
                   {/* <span className="text-xs text-gray-500">{new Date(lastMessage.createdAt).toLocaleDateString()}</span> */}
                 </div>
