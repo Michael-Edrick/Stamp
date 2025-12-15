@@ -1,5 +1,13 @@
 # StampMe - Mini-App Layout Refactor
 
+### Critical Security Patch: React2Shell (CVE-2025-66478) [COMPLETED]
+- **Objective**: Address a critical Remote Code Execution (RCE) vulnerability (CVSS 10.0) affecting our version of Next.js (15.x).
+- **Action Taken**: Utilized the official `npx fix-react2shell-next` tool provided by the Next.js and Vercel teams.
+- **Outcome**: The tool successfully identified the vulnerability, updated the `next` package in `package.json` to the patched version (`15.5.9`), and ran `npm install`. The application is now secure from this threat.
+- **Reference**: [Official Next.js Security Advisory](https://nextjs.org/blog/CVE-2025-66478)
+
+
+
 ## Background and Motivation
 
 The application currently suffers from a critical layout bug when run as a Farcaster mini-app. A large, empty gap appears at the bottom of the screen, especially when scrolling or interacting with the page. This issue does not occur in a standard web browser. The root cause is a combination of using standard CSS viewport units (`vh`) which are unreliable in the Farcaster webview environment, and using `position: fixed` for the header and footer, which breaks the page's layout flow.
