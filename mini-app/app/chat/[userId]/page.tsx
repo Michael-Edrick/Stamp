@@ -337,6 +337,7 @@ export default function ChatPage() {
       onChainMessageId: onChainMessageIdRef.current,
       recipientId: recipientUser!.id,
       sender: meUser,
+      isClaimed: false,
     };
     
     setConversation(prev => {
