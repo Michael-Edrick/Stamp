@@ -6,6 +6,8 @@ import type { Metadata, Viewport } from "next";
 import { Providers } from "./providers";
 import { Toaster } from 'sonner';
 import AppFrame from "./AppFrame";
+import Script from 'next/script';
+import "./peel.css"; // Correct import path
 
 const inter = Inter({ 
   subsets: ["latin"],
@@ -72,6 +74,7 @@ export default function RootLayout({
             {children}
           </AppFrame>
           <Toaster />
+          <Script src="/peel.js" strategy="beforeInteractive" />
         </Providers>
       </body>
     </html>

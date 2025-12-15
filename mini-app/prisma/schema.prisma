@@ -112,6 +112,7 @@ model Message {
   amount           Float?
   txHash           String?       @unique
   onChainMessageId String?       @unique
+  isClaimed        Boolean       @default(false)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

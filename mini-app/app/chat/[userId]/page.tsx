@@ -23,6 +23,7 @@ import { erc20Abi } from 'viem';
 import PaymentModal from '@/app/components/PaymentModal';
 import StampAvatar from '@/app/components/StampAvatar';
 import InfoModal from '@/app/components/InfoModal';
+import ClaimableStamp from '@/app/components/ClaimableStamp';
 
 type User = PrismaUser & {
   standardCost?: number | null;
@@ -31,6 +32,7 @@ type User = PrismaUser & {
 
 interface MessageWithSender extends PrismaMessage {
   sender: User;
+  isClaimed?: boolean; // Add isClaimed to the local type
 }
 
 interface Conversation {
@@ -61,6 +63,7 @@ export default function ChatPage() {
   const [isInfoModalOpen, setInfoModalOpen] = useState(false);
   const [infoModalContent, setInfoModalContent] = useState({ title: '', message: '' });
   const [isSendingTriggered, setIsSendingTriggered] = useState(false);
+  const [animatingMessageId, setAnimatingMessageId] = useState<string | null>(null);
 
   const pendingMessageContentRef = useRef<string | null>(null);
   const onChainMessageIdRef = useRef<string | null>(null);
@@ -217,6 +220,7 @@ export default function ChatPage() {
       }
 
       optimisticIdRef.current = messageId;
+      // We don't trigger animation here. We trigger it after the claim is confirmed.
       claimRefund({
         address: CONFIG.messageEscrowAddress as `0x${string}`,
         abi: messageEscrowABI,
@@ -268,6 +272,13 @@ export default function ChatPage() {
       const responseData = await response.json();
 
       if (response.ok) {
+        // We no longer set isClaimed here.
+        // We ONLY trigger the animation.
+        if (responseData.claimSuccess && responseData.claimedMessageId) {
+          setAnimatingMessageId(responseData.claimedMessageId);
+        }
+        
+        // Add the new reply message to the conversation
         setConversation(prev => {
             if (!prev) return null;
             const newMessages = [...prev.messages, responseData.newMessage];
@@ -525,6 +536,19 @@ export default function ChatPage() {
     }
   }, [approveError, sendMessageError, isMessageError, sendMessageHash, refundError, approveReceiptError, sendMessageReceiptError]);
 
+  const handleAnimationComplete = (messageId: string) => {
+    setConversation(prev => {
+      if (!prev) return null;
+      return {
+        ...prev,
+        messages: prev.messages.map(msg => 
+          msg.id === messageId ? { ...msg, isClaimed: true } : msg
+        ),
+      };
+    });
+    // Optional: Clear the animating ID after completion
+    setAnimatingMessageId(null); 
+  };
 
   if (isLoading) {
     return <div className="flex h-screen items-center justify-center">Loading conversation...</div>;
@@ -687,12 +711,15 @@ export default function ChatPage() {
                           {msg.amount && msg.amount > 0 ? (
                             <div className="flex flex-col items-center">
                               <div className="mb-2">
-                                <StampAvatar
+                                <ClaimableStamp
                                   profile={senderProfile || {}}
                                   displayName={senderProfile?.name}
                                   amount={msg.amount}
                                   className="w-32 h-32"
                                   style={{ transform: 'rotate(5.38deg)' }}
+                                  isClaimed={!!msg.isClaimed}
+                                  startClaimAnimation={animatingMessageId === msg.id}
+                                  onAnimationComplete={() => handleAnimationComplete(msg.id)}
                                 />
                         </div>
                         <p className="text-sm">{msg.content}</p>

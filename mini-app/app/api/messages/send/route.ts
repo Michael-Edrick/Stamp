@@ -149,10 +149,14 @@ export async function POST(req: NextRequest) {
 
     // --- Standard Message Sending Logic ---
     // This logic now only runs if payment is NOT required.
+
+    // We need to handle the transaction result outside the transaction block
+    let lastMessageFromOtherUser: any = null; 
+
     const result = await prisma.$transaction(async (tx) => {
       
       // --- START: Restored Reply-to-Claim Logic ---
-      const lastMessageFromOtherUser = await tx.message.findFirst({
+      lastMessageFromOtherUser = await tx.message.findFirst({
           where: {
               conversationId: conversation.id,
               senderId: recipientId, // The message was from the person we are replying to
@@ -203,9 +207,12 @@ export async function POST(req: NextRequest) {
 
             await tx.message.update({
                 where: { id: lastMessageFromOtherUser.id },
-                data: { status: 'REPLIED' },
+                data: { 
+                  status: 'REPLIED', // Revert status back to REPLIED
+                  isClaimed: true      // Set the new field
+                },
             });
-            console.log(`Updated status of message ${lastMessageFromOtherUser.id} to REPLIED.`);
+            console.log(`Updated message ${lastMessageFromOtherUser.id}: status to REPLIED, isClaimed to true.`);
 
           } catch (contractError) {
               console.error("Smart contract call to release funds failed:", contractError);
@@ -239,6 +246,15 @@ export async function POST(req: NextRequest) {
 
       return { newMessage, updatedConversation };
     }, { timeout: 20000 }); // Increased timeout to 20 seconds
+
+    // After the transaction is successful, check if a claim happened
+    if (lastMessageFromOtherUser) {
+        return NextResponse.json({
+            newMessage: result.newMessage,
+            claimSuccess: true,
+            claimedMessageId: lastMessageFromOtherUser.id,
+        }, { status: 201 });
+    }
 
     return NextResponse.json(result, { status: 201 });
 
