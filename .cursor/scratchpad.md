@@ -337,3 +337,50 @@ The user requested a series of visual refinements to the inbox list and the paid
 - [x] Task 2: Add Designer-Approved Effects to Stamp
 - [x] Task 3: Implement Dynamic Username Truncation in Inbox
 - [x] Task 4: Refine Paid Message Card Layout
+
+---
+
+# Paid Message Claim Animation
+
+**Status: Planning**
+
+## Background and Motivation
+To enhance the user experience of claiming a paid message, the user wants to add a satisfying visual animation. When a user successfully claims the funds from a paid message, the existing message "stamp" should peel away to reveal a new "claimed" version of the stamp. This effect will be persistent, meaning that once a message is claimed, it will always show the "claimed" stamp on subsequent views.
+
+## Analysis and High-level Plan
+The animation will be implemented using the `Peel.js` library for the geometry and the `GSAP` (GreenSock Animation Platform) library for smooth animation tweening. The implementation will be isolated into a new, dedicated component to avoid affecting existing components.
+
+### Phase 1: Component Creation and Setup
+
+*   **Task 1: Install Dependencies and Assets**
+    *   **Action:** Add `gsap` to the project's `package.json`. Download the `peel.js` script and place it in the `public` folder. Load `peel.js` in the root layout using a `<Script>` tag.
+    *   **Success Criteria:** The necessary third-party libraries are installed and accessible to the application.
+
+*   **Task 2: Create a New `ClaimableStamp.tsx` Component**
+    *   **Action:** Create a new file: `mini-app/app/components/ClaimableStamp.tsx`.
+    *   **Details:** This component will be built with the specific three-layer HTML structure required by `Peel.js`.
+    *   **Success Criteria:** A new, self-contained component for the claim animation is created with the correct DOM structure.
+
+### Phase 2: Animation and State Logic
+
+*   **Task 3: Implement Animation and State Logic in `ClaimableStamp`**
+    *   **Action:** Use React hooks (`useRef`, `useEffect`) within the new component to initialize the `Peel.js` and `GSAP` animation logic.
+    *   **Details:** The component will accept two props: `messageStatus` and `startClaimAnimation`.
+    *   **Success Criteria:** The component can display the correct state (claimed or unclaimed) and can successfully trigger the peel animation via a prop.
+
+### Phase 3: Integration
+
+*   **Task 4: Integrate `ClaimableStamp` into `ChatPage.tsx`**
+    *   **Action:** Modify `mini-app/app/chat/[userId]/page.tsx`.
+    *   **Details:**
+        1.  Replace the existing `<StampAvatar>` with the new `<ClaimableStamp>` component in the message mapping logic.
+        2.  Add a new state variable, `animatingMessageId`, to the `ChatPage`.
+        3.  When a claim transaction is confirmed, set `animatingMessageId` to the ID of the claimed message.
+        4.  Pass the `message.status` and a boolean (`animatingMessageId === message.id`) to the `ClaimableStamp` component's props.
+    *   **Success Criteria:** The animation is correctly triggered on the specific message being claimed, and the "claimed" state persists correctly on subsequent page loads.
+
+## Project Status Board
+- [ ] Task 1: Install Dependencies and Assets
+- [ ] Task 2: Create a New `ClaimableStamp.tsx` Component
+- [ ] Task 3: Implement Animation and State Logic in `ClaimableStamp`
+- [ ] Task 4: Integrate `ClaimableStamp` into `ChatPage.tsx`
