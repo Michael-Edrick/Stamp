@@ -32,7 +32,7 @@ type User = PrismaUser & {
 
 interface MessageWithSender extends PrismaMessage {
   sender: User;
-  isClaimed?: boolean; // Add isClaimed to the local type
+  isClaimed: boolean; // Add isClaimed to the local type
 }
 
 interface Conversation {
