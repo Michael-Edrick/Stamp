@@ -46,6 +46,8 @@ export async function POST(req: NextRequest) {
       messageId, // This will be present when confirming a transaction
     } = body;
     const walletAddress = req.headers.get("x-wallet-address");
+    console.log("--- New Request to /api/messages/send ---");
+    console.log(`Received x-wallet-address: ${walletAddress}`);
     
     // Use wallet address from header to get sender, ensuring backend identifies the user
     if (!walletAddress) {

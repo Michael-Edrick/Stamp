@@ -6,255 +6,116 @@
 - **Outcome**: The tool successfully identified the vulnerability, updated the `next` package in `package.json` to the patched version (`15.5.9`), and ran `npm install`. The application is now secure from this threat.
 - **Reference**: [Official Next.js Security Advisory](https://nextjs.org/blog/CVE-2025-66478)
 
-
-
-## Background and Motivation
-
-The application currently suffers from a critical layout bug when run as a Farcaster mini-app. A large, empty gap appears at the bottom of the screen, especially when scrolling or interacting with the page. This issue does not occur in a standard web browser. The root cause is a combination of using standard CSS viewport units (`vh`) which are unreliable in the Farcaster webview environment, and using `position: fixed` for the header and footer, which breaks the page's layout flow.
-
-This plan outlines the steps to refactor the application's layout to be robust and correctly sized within the Farcaster mini-app environment, ensuring a clean and professional user experience.
-
-## Key Challenges and Analysis
-
-1.  **Unreliable Viewport Units:** CSS `vh` units do not respect the UI chrome of the host Farcaster application, leading to incorrect height calculations.
-2.  **`position: fixed` Issues:** Fixed positioning removes elements from the document flow, which causes layout instability and scrolling conflicts inside a webview.
-3.  **The SDK Solution:** The `@coinbase/onchainkit` library provides the `useMiniKit` hook. This hook exposes the `safeAreaInsets` (top and bottom padding occupied by the Farcaster native UI), which is the definitive way to calculate the true available screen space for our app.
-
-## High-level Task Breakdown
-
-The strategy is to create a master `AppFrame` component that correctly calculates the available height, and then refactor our pages to use a modern Flexbox layout within that frame.
-
-1.  **Task 1: Create a Dedicated `AppFrame` Client Component**
-    *   **Action:** Create a new file: `mini-app/app/AppFrame.tsx`.
-    *   **Details:** This will be a `'use client'` component. It will import and use the `useMiniKit` hook to access `context.client.safeAreaInsets`. It will then calculate the true available height (`calc(100vh - topInset - bottomInset)`) and render a `<main>` tag that wraps its children and has its height set to this calculated value.
-    *   **Success Criteria:** The component is created and encapsulates the logic for calculating the mini-app's true height. The app builds without errors.
-
-2.  **Task 2: Integrate `AppFrame` into the Root Layout**
-    *   **Action:** Modify `mini-app/app/layout.tsx`.
-    *   **Details:** The root layout will remain a simple server component. It will import the new `AppFrame` component and use it to wrap the `{children}`. This must be done *inside* the `<Providers>` component to ensure the `useMiniKit` hook has access to the required context.
-    *   **Success Criteria:** The application's core structure is updated. Every page is now rendered inside a container that is perfectly sized to the Farcaster mini-app's visible area.
-
-3.  **Task 3: Refactor Homepage to a Flexbox Layout**
-    *   **Action:** Modify `mini-app/app/page.tsx`.
-    *   **Details:** The page's root `div` will be changed to `className="h-full flex flex-col"`. The `<header>` and `BottomNav` components will have their `position: fixed` CSS removed. The main content area will be wrapped in a `div` with `className="flex-1 overflow-y-auto"` to make it the single, scrollable area that fills the remaining space.
-    *   **Success Criteria:** The homepage layout is now robust, uses the full available space correctly, and the scroll/gap bug is eliminated.
-
-4.  **Task 4: Refactor Chat Page to a Flexbox Layout**
-    *   **Action:** Modify `mini-app/app/chat/[fid]/page.tsx`.
-    *   **Details:** The same Flexbox architecture will be applied. The root `div` will become `h-full flex flex-col`. The header and message input footer will have `position: sticky` removed. The message list will become the scrollable `flex-1` content area.
-    *   **Success Criteria:** The chat page layout is fixed, consistent with the homepage, and works correctly when the on-screen keyboard appears. The bug is universally resolved.
-
-## Project Status Board
-- [x] Task 1: Create a Dedicated `AppFrame` Client Component
-- [x] Task 2: Integrate `AppFrame` into the Root Layout
-- [x] Task 3: Refactor Homepage to a Flexbox Layout
-- [x] Task 4: Refactor Chat Page to a Flexbox Layout
-- [x] Fix "Could not identify current user in conversation" bug by fetching current user data correctly.
-- [x] Sort the homepage "Following" list by follower count, fetching the top 250 users for accuracy.
-- [x] Implement "Just-in-Time User Creation" for messaging unregistered Farcaster users.
-- [x] Refactor APIs to support multiple wallet addresses per user.
-- [x] Fix conversation loading and message sending with secondary wallet.
-
-## Executor's Feedback or Assistance Requests
-*All previous tasks are complete. The multi-address authentication and messaging flow is now working correctly.*
-
-**Update:** The "Platform Fee Implementation" feature has been successfully implemented, tested, and the new contract has been deployed. The platform is now correctly collecting a 10% fee on claimed messages. All related tasks are complete.
-
----
-
-# UI & Flow Refactoring
-
-## Background and Motivation
-The user wants to refactor the application's user interface, starting with the homepage. The goal is to simplify the main view by removing the list of "Following" users, while preserving the code for potential future use.
-
-## High-level Task Breakdown
-
-*   **Task 1: Temporarily Remove the "Following" List from the Homepage**
-    *   **Action:** Modify `mini-app/app/page.tsx`.
-    *   **Details:**
-        1.  Locate the `fetch` call to the `/api/users/following` endpoint and comment it out.
-        2.  Locate the JSX code that maps over the `following` state variable to render the `UserCard` components and comment out the entire section.
-    *   **Success Criteria:** The homepage loads and functions correctly, but the list of followed users is no longer visible. The application builds without errors.
-
-*   **Task 2: Create a Reusable `Inbox` Component**
-    *   **Action:** Create a new file: `mini-app/app/components/Inbox.tsx`.
-    *   **Details:**
-        1.  Move the data fetching logic (the call to `/api/messages/inbox`) and state management from the existing `inbox/page.tsx` into this new component.
-        2.  The component will render the full, scrollable list of conversations.
-    *   **Success Criteria:** A self-contained `Inbox.tsx` component is created that handles all logic for fetching and displaying a user's complete inbox.
-
-*   **Task 3: Integrate the `Inbox` Component into the Homepage**
-    *   **Action:** Modify `mini-app/app/page.tsx`.
-    *   **Details:**
-        1.  Remove the old "Your chats" section and its associated data fetching logic.
-        2.  Import and render the new `<Inbox />` component in its place.
-    *   **Success Criteria:** The homepage now displays the full, scrollable inbox.
-
-*   **Task 4: Clean up the old `/inbox` Page**
-    *   **Action:** Modify `mini-app/app/inbox/page.tsx`.
-    *   **Details:**
-        1.  Strip the page down to a simple container that imports and displays the `<Inbox />` component.
-    *   **Success Criteria:** The `/inbox` page continues to work correctly but with much simpler, non-duplicated code.
-
-*   **Task 5: Update App Color Scheme and Conversation Card Layout**
-    *   **Action:** Modify global CSS and the `Inbox.tsx` component.
-    *   **Details:**
-        1.  Change the application's primary background color from `#F0F2F5` to `#DEDEDE`.
-        2.  In `mini-app/app/components/Inbox.tsx`, change the background color of conversation cards to `#ECECEC`.
-        3.  In the same component, adjust the layout to display the username next to the display name (e.g., "**Display Name** @username").
-    *   **Success Criteria:** The app's background and card colors are updated, and the username appears correctly formatted on each conversation card.
-
-*   **Task 6: Remove "StampMe" Title from Homepage Header**
-    *   **Action:** Modify `mini-app/app/page.tsx`.
-    *   **Details:** Locate and remove the `<h1>StampMe</h1>` element from the header.
-    *   **Success Criteria:** The homepage header no longer displays the "StampMe" title.
-
-*   **Task 7: Create a Reusable `StampIcon` SVG Component**
-    *   **Action:** Create a new file: `mini-app/app/components/StampIcon.tsx`.
-    *   **Details:** Write a new React component that renders a precise SVG of the orange stamp shape.
-    *   **Success Criteria:** The `StampIcon.tsx` component is created and displays the stamp icon correctly.
-
-*   **Task 8: Add the Stamp Icon Home Button to the Homepage Header**
-    *   **Action:** Modify `mini-app/app/page.tsx`.
-    *   **Details:**
-        1.  Import the new `StampIcon` component.
-        2.  Place the `StampIcon` inside a Next.js `<Link href="/">` component to act as a home button.
-        3.  Integrate this link into the header on the top-left.
-    *   **Success Criteria:** The homepage header displays the stamp icon button in the top-left corner, and it functions as a link to home.
-
-*   **Task 9: Remove the `BottomNav` Component**
-    *   **Action:** Modify `mini-app/app/page.tsx`.
-    *   **Details:** Completely remove the `BottomNav` component and its invocation from the homepage layout.
-    *   **Success Criteria:** The application renders without the black bottom navigation bar.
-
-*   **Task 10: Implement the Floating `+` Button**
-    *   **Action:** Modify `mini-app/app/page.tsx`.
-    *   **Details:** Add a new circular, blue button with a `+` icon, using fixed positioning to float it in the bottom-right corner of the page.
-    *   **Success Criteria:** A floating action button is visible and correctly positioned on the homepage.
-
-*   **Task 11: Move the Profile Avatar to the Header**
-    *   **Action:** Modify `mini-app/app/page.tsx`.
-    *   **Details:** Relocate the user's profile avatar from the old navigation bar to the top-right of the main header. It will function as a link to the profile page.
-    *   **Success Criteria:** The user's avatar appears in the header and links correctly to their profile, matching the new design.
-
-*   **Task 12: Temporarily Hide Wallet Information from Header**
-    *   **Action:** Modify `mini-app/app/page.tsx`.
-    *   **Details:** Comment out the block of code that displays the connected wallet address, network switcher, and logout button.
-    *   **Success Criteria:** The header renders with only the stamp icon on the left and the profile avatar on the right.
-
----
-
-# Farcaster Embed Failure (Root Cause Analysis)
-
-**Status: Active**
-
-## Background and Motivation
-Despite having a valid `farcaster.json` manifest, sharing the app's URL in the Base app does not generate a rich embed preview. The URL is treated as a plain link. This prevents the app from being launched as a mini-app from a shared link.
-
-## Analysis and Findings
-1.  **Initial Hypothesis (Incorrect):** The issue was initially believed to be caused by an incorrect Farcaster Frame action type (`post` vs `launch_frame`) or a leftover `rewrites` rule in `next.config.mjs`. These were corrected, but the problem persisted.
-2.  **Diagnostic Testing:** A test was performed to isolate the `MiniKitProvider` by commenting out other providers (`WagmiProvider`, `SessionProvider`, `QueryClientProvider`). This caused the build to fail, preventing the test's completion.
-3.  **Definitive Root Cause:** By inspecting the live, deployed HTML of the homepage, it was confirmed that the crucial **`fc:frame` meta tags are completely missing from the final server output.** The `generateMetadata` function in `layout.tsx` is not being rendered into the HTML `<head>`.
-
-## Conclusion
-The failure of the `generateMetadata` function to execute correctly on the server is the root cause. This is almost certainly due to a conflict in the `providers.tsx` file, where the complex nesting of client-side providers (Wagmi, NextAuth) is preventing Next.js from server-rendering the necessary metadata tags. The link scraper sees no frame tags and correctly treats the URL as a regular webpage.
-
-The next step is to refactor `providers.tsx` to resolve this conflict.
-
----
-
-# Farcaster Login Flow Debugging
+# "Sender Not Found" Error Debugging
 
 **Status: Completed**
 
 ## Background and Motivation
-When logging in from a Farcaster-native environment (like the Base app), some users were having a blank "New User" profile created instead of being logged into their existing account. This was caused by a frontend race condition that was fixed, but a final backend error was preventing successful login.
+When a user tried to compose and send a new message, the application would fail with a "Sender not found" error. This was a critical bug preventing the core messaging functionality from working.
 
 ## Analysis and Findings
-1.  **Frontend Race Condition:** The initial problem was a race condition in `app/page.tsx`. The app was calling the backend to fetch the user *after* the wallet was connected but *before* the Farcaster `useMiniKit` hook had provided the user's Farcaster identity. This caused the frontend to make an unauthenticated request, leading the backend to create a new user.
-2.  **Solution (Frontend):** The race condition was resolved by implementing a robust `useEffect` hook with a 5-second timeout. The app now waits for the Farcaster user data to arrive. If it does, it proceeds immediately (Success Path). If it doesn't arrive within 5 seconds, it assumes a regular browser environment and proceeds (Fallback Path). This ensures the frontend logic is correct.
-3.  **Backend `401 Unauthorized` Error:** After fixing the frontend, logins were still failing. The final issue was a `401 Unauthorized` error when the backend tried to call the Neynar API.
-4.  **Root Cause (Backend):** The `NEYNAR_API_KEY` environment variable stored in Vercel had expired. Updating the key to a valid one resolved the `401` error.
+1.  **Initial Incorrect Theories:** The problem was initially misdiagnosed multiple times due to a misunderstanding of the application's complex user creation and authentication flow. I incorrectly identified the source of the `walletAddress` used for new Farcaster users multiple times.
+2.  **User-Led Diagnosis:** The user correctly diagnosed the root cause of the problem. The issue stemmed from an inconsistency in which wallet address was being used to identify the sender.
+3.  **The Core Problem:**
+    *   When a user logs in, the backend's `/api/users/me` endpoint links their **currently connected wallet address** to their user profile in the `VerifiedAddress` table. This is the address the backend can use to reliably look them up.
+    *   However, the frontend's `ComposeModal.tsx` was reading the `walletAddress` field from the user's database record (`currentUser.walletAddress`). This database field is populated from the user's *primary Farcaster address*, which can be different from the address they are currently connected with.
+    *   The frontend was sending this (potentially incorrect) primary Farcaster address in the `x-wallet-address` header. The backend would then fail to find this address in the `VerifiedAddress` table, resulting in the "Sender not found" error.
+4.  **The Solution:** The user correctly proposed that the `x-wallet-address` header should **always** contain the address of the currently connected wallet, not the address from the database record.
 
-## Conclusion
-The entire end-to-end login flow is now fixed. The frontend correctly waits for Farcaster data, and the backend is correctly authenticated with the Neynar API.
+## Implementation
+- **Action:** Modified `mini-app/app/components/ComposeModal.tsx`.
+- **Details:** The `useAccount` hook from `wagmi` was used to get the active wallet address. This address is now used for the value of the `x-wallet-address` header in all API calls made from the component.
+- **Outcome:** The backend now correctly identifies the sender using the address they are actively using, resolving the bug.
+
 
 ## Lessons
-*   When debugging a `401 Unauthorized` error from an external API, the first step should always be to verify that the API key is correct, valid, and has been correctly configured in the environment variables.
-*   React `useEffect` dependency arrays can be tricky. When a `useCallback` function is a dependency, ensure that its own dependency array is correct, otherwise, the `useEffect` may not re-run when expected.
-*   Complex race conditions on the frontend can be reliably solved with a timeout-based fallback mechanism.
+*   It is critical to have a precise and accurate understanding of the data flow, especially in authentication and user identification. My repeated failures to trace the `walletAddress` value from its source to its use caused significant delays and frustration.
+*   When identifying a user on the backend, the identifier sent from the frontend must be the same one used to establish the session or link the user's identity. In this case, the `connectingAddress` is the source of truth for a session, not a static field from the database.
+
 
 ## Project Status Board
-- [x] Debug and fix the "New User" creation bug for Farcaster logins.
-- [x] Restore the profile button and other header UI elements.
+- [x] Debug and fix the "Sender not found" error.
 
-## Executor's Feedback or Assistance Requests
-*All tasks related to the login flow are now complete. The application is stable and ready for the next set of improvements.*
 
----
-
-# Compose Modal UI/UX Improvement
+# Paid Message Claim Animation
 
 **Status: Completed**
 
 ## Background and Motivation
-The user wanted to improve the UI/UX of the "Compose Message" modal. The original implementation required the user to press "Enter" to send and lacked clear visual feedback. The goal was to implement a design with a dedicated, state-aware "Send" button.
+To enhance the user experience of claiming a paid message, a satisfying visual animation was implemented. When a user successfully claims the funds from a paid message, the existing message "stamp" peels away to reveal a new "claimed" version of the stamp. This effect is persistent, meaning that once a message is claimed, it will always show the "claimed" stamp on subsequent views.
 
-## Analysis and Implementation
-1.  **Added a "Send" Button:** A new button with a paper airplane icon was added to the modal. This replaced the reliance on the "Enter" key as the only way to send a message.
-2.  **State-Aware Logic:** The button's state is conditionally controlled. It is disabled and styled in gray when either a recipient has not been selected or the message body is empty. It becomes enabled and styled in blue as soon as both conditions are met, providing clear visual feedback to the user that they can now send the message.
-3.  **Layout Refinements:** The button was initially placed inside the recipient input field. Based on user feedback, it was relocated to be part of a single, unified header bar, creating a cleaner layout with the "Close" button on the left, the recipient input in the middle, and the "Send" button on the right.
-4.  **Icon Polish:** As a final touch, the paper airplane icon was rotated -45 degrees to point towards the top-right, giving it a more dynamic and active feel.
+## Analysis and High-level Plan
+The animation was implemented using the `Peel.js` library for the geometry and the `GSAP` (GreenSock Animation Platform) library for smooth animation tweening. The implementation was isolated into a new, dedicated component to avoid affecting existing components. A new `isClaimed` boolean field was added to the `Message` model in the database to persist the claimed state.
 
-## Conclusion
-The `ComposeModal` has been successfully updated to match the new design, providing a more intuitive and visually appealing user experience for sending new messages.
+### Implementation Details
+
+*   **Task 1: Database Migration**
+    *   **Action:** Added an `isClaimed` field to the `Message` model in `prisma/schema.prisma` and ran a database migration.
+    *   **Success Criteria:** The database schema is updated to track the claimed status of each message.
+
+*   **Task 2: Backend Logic Update**
+    *   **Action:** Modified the `/api/messages/send` endpoint.
+    *   **Details:** When a user replies to a paid message (the "claim" action), the backend now sets `isClaimed: true` for the original message in the database. It also returns a `claimSuccess: true` flag and the `claimedMessageId` to the frontend.
+    *   **Success Criteria:** The backend correctly updates the database and informs the frontend when a claim is successful.
+
+*   **Task 3: Create a New `ClaimableStamp.tsx` Component**
+    *   **Action:** Created `mini-app/app/components/ClaimableStamp.tsx`.
+    *   **Details:** This component contains the three-layer HTML structure required by `Peel.js` and uses React hooks (`useRef`, `useEffect`) to manage the animation lifecycle. It accepts props to control the animation and display the correct state (claimed or unclaimed).
+    *   **Success Criteria:** The component successfully initializes the peel animation and can trigger it programmatically.
+
+*   **Task 4: Integrate `ClaimableStamp` into `ChatPage.tsx`**
+    *   **Action:** Modified `mini-app/app/chat/[userId]/page.tsx`.
+    *   **Details:**
+        1.  Replaced the `<StampAvatar>` with the new `<ClaimableStamp>` component.
+        2.  Added state (`animatingMessageId`) to track which message should be animating.
+        3.  When the backend returns `claimSuccess`, the frontend sets `animatingMessageId` to trigger the animation on the correct stamp.
+        4.  An `onAnimationComplete` callback was implemented to update the local message state to `isClaimed: true` *after* the animation finishes, preventing a visual flash.
+    *   **Success Criteria:** The peel animation is correctly triggered on the specific message being claimed, and the "claimed" state persists correctly on subsequent page loads.
 
 ## Project Status Board
-- [x] Debug and fix the "New User" creation bug for Farcaster logins.
-- [x] Restore the profile button and other header UI elements.
-- [x] Redesign and implement the "Compose Message" modal UI.
+- [x] Task 1: Add `isClaimed` field to the database.
+- [x] Task 2: Update backend to handle claim status.
+- [x] Task 3: Create the `ClaimableStamp` animation component.
+- [x] Task 4: Integrate the animation into the chat page.
 
----
 
-# Mainnet Deployment Strategy
+# Inbox & Stamp UI Polish
 
-**Status: Planning**
+**Status: Completed**
 
 ## Background and Motivation
-The application is currently running on the Base Sepolia testnet. The next major milestone is to deploy the application to the Base mainnet, allowing for real-user interaction with real funds. This requires a robust, secure, and maintainable deployment strategy that clearly separates the test and production environments. Based on user requirements for managing Farcaster mini-app testing on Vercel's free tier, this will be achieved by creating a separate, dedicated repository for the mainnet codebase.
+The user requested a series of visual refinements to the inbox list and the paid message "stamp" to improve clarity, aesthetics, and handle edge cases like long usernames gracefully.
 
 ## High-level Task Breakdown
 
-*   **Task 1: Implement Environment-Aware Configuration**
-    *   **Action:** Create a central configuration file (e.g., `mini-app/lib/config.ts`) that reads `process.env.NEXT_PUBLIC_NETWORK`.
-    *   **Details:** Based on whether the variable is `'mainnet'` or `'testnet'`, this file will export the correct contract addresses (`MessageEscrow`, `USDC`), chain ID, and any other environment-specific settings. This ensures the codebase remains the same for all environments.
-    *   **Success Criteria:** The application's blockchain configuration can be switched between testnet and mainnet solely by changing an environment variable.
+*   **Task 1: Replace Username with Initials on Stamp**
+    *   **Action:** Modify the `StampAvatar` component.
+    *   **Details:** The component was updated to accept a user's full display name, from which it generates and displays initials (e.g., "Danielle Michelle" -> "DM") instead of the full username. This was applied to stamps in both the inbox and chat views for consistency.
+    *   **Success Criteria:** All stamps correctly show the sender's initials.
 
-*   **Task 2: Deploy Smart Contracts to Mainnet**
-    *   **Action:** Deploy the `MessageEscrow.sol` contract to the Base mainnet.
-    *   **Details:** This will require running the deployment scripts targeted at the Base mainnet. We will obtain new, official contract addresses for the production environment and will need to use the official Base USDC token address.
-    *   **Success Criteria:** The contract is live on Base mainnet, and we have the final production contract addresses.
+*   **Task 2: Add Designer-Approved Effects to Stamp**
+    *   **Action:** Modify the `StampAvatar` component.
+    *   **Details:** Two effects from the Figma design were applied to the user's profile picture within the stamp:
+        1.  A `linear-gradient(0deg, rgba(185, 185, 185, 0.1), rgba(185, 185, 185, 0.1))` overlay.
+        2.  A "monotone noise" effect using a custom SVG filter to add texture, with the color `#A04B00` at `32%` opacity.
+    *   **Success Criteria:** The stamp's visual effects perfectly match the Figma design specifications.
 
-*   **Task 3: Provision Production Database**
-    *   **Action:** Set up a new, dedicated database instance for the production environment.
-    *   **Details:** This ensures a complete separation of user data between the test and live applications, which is critical for security and data integrity. The new database connection string will be set as the `DATABASE_URL` in the production environment.
-    *   **Success Criteria:** A new, empty, and accessible database for mainnet is ready.
+*   **Task 3: Implement Dynamic Username Truncation in Inbox**
+    *   **Action:** Create a new `TruncatedUsername` component and integrate it into `Inbox.tsx`.
+    *   **Details:** To handle long usernames that could break the layout, a new component was built. This component uses a hybrid approach:
+        1.  CSS Flexbox is used to determine the available space for the username.
+        2.  A `useLayoutEffect` hook in React measures the component's rendered width.
+        3.  If the component detects that its content is overflowing, it uses JavaScript to reformat the username string into a `start...end` format (e.g., `airialmanage...eth`).
+    *   **Success Criteria:** Long usernames in the inbox list are now gracefully and dynamically truncated, preventing any layout overflow issues.
 
-*   **Task 4: Create a Dedicated Mainnet Repository**
-    *   **Action:** Clone the current repository to create a new, separate repository for the mainnet application.
-    *   **Details:** This new repository will be the source of truth for the production deployment. The existing repository will continue to serve as the testnet environment.
-    *   **Success Criteria:** A new GitHub repository for the mainnet codebase is created and accessible.
-    *   **Note on Maintenance:** It will be critical to establish a strict manual process for keeping the two repositories in sync. Any bug fixes or features applied to the testnet repo must be carefully ported to the mainnet repo to prevent them from diverging.
-
-*   **Task 5: Configure a New Vercel Project for Mainnet**
-    *   **Action:** Create a new Vercel project and connect it to the new mainnet GitHub repository.
+*   **Task 4: Refine Paid Message Card Layout**
+    *   **Action:** Modify the `Inbox.tsx` component.
     *   **Details:**
-        1.  The new Vercel project will be configured with the production environment variables (mainnet database URL, mainnet contract addresses, `NEXT_PUBLIC_NETWORK='mainnet'`).
-        2.  The `main` branch of the new repository will be set as the Production Branch.
-        3.  The existing Vercel project will remain connected to the original testnet repository.
-    *   **Success Criteria:** We have two distinct Vercel deployments: one for production connected to the mainnet repository, and one for testing connected to the testnet repository.
+        1.  The horizontal `<hr>` divider was removed from the paid message card for a cleaner look.
+        2.  The "Reply to... to collect..." text was wrapped in a smaller, white, pill-shaped container.
+        3.  The layout was updated using Flexbox to push this new button to the bottom of the card, ensuring a consistent and clean visual hierarchy.
+    *   **Success Criteria:** The paid message card's call-to-action button is correctly styled and positioned at the bottom of the card.
 
----
 
 # Success Modal Redesign
 
@@ -294,101 +155,41 @@ The user wanted to replace the current generic success pop-up with a more visual
     *   **Details:** The `useComposeCast` hook from OnchainKit was used to open the native Farcaster compose window. A pre-filled message was created, including the transaction amount, recipient, and an embed link back to the app.
     *   **Success Criteria:** Clicking the "Share" button opens the Farcaster composer with the correct, pre-populated cast.
 
-## Project Status Board
-- [x] Task 1: Create and Integrate the `SuccessModal`
-- [x] Task 2: Redesign the `SuccessModal` UI
-- [x] Task 3: Add Custom Font
-- [x] Task 4: Implement Celebratory Effects
-- [x] Task 5: Activate the "Share" Button
+# Mainnet Deployment Strategy
 
----
-
-# Inbox & Stamp UI Polish
-
-**Status: Completed**
+**Status: In Progress**
 
 ## Background and Motivation
-The user requested a series of visual refinements to the inbox list and the paid message "stamp" to improve clarity, aesthetics, and handle edge cases like long usernames gracefully.
+The application is currently running on the Base Sepolia testnet. The next major milestone is to deploy the application to the Base mainnet, allowing for real-user interaction with real funds. This requires a robust, secure, and maintainable deployment strategy that clearly separates the test and production environments. Based on user requirements for managing Farcaster mini-app testing on Vercel's free tier, this will be achieved by creating a separate, dedicated repository for the mainnet codebase.
 
 ## High-level Task Breakdown
 
-*   **Task 1: Replace Username with Initials on Stamp**
-    *   **Action:** Modify the `StampAvatar` component.
-    *   **Details:** The component was updated to accept a user's full display name, from which it generates and displays initials (e.g., "Danielle Michelle" -> "DM") instead of the full username. This was applied to stamps in both the inbox and chat views for consistency.
-    *   **Success Criteria:** All stamps correctly show the sender's initials.
+*   **Task 1: Implement Environment-Aware Configuration**
+    *   **Action:** Create a central configuration file (e.g., `mini-app/lib/config.ts`) that reads `process.env.NEXT_PUBLIC_NETWORK`.
+    *   **Details:** Based on whether the variable is `'mainnet'` or `'testnet'`, this file will export the correct contract addresses (`MessageEscrow`, `USDC`), chain ID, and any other environment-specific settings. This ensures the codebase remains the same for all environments.
+    *   **Success Criteria:** The application's blockchain configuration can be switched between testnet and mainnet solely by changing an environment variable.
 
-*   **Task 2: Add Designer-Approved Effects to Stamp**
-    *   **Action:** Modify the `StampAvatar` component.
-    *   **Details:** Two effects from the Figma design were applied to the user's profile picture within the stamp:
-        1.  A `linear-gradient(0deg, rgba(185, 185, 185, 0.1), rgba(185, 185, 185, 0.1))` overlay.
-        2.  A "monotone noise" effect using a custom SVG filter to add texture, with the color `#A04B00` at `32%` opacity.
-    *   **Success Criteria:** The stamp's visual effects perfectly match the Figma design specifications.
+*   **Task 2: Deploy Smart Contracts to Mainnet**
+    *   **Action:** Deploy the `MessageEscrow.sol` contract to the Base mainnet.
+    *   **Details:** This will require running the deployment scripts targeted at the Base mainnet. We will obtain new, official contract addresses for the production environment and will need to use the official Base USDC token address.
+    *   **Success Criteria:** The contract is live on Base mainnet, and we have the final production contract addresses.
 
-*   **Task 3: Implement Dynamic Username Truncation in Inbox**
-    *   **Action:** Create a new `TruncatedUsername` component and integrate it into `Inbox.tsx`.
-    *   **Details:** To handle long usernames that could break the layout, a new component was built. This component uses a hybrid approach:
-        1.  CSS Flexbox is used to determine the available space for the username.
-        2.  A `useLayoutEffect` hook in React measures the component's rendered width.
-        3.  If the component detects that its content is overflowing, it uses JavaScript to reformat the username string into a `start...end` format (e.g., `airialmanage...eth`).
-    *   **Success Criteria:** Long usernames in the inbox list are now gracefully and dynamically truncated, preventing any layout overflow issues.
+*   **Task 3: Provision Production Database**
+    *   **Action:** Set up a new, dedicated database instance for the production environment.
+    *   **Details:** This ensures a complete separation of user data between the test and live applications, which is critical for security and data integrity. The new database connection string will be set as the `DATABASE_URL` in the production environment.
+    *   **Success Criteria:** A new, empty, and accessible database for mainnet is ready.
 
-*   **Task 4: Refine Paid Message Card Layout**
-    *   **Action:** Modify the `Inbox.tsx` component.
+*   **Task 4: Create a Dedicated Mainnet Repository**
+    *   **Action:** Clone the current repository to create a new, separate repository for the mainnet application.
+    *   **Details:** This new repository will be the source of truth for the production deployment. The existing repository will continue to serve as the testnet environment.
+    *   **Success Criteria:** A new GitHub repository for the mainnet codebase is created and accessible.
+    *   **Note on Maintenance:** It will be critical to establish a strict manual process for keeping the two repositories in sync. Any bug fixes or features applied to the testnet repo must be carefully ported to the mainnet repo to prevent them from diverging.
+
+*   **Task 5: Configure a New Vercel Project for Mainnet**
+    *   **Action:** Create a new Vercel project and connect it to the new mainnet GitHub repository.
     *   **Details:**
-        1.  The horizontal `<hr>` divider was removed from the paid message card for a cleaner look.
-        2.  The "Reply to... to collect..." text was wrapped in a smaller, white, pill-shaped container.
-        3.  The layout was updated using Flexbox to push this new button to the bottom of the card, ensuring a consistent and clean visual hierarchy.
-    *   **Success Criteria:** The paid message card's call-to-action button is correctly styled and positioned at the bottom of the card.
+        1.  The new Vercel project will be configured with the production environment variables (mainnet database URL, mainnet contract addresses, `NEXT_PUBLIC_NETWORK='mainnet'`).
+        2.  The `main` branch of the new repository will be set as the Production Branch.
+        3.  The existing Vercel project will remain connected to the original testnet repository.
+    *   **Success Criteria:** We have two distinct Vercel deployments: one for production connected to the mainnet repository, and one for testing connected to the testnet repository.
 
-## Project Status Board
-- [x] Task 1: Replace Username with Initials on Stamp
-- [x] Task 2: Add Designer-Approved Effects to Stamp
-- [x] Task 3: Implement Dynamic Username Truncation in Inbox
-- [x] Task 4: Refine Paid Message Card Layout
-
----
-
-# Paid Message Claim Animation
-
-**Status: Planning**
-
-## Background and Motivation
-To enhance the user experience of claiming a paid message, the user wants to add a satisfying visual animation. When a user successfully claims the funds from a paid message, the existing message "stamp" should peel away to reveal a new "claimed" version of the stamp. This effect will be persistent, meaning that once a message is claimed, it will always show the "claimed" stamp on subsequent views.
-
-## Analysis and High-level Plan
-The animation will be implemented using the `Peel.js` library for the geometry and the `GSAP` (GreenSock Animation Platform) library for smooth animation tweening. The implementation will be isolated into a new, dedicated component to avoid affecting existing components.
-
-### Phase 1: Component Creation and Setup
-
-*   **Task 1: Install Dependencies and Assets**
-    *   **Action:** Add `gsap` to the project's `package.json`. Download the `peel.js` script and place it in the `public` folder. Load `peel.js` in the root layout using a `<Script>` tag.
-    *   **Success Criteria:** The necessary third-party libraries are installed and accessible to the application.
-
-*   **Task 2: Create a New `ClaimableStamp.tsx` Component**
-    *   **Action:** Create a new file: `mini-app/app/components/ClaimableStamp.tsx`.
-    *   **Details:** This component will be built with the specific three-layer HTML structure required by `Peel.js`.
-    *   **Success Criteria:** A new, self-contained component for the claim animation is created with the correct DOM structure.
-
-### Phase 2: Animation and State Logic
-
-*   **Task 3: Implement Animation and State Logic in `ClaimableStamp`**
-    *   **Action:** Use React hooks (`useRef`, `useEffect`) within the new component to initialize the `Peel.js` and `GSAP` animation logic.
-    *   **Details:** The component will accept two props: `messageStatus` and `startClaimAnimation`.
-    *   **Success Criteria:** The component can display the correct state (claimed or unclaimed) and can successfully trigger the peel animation via a prop.
-
-### Phase 3: Integration
-
-*   **Task 4: Integrate `ClaimableStamp` into `ChatPage.tsx`**
-    *   **Action:** Modify `mini-app/app/chat/[userId]/page.tsx`.
-    *   **Details:**
-        1.  Replace the existing `<StampAvatar>` with the new `<ClaimableStamp>` component in the message mapping logic.
-        2.  Add a new state variable, `animatingMessageId`, to the `ChatPage`.
-        3.  When a claim transaction is confirmed, set `animatingMessageId` to the ID of the claimed message.
-        4.  Pass the `message.status` and a boolean (`animatingMessageId === message.id`) to the `ClaimableStamp` component's props.
-    *   **Success Criteria:** The animation is correctly triggered on the specific message being claimed, and the "claimed" state persists correctly on subsequent page loads.
-
-## Project Status Board
-- [ ] Task 1: Install Dependencies and Assets
-- [ ] Task 2: Create a New `ClaimableStamp.tsx` Component
-- [ ] Task 3: Implement Animation and State Logic in `ClaimableStamp`
-- [ ] Task 4: Integrate `ClaimableStamp` into `ChatPage.tsx`

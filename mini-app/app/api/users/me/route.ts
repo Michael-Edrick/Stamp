@@ -36,12 +36,13 @@ async function findOrCreateUserWithFid(fid: string, username: string, displayNam
     },
   });
 
-  // Link the connecting address
-  await prisma.verifiedAddress.create({
-    data: {
-      address: connectingAddress.toLowerCase(),
-      userId: newUser.id,
-    },
+  // Link both the connecting address and the custody address
+  await prisma.verifiedAddress.createMany({
+    data: [
+      { address: connectingAddress.toLowerCase(), userId: newUser.id },
+      { address: fullProfile.custody_address.toLowerCase(), userId: newUser.id },
+    ],
+    skipDuplicates: true, // Don't throw an error if the address is already linked
   });
 
   return newUser;

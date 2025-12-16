@@ -9,6 +9,7 @@ import { User as FarcasterUser } from "@neynar/nodejs-sdk/build/api";
 import { useDebounce } from 'use-debounce';
 import { useRouter } from 'next/navigation';
 import { usePrivy, useWallets } from "@privy-io/react-auth";
+import { useAccount } from 'wagmi';
 import { useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { messageEscrowABI } from '@/lib/contract';
 import { CONFIG } from '@/lib/config';
@@ -28,6 +29,7 @@ interface ComposeModalProps {
 const ComposeModal = ({ isOpen, onClose, currentUser }: ComposeModalProps) => {
   const { user } = usePrivy();
   const { wallets } = useWallets();
+  const { address: selfAddress } = useAccount();
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState<FarcasterUser[]>([]);
   const [selectedUser, setSelectedUser] = useState<FarcasterUser | null>(null);
@@ -105,7 +107,7 @@ const ComposeModal = ({ isOpen, onClose, currentUser }: ComposeModalProps) => {
   }
 
   const handleSendMessage = async () => {
-    if (!selectedUser || !message.trim() || !currentUser?.walletAddress) return;
+    if (!selectedUser || !message.trim() || !selfAddress) return;
 
     setIsSending(true);
     try {
@@ -124,7 +126,7 @@ const ComposeModal = ({ isOpen, onClose, currentUser }: ComposeModalProps) => {
         method: 'POST',
         headers: { 
             'Content-Type': 'application/json',
-            'x-wallet-address': currentUser.walletAddress,
+            'x-wallet-address': selfAddress as string,
         },
         body: JSON.stringify({ 
             content: message, 
@@ -210,7 +212,7 @@ const ComposeModal = ({ isOpen, onClose, currentUser }: ComposeModalProps) => {
             method: 'POST',
             headers: { 
                  'Content-Type': 'application/json',
-                'x-wallet-address': currentUser!.walletAddress!,
+                'x-wallet-address': selfAddress as string,
             },
             body: JSON.stringify({
                 content: pendingMessageContentRef.current,
