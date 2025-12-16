@@ -717,13 +717,13 @@ export default function ChatPage() {
                                   displayName={senderProfile?.name}
                                   amount={msg.amount}
                                   className="w-32 h-32"
-                                  style={{ transform: 'rotate(5.38deg)' }}
+                                  // style={{ transform: 'rotate(5.38deg)' }}
                                   isClaimed={!!msg.isClaimed}
                                   startClaimAnimation={animatingMessageId === msg.id}
                                   onAnimationComplete={() => handleAnimationComplete(msg.id)}
                                 />
-                        </div>
-                        <p className="text-sm">{msg.content}</p>
+                              </div>
+                              <p className="text-sm">{msg.content}</p>
                             </div>
                           ) : (
                             <>

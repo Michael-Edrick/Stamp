@@ -47,8 +47,10 @@ export default function PeelTestPage() {
     return (
         <div className="flex items-center justify-center h-screen bg-gray-100">
             <div ref={peelRef} className="relative peel cursor-pointer" style={{ width: '128px', height: '128px' }}>
-                <div className="peel-top">
-                    <img src="/stamp-frame.png" alt="Top Layer" className="w-full h-full" />
+                <div className="peel-top" style={{ backgroundColor: '#f3f4f6' }}>
+                    <img src="/stamp-frame.png" alt="Top Layer" className="w-full h-full" style={{
+                        filter: 'invert(37%) sepia(89%) saturate(420%) hue-rotate(3deg)',
+                    }} />
                 </div>
                 <div className="peel-back">
                     <img src="/stamp-frame-claimed.png" alt="Back Layer" className="w-full h-full" />

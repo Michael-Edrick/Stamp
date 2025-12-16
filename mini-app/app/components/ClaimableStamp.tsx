@@ -149,7 +149,7 @@ const ClaimableStamp: React.FC<ClaimableStampProps> = (props) => {
         <div 
             ref={peelRef} 
             className={`relative peel ${props.className || ''}`} 
-            style={props.style}
+            style={{ transform: 'rotate(5.38deg)' }}
         >
             <div className="peel-top">
                 <InlinedStampAvatar {...props} />
@@ -159,7 +159,7 @@ const ClaimableStamp: React.FC<ClaimableStampProps> = (props) => {
                     src="/stamp-frame-claimed.png" 
                     alt="Claimed Stamp Back" 
                     className="w-full h-full" 
-                    style={{ transform: 'rotate(5.38deg)' }} // Add rotation
+                   
                 />
             </div>
             <div className="peel-bottom">
@@ -167,7 +167,7 @@ const ClaimableStamp: React.FC<ClaimableStampProps> = (props) => {
                     src="/stamp-frame-claimed.png" 
                     alt="Claimed Stamp Bottom" 
                     className="w-full h-full" 
-                    style={{ transform: 'rotate(5.38deg)' }} // Add rotation
+                   
                 />
             </div>
         </div>
