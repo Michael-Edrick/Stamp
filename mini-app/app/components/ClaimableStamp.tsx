@@ -137,7 +137,7 @@ const ClaimableStamp: React.FC<ClaimableStampProps> = (props) => {
 
     if (props.isClaimed) {
         return (
-            <div className={`relative ${props.className || ''}`} style={props.style}>
+            <div className={`relative ${props.className || ''}`} style={{ transform: 'rotate(5.38deg)' }}>
                 <img src="/stamp-frame-claimed.png" alt="Claimed Stamp" className="w-full h-full" />
             </div>
         );
