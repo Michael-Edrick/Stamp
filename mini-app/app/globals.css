@@ -36,3 +36,75 @@ body {
 #root, #__next {
   height: 100%;
 }
+
+/* Registering the custom property for smooth animation */
+@property --gradient-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+/* Animated Gradient Border Styles */
+.gradient-border-wrapper {
+  position: relative;
+  display: inline-block; /* Ensures the wrapper fits the content */
+}
+
+.gradient-border-wrapper::before {
+  content: '';
+  position: absolute;
+  inset: -3px; /* Controls the thickness of the border */
+  z-index: 0; /* Sits behind the main content */
+    /* Using a conic gradient that starts from our animated angle */
+  background: conic-gradient(
+    from var(--gradient-angle), 
+    #FF5208, 
+    #FF9D00, 
+    #FFFFFF, 
+    #F08D01, 
+    #FFFFFF, 
+    #FF9D00, 
+    #FF5208
+  );
+  /* Applying the new rotation animation */
+  animation: gradient-rotate 4s linear infinite;
+  /* Use mask to create the stamp shape */
+  -webkit-mask-image: url('/stamp-frame.png');
+  mask-image: url('/stamp-frame.png');
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+}
+
+/* Keyframes to animate the --gradient-angle custom property */
+@keyframes gradient-rotate {
+  to {
+    --gradient-angle: 360deg;
+  }
+}
+
+/* Sparkle Animation */
+.sparkle {
+  position: absolute;
+  opacity: 0;
+  animation: sparkle-effect 3s infinite alternate;
+  pointer-events: none; /* Make sure they don't block clicks */
+}
+
+@keyframes sparkle-effect {
+  0% {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+}

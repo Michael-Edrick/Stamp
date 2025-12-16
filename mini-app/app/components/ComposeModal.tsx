@@ -397,7 +397,8 @@ const ComposeModal = ({ isOpen, onClose, currentUser }: ComposeModalProps) => {
       
       {showPaymentModal && 
         <PaymentModal 
-            user={recipientDbUserRef.current} 
+            user={recipientDbUserRef.current}
+            sender={currentUser} 
             onSelect={handlePaymentSelect} 
             onClose={() => setShowPaymentModal(false)} 
             isProcessing={isProcessingTx} 

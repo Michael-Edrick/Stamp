@@ -790,7 +790,7 @@ export default function ChatPage() {
         </div>
       </footer>
       
-      {showPaymentModal && <PaymentModal user={recipientUser} onSelect={handlePaymentSelect} onClose={() => setShowPaymentModal(false)} isProcessing={isApproving || isConfirmingApproval || isSendingMessage || isConfirmingMessage} />}
+      {showPaymentModal && <PaymentModal user={recipientUser} sender={currentUser} onSelect={handlePaymentSelect} onClose={() => setShowPaymentModal(false)} isProcessing={isApproving || isConfirmingApproval || isSendingMessage || isConfirmingMessage} />}
       
       {(isApproving || isSendingMessage || isConfirmingApproval || isConfirmingMessage || isClaimingRefund || isConfirmingRefund) && (
         <div className="fixed inset-0 bg-black/60 flex flex-col items-center justify-center z-50">
