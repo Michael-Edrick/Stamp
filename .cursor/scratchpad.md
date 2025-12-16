@@ -155,6 +155,42 @@ The user wanted to replace the current generic success pop-up with a more visual
     *   **Details:** The `useComposeCast` hook from OnchainKit was used to open the native Farcaster compose window. A pre-filled message was created, including the transaction amount, recipient, and an embed link back to the app.
     *   **Success Criteria:** Clicking the "Share" button opens the Farcaster composer with the correct, pre-populated cast.
 
+# Payment Modal Redesign
+
+**Status: Completed**
+
+## Background and Motivation
+The user requested a complete redesign of the `PaymentModal` to match a new design provided by the design team. The goal was to create a more visually engaging and informative selection screen for sending paid messages.
+
+## High-level Task Breakdown
+
+*   **Task 1: Simplify and Refine Layout**
+    *   **Action:** Modify `mini-app/app/components/PaymentModal.tsx`.
+    *   **Details:** The "None" option was removed. The layout of the remaining buttons was changed to display the price on the left, followed by the stamp name (e.g., "$1 Standard Stamp"). The button colors were updated to match the new design specs.
+    *   **Success Criteria:** The modal displays two options with the correct text, colors, and layout.
+
+*   **Task 2: Add Stamp Previews**
+    *   **Action:** Create `StampPreview.tsx` and `PriorityStampPreview.tsx` components and integrate them into `PaymentModal.tsx`.
+    *   **Details:** New components were created to render a preview of the stamp, including a static background image, the sender's initials, and the message price. These were added to the right side of each button in the `PaymentModal`.
+    *   **Success Criteria:** The `PaymentModal` displays a visual preview of each stamp type next to its corresponding button.
+
+*   **Task 3: Implement Animated Gradient Border**
+    *   **Action:** Add new CSS to `globals.css` and modify the `PriorityStampPreview` integration.
+    *   **Details:** An advanced CSS technique was used to create an animated border for the "Priority Stamp" preview. A `conic-gradient` was used as a background for a pseudo-element, and its starting angle was animated to create the effect of the gradient flowing around the border's shape. CSS masking (`mask-image`) was used to clip both the gradient and the stamp into the correct perforated shape.
+    *   **Success Criteria:** The "Priority Stamp" preview has a smoothly animating, multi-colored border that follows the contour of the stamp.
+
+*   **Task 4: Add Animated Sparkles**
+    *   **Action:** Create a `<Sparkle />` component, add CSS, and update `PaymentModal.tsx`.
+    *   **Details:** A new SVG component was created for the star shape. A CSS `sparkle-effect` animation was added to make them twinkle. Logic was added to the `PaymentModal` to render several of these sparkles at fixed positions around the "Priority Stamp" preview, each with a random animation delay.
+    *   **Success Criteria:** The "Priority Stamp" preview is surrounded by several twinkling, four-pointed stars, matching the design mockup.
+
+## Project Status Board
+- [x] Task 1: Simplify and Refine Layout
+- [x] Task 2: Add Stamp Previews
+- [x] Task 3: Implement Animated Gradient Border
+- [x] Task 4: Add Animated Sparkles
+
+
 # Mainnet Deployment Strategy
 
 **Status: In Progress**
