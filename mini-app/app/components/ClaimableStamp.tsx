@@ -5,7 +5,6 @@ import { gsap } from 'gsap';
 
 declare var Peel: any;
 
-// StampAvatar logic remains inlined
 const InlinedStampAvatar = ({ profile, displayName, amount, className, style }: any) => {
   if (!profile.image) {
     return null; // Or a fallback
@@ -148,7 +147,7 @@ const ClaimableStamp: React.FC<ClaimableStampProps> = (props) => {
     return (
         <div 
             ref={peelRef} 
-            className={`relative peel ${props.className || ''}`} 
+            className={`relative peel w-full h-full ${props.className || ''}`} 
             style={{ transform: 'rotate(5.38deg)' }}
         >
             <div className="peel-top">

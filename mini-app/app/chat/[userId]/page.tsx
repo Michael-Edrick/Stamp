@@ -711,13 +711,12 @@ export default function ChatPage() {
                           
                           {msg.amount && msg.amount > 0 ? (
                             <div className="flex flex-col items-center">
-                              <div className="mb-2">
+                              <div className="mb-2 w-32 h-32 scale-90 sm:scale-100">
                                 <ClaimableStamp
                                   profile={senderProfile || {}}
                                   displayName={senderProfile?.name}
                                   amount={msg.amount}
-                                  className="w-32 h-32"
-                                  // style={{ transform: 'rotate(5.38deg)' }}
+                                  className="w-full h-full"
                                   isClaimed={!!msg.isClaimed}
                                   startClaimAnimation={animatingMessageId === msg.id}
                                   onAnimationComplete={() => handleAnimationComplete(msg.id)}
