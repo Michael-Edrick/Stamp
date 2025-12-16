@@ -24,7 +24,7 @@ When a user tried to compose and send a new message, the application would fail 
 
 ## Implementation
 - **Action:** Modified `mini-app/app/components/ComposeModal.tsx`.
-- **Details:** The `useAccount` hook from `wagmi` was used to get the active wallet address. This address is now used for the value of the `x-wallet-address` header in all API calls made from the component.
+- **Details:** The `useAccount` hook from `wagmi` was used to get the active wallet address (renamed to `selfAddress` for consistency). This address is now used for the value of the `x-wallet-address` header in all API calls made from the component. A guard clause was also corrected to use this `selfAddress` to prevent sending messages when a wallet is not connected.
 - **Outcome:** The backend now correctly identifies the sender using the address they are actively using, resolving the bug.
 
 
@@ -192,4 +192,3 @@ The application is currently running on the Base Sepolia testnet. The next major
         2.  The `main` branch of the new repository will be set as the Production Branch.
         3.  The existing Vercel project will remain connected to the original testnet repository.
     *   **Success Criteria:** We have two distinct Vercel deployments: one for production connected to the mainnet repository, and one for testing connected to the testnet repository.
-
