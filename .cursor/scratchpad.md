@@ -190,7 +190,6 @@ The user requested a complete redesign of the `PaymentModal` to match a new desi
 - [x] Task 3: Implement Animated Gradient Border
 - [x] Task 4: Add Animated Sparkles
 
-
 # Mainnet Deployment Strategy
 
 **Status: In Progress**
