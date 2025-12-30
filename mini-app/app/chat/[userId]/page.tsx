@@ -24,6 +24,7 @@ import PaymentModal from '@/app/components/PaymentModal';
 import StampAvatar from '@/app/components/StampAvatar';
 import InfoModal from '@/app/components/InfoModal';
 import ClaimableStamp from '@/app/components/ClaimableStamp';
+import ClaimConfirmationModal from '@/app/components/ClaimConfirmationModal';
 
 type User = PrismaUser & {
   standardCost?: number | null;
@@ -64,6 +65,8 @@ export default function ChatPage() {
   const [infoModalContent, setInfoModalContent] = useState({ title: '', message: '' });
   const [isSendingTriggered, setIsSendingTriggered] = useState(false);
   const [animatingMessageId, setAnimatingMessageId] = useState<string | null>(null);
+  const [showClaimModal, setShowClaimModal] = useState(false);
+  const [claimedAmount, setClaimedAmount] = useState<number | null>(null);
 
   const pendingMessageContentRef = useRef<string | null>(null);
   const onChainMessageIdRef = useRef<string | null>(null);
@@ -538,6 +541,12 @@ export default function ChatPage() {
   }, [approveError, sendMessageError, isMessageError, sendMessageHash, refundError, approveReceiptError, sendMessageReceiptError]);
 
   const handleAnimationComplete = (messageId: string) => {
+    const claimedMessage = conversation?.messages.find(msg => msg.id === messageId);
+    if (claimedMessage && claimedMessage.amount) {
+      setClaimedAmount(claimedMessage.amount);
+      setShowClaimModal(true);
+    }
+    
     setConversation(prev => {
       if (!prev) return null;
       return {
@@ -574,7 +583,7 @@ export default function ChatPage() {
         </div>
       </header>
 
-      <main className="flex-1 overflow-y-auto p-4 flex flex-col-reverse space-y-4">
+      <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 flex flex-col-reverse space-y-4">
         <div ref={messagesEndRef} />
         {conversation?.messages.slice().reverse().map((msg) => {
           const isSender = msg.senderId === currentUser?.id;
@@ -814,6 +823,15 @@ export default function ChatPage() {
         }}
         title={infoModalContent.title}
         message={infoModalContent.message}
+      />
+
+      <ClaimConfirmationModal
+        show={showClaimModal}
+        amount={claimedAmount}
+        onClose={() => {
+          setShowClaimModal(false);
+          setClaimedAmount(null);
+        }}
       />
     </div>
   );

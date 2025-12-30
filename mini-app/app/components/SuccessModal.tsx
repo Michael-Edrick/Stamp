@@ -50,7 +50,7 @@ const SuccessModal: React.FC<SuccessModalProps> = ({ isOpen, onClose, onNavigate
     const appUrl: string = process.env.NEXT_PUBLIC_URL || '';
     
     composeCast({
-      text: `I just sent ${amount} stamps to @${recipientUsername} on ${appName}, reply to claim your funds!`,
+      text: `I just sent a ${amount} Stamp to @${recipientUsername}. Claim it on the Stamp miniapp!`,
       embeds: [appUrl],
     });
   };
