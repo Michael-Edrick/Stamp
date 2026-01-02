@@ -24,7 +24,7 @@ import PaymentModal from '@/app/components/PaymentModal';
 import StampAvatar from '@/app/components/StampAvatar';
 import InfoModal from '@/app/components/InfoModal';
 import ClaimableStamp from '@/app/components/ClaimableStamp';
-import ClaimConfirmationModal from '@/app/components/ClaimConfirmationModal';
+import FloatingAmount from '@/app/components/FloatingAmount';
 
 type User = PrismaUser & {
   standardCost?: number | null;
@@ -65,7 +65,7 @@ export default function ChatPage() {
   const [infoModalContent, setInfoModalContent] = useState({ title: '', message: '' });
   const [isSendingTriggered, setIsSendingTriggered] = useState(false);
   const [animatingMessageId, setAnimatingMessageId] = useState<string | null>(null);
-  const [showClaimModal, setShowClaimModal] = useState(false);
+  const [showFloatingAmount, setShowFloatingAmount] = useState(false);
   const [claimedAmount, setClaimedAmount] = useState<number | null>(null);
 
   const pendingMessageContentRef = useRef<string | null>(null);
@@ -544,7 +544,11 @@ export default function ChatPage() {
     const claimedMessage = conversation?.messages.find(msg => msg.id === messageId);
     if (claimedMessage && claimedMessage.amount) {
       setClaimedAmount(claimedMessage.amount);
-      setShowClaimModal(true);
+      setShowFloatingAmount(true);
+      setTimeout(() => {
+        setShowFloatingAmount(false);
+        setClaimedAmount(null);
+      }, 2000); // Hide after 2 seconds
     }
     
     setConversation(prev => {
@@ -825,13 +829,9 @@ export default function ChatPage() {
         message={infoModalContent.message}
       />
 
-      <ClaimConfirmationModal
-        show={showClaimModal}
-        amount={claimedAmount}
-        onClose={() => {
-          setShowClaimModal(false);
-          setClaimedAmount(null);
-        }}
+      <FloatingAmount
+        show={showFloatingAmount}
+        amount={claimedAmount || 0}
       />
     </div>
   );
