@@ -25,6 +25,8 @@ import StampAvatar from '@/app/components/StampAvatar';
 import InfoModal from '@/app/components/InfoModal';
 import ClaimableStamp from '@/app/components/ClaimableStamp';
 import FloatingAmount from '@/app/components/FloatingAmount';
+import Confetti from 'react-confetti';
+import { useWindowSize } from 'react-use';
 
 type User = PrismaUser & {
   standardCost?: number | null;
@@ -67,6 +69,9 @@ export default function ChatPage() {
   const [animatingMessageId, setAnimatingMessageId] = useState<string | null>(null);
   const [showFloatingAmount, setShowFloatingAmount] = useState(false);
   const [claimedAmount, setClaimedAmount] = useState<number | null>(null);
+  const [showConfetti, setShowConfetti] = useState(false);
+
+  const { width, height } = useWindowSize();
 
   const pendingMessageContentRef = useRef<string | null>(null);
   const onChainMessageIdRef = useRef<string | null>(null);
@@ -545,10 +550,16 @@ export default function ChatPage() {
     if (claimedMessage && claimedMessage.amount) {
       setClaimedAmount(claimedMessage.amount);
       setShowFloatingAmount(true);
+      setShowConfetti(true);
+
       setTimeout(() => {
         setShowFloatingAmount(false);
         setClaimedAmount(null);
       }, 2000); // Hide after 2 seconds
+      
+      const confettiTimer = setTimeout(() => {
+        setShowConfetti(false);
+      }, 5000); // Stop confetti after 5 seconds
     }
     
     setConversation(prev => {
@@ -833,6 +844,7 @@ export default function ChatPage() {
         show={showFloatingAmount}
         amount={claimedAmount || 0}
       />
+      {showConfetti && <Confetti width={width} height={height} />}
     </div>
   );
 }
