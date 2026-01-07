@@ -45,7 +45,7 @@ When a user tried to compose and send a new message, the application would fail 
 To enhance the user experience of claiming a paid message, a satisfying visual animation was implemented. When a user successfully claims the funds from a paid message, the existing message "stamp" peels away to reveal a new "claimed" version of the stamp. This effect is persistent, meaning that once a message is claimed, it will always show the "claimed" stamp on subsequent views.
 
 ## Analysis and High-level Plan
-The animation was implemented using the `Peel.js` library for the geometry and the `GSAP` (GreenSock Animation Platform) library for smooth animation tweening. The implementation was isolated into a new, dedicated component to avoid affecting existing components. A new `isClaimed` boolean field was added to the `Message` model in the database to persist the claimed state.
+The animation was implemented using the `Peel.js` library for the geometry and the `GSAP` (GreenSock Animation Platform) for smooth animation tweening. The implementation was isolated into a new, dedicated component to avoid affecting existing components. A new `isClaimed` boolean field was added to the `Message` model in the database to persist the claimed state.
 
 ### Implementation Details
 
@@ -190,31 +190,31 @@ The user requested a complete redesign of the `PaymentModal` to match a new desi
 - [x] Task 3: Implement Animated Gradient Border
 - [x] Task 4: Add Animated Sparkles
 
-# Post-Claim Confirmation Modal
+# Post-Claim Confirmation UX Improvement
 
 **Status: Completed**
 
 ## Background and Motivation
-To improve the user experience of claiming a paid message, we want to provide explicit confirmation that the funds have been received. Currently, the peel animation provides visual feedback, but a clear, textual confirmation will remove any ambiguity. The goal is to display a simple, non-intrusive modal that says "You have been paid by $(amount)" immediately after the peel animation finishes.
+To improve the user experience of claiming a paid message, the previous confirmation modal was replaced with a more dynamic and less intrusive notification. The goal is to provide clear, celebratory feedback without interrupting the user's flow with a modal that requires dismissal.
 
 ## High-level Task Breakdown
 
-*   **Task 1: Create a `ClaimConfirmationModal.tsx` Component**
-    *   **Action:** Create a new file at `mini-app/app/components/ClaimConfirmationModal.tsx`.
-    *   **Details:** This component will render a simple modal centered on the screen with a semi-transparent backdrop. It will display the confirmation message ("You have been paid by $(amount)") and will have a button to close it. It will accept `show`, `amount`, and `onClose` props.
-    *   **Success Criteria:** A new modal component is created that can be shown or hidden, displaying the dynamic payment amount.
+*   **Task 1: Create a `FloatingAmount.tsx` Component**
+    *   **Action:** Created a new file at `mini-app/app/components/FloatingAmount.tsx`.
+    *   **Details:** This component renders a `+$(amount)` message. It is styled to be fixed to the center of the viewport. A CSS animation (`float-up`) was created to make it fade in, float upwards, and then fade out over 2 seconds. The component takes a `show` prop to control its visibility. The amount displayed is automatically calculated with a 10% fee reduction.
+    *   **Success Criteria:** A new component exists that can display the animated "flash" amount when rendered.
 
-*   **Task 2: Integrate the Modal into the Chat Page**
-    *   **Action:** Modify `mini-app/app/chat/[userId]/page.tsx`.
-    *   **Details:** I will add state to manage the modal's visibility and the amount to be displayed. The `<ClaimConfirmationModal />` will be rendered in the page's JSX, linked to this new state.
-    *   **Success Criteria:** The modal is present on the chat page, and its visibility and content can be controlled via state.
+*   **Task 2: Integrate the `FloatingAmount` Component**
+    *   **Action:** Modified `mini-app/app/chat/[userId]/page.tsx`.
+    *   **Details:** The `ClaimConfirmationModal` was replaced with the new `FloatingAmount` component. State was added to manage its visibility. The `onAnimationComplete` function was updated to set this state to `true` when a claim is successful. A `setTimeout` is used to hide the component after its animation is complete.
+    *   **Success Criteria:** The floating amount animation appears in the center of the screen immediately after the peel animation finishes and disappears automatically.
 
-*   **Task 3: Trigger the Modal on Animation Completion**
-    *   **Action:** Modify the `onAnimationComplete` function in `mini-app/app/chat/[userId]/page.tsx`.
-    *   **Details:** When the peel animation finishes, I will update the state to make the modal visible, passing it the correct `amount` from the message that was just claimed.
-    *   **Success Criteria:** The confirmation modal appears in the center of the screen immediately after the peel animation finishes.
+*   **Task 3: Add Celebratory Confetti Effect**
+    *   **Action:** Reused the existing confetti logic from `SuccessModal.tsx` in `mini-app/app/chat/[userId]/page.tsx`.
+    *   **Details:** The `react-confetti` library and `useWindowSize` hook were added to the chat page. State was added to control the confetti's visibility. The `onAnimationComplete` function now also triggers the confetti, which runs for 5 seconds.
+    *   **Success Criteria:** A full-screen confetti burst appears along with the floating amount notification upon a successful claim.
 
 ## Project Status Board
-- [x] Task 1: Create a `ClaimConfirmationModal.tsx` Component
-- [x] Task 2: Integrate the Modal into the Chat Page
-- [x] Task 3: Trigger the Modal on Animation Completion
+- [x] Task 1: Create `FloatingAmount.tsx` component with CSS animation.
+- [x] Task 2: Integrate `FloatingAmount` into the chat page.
+- [x] Task 3: Add confetti effect to the claim confirmation.
