@@ -11,6 +11,7 @@ export async function POST(req: NextRequest) {
 
     const neynarApiKey = process.env.NEYNAR_API_KEY;
     const signerUuid = process.env.NEYNAR_SIGNER_UUID; 
+    const app_link = process.env.NEXT_PUBLIC_URL || '';
 
     if (!neynarApiKey || !signerUuid) {
       console.error("Neynar API Key or Signer UUID are not set in environment variables.");
@@ -19,10 +20,13 @@ export async function POST(req: NextRequest) {
 
     const neynarClient = new NeynarAPIClient({ apiKey: neynarApiKey } as { apiKey: string });
 
-    const app_link = "https://app.stampme.xyz";
-    const castText = `Hey @${recipientUsername}! You've received a new paid message on StampMe. Check your inbox to read it and claim your funds: ${app_link}`;
+    const castText = `Hey @${recipientUsername}! You've received a priority DM on Stamp. Check your inbox and get rewarded for replying.`;
     
-    const castResponse = await neynarClient.publishCast({ signerUuid, text: castText });
+    const castResponse = await neynarClient.publishCast({
+      signerUuid,
+      text: castText,
+      embeds: [{ url: app_link }],
+    });
 
     return NextResponse.json({ success: true, message: 'Cast submitted successfully via Neynar', data: castResponse }, { status: 200 });
 
