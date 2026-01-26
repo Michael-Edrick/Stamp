@@ -32,8 +32,8 @@ export const viewport: Viewport = {
 };
 
 export async function generateMetadata(): Promise<Metadata> {
-  const URL = process.env.NEXT_PUBLIC_URL || 'https://stamp-me.vercel.app';
-  const appName = process.env.NEXT_PUBLIC_ONCHAINKIT_PROJECT_NAME || 'StampMe';
+  const URL = process.env.NEXT_PUBLIC_URL || 'https://stamp-lucid.vercel.app';
+  const appName = process.env.NEXT_PUBLIC_ONCHAINKIT_PROJECT_NAME || 'Stamp';
 
   const frameMetadata = {
     version: "next",
