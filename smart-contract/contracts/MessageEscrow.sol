@@ -27,7 +27,7 @@ contract MessageEscrow is ReentrancyGuard {
 
     constructor(address _usdcAddress, address _platformFeeWallet, uint256 _platformFeePercentage) {
         require(_platformFeeWallet != address(0), "Invalid fee wallet address");
-        require(_platformFeePercentage > 0 && _platformFeePercentage <= 100, "Fee percentage must be between 1 and 100");
+        require(_platformFeePercentage <= 100, "Fee percentage must be between 0 and 100");
         usdc = IERC20(_usdcAddress);
         owner = msg.sender;
         platformFeeWallet = _platformFeeWallet;

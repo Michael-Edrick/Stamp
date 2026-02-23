@@ -30,7 +30,7 @@ async function main() {
   
   // Platform fee configuration
   const platformFeeWallet = process.env.PLATFORM_FEE_WALLET || "0x19f45792DC4237019A09033d9e226Dd4f5250312";
-  const platformFeePercentage = 10;
+  const platformFeePercentage = 0;
 
   console.log("Using USDC Address:", config.usdcTokenAddress);
   console.log("Platform fee wallet:", platformFeeWallet);

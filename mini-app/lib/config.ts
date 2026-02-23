@@ -8,7 +8,7 @@ const TESTNET_CONFIG = {
 
 const MAINNET_CONFIG = {
   usdcContractAddress: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
-  messageEscrowAddress: '0xFbb520165C951a1E7A24B8d89EEF3C2d400ac441',
+  messageEscrowAddress: '0x6770b02fa67705BF2C42918658b5485179baeE17',
   chain: base,
 }
 
