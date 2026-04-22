@@ -8,7 +8,6 @@ import { User as PrismaUser } from '@prisma/client';
 import { User as FarcasterUser } from "@neynar/nodejs-sdk/build/api";
 import { useDebounce } from 'use-debounce';
 import { useRouter } from 'next/navigation';
-import { usePrivy, useWallets } from "@privy-io/react-auth";
 import { useAccount } from 'wagmi';
 import { useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { messageEscrowABI } from '@/lib/contract';
@@ -27,8 +26,6 @@ interface ComposeModalProps {
 }
 
 const ComposeModal = ({ isOpen, onClose, currentUser }: ComposeModalProps) => {
-  const { user } = usePrivy();
-  const { wallets } = useWallets();
   const { address: selfAddress } = useAccount();
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState<FarcasterUser[]>([]);

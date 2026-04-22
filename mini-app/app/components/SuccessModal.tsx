@@ -4,8 +4,6 @@ import Image from 'next/image';
 import { Bad_Script } from 'next/font/google';
 import Confetti from 'react-confetti';
 import { useWindowSize } from 'react-use';
-import { useComposeCast } from '@coinbase/onchainkit/minikit';
-
 // Configure the font
 const badScript = Bad_Script({
   weight: '400',
@@ -25,7 +23,6 @@ const SuccessModal: React.FC<SuccessModalProps> = ({ isOpen, onClose, onNavigate
   const timeframe = "48 hours"; 
   const { width, height } = useWindowSize();
   const [showConfetti, setShowConfetti] = useState(false);
-  const { composeCast } = useComposeCast();
 
   useEffect(() => {
     if (isOpen) {
@@ -46,13 +43,15 @@ const SuccessModal: React.FC<SuccessModalProps> = ({ isOpen, onClose, onNavigate
   }, [isOpen]);
 
   const handleShare = () => {
-    const appName = process.env.NEXT_PUBLIC_ONCHAINKIT_PROJECT_NAME || 'Stamp';
-    const appUrl: string = process.env.NEXT_PUBLIC_URL || '';
-    
-    composeCast({
-      text: `I just sent a ${amount} Stamp to @${recipientUsername}. Claim it on the Stamp miniapp!`,
-      embeds: [appUrl],
-    });
+    const appUrl = process.env.NEXT_PUBLIC_URL || 'https://stamp-me.vercel.app/';
+    const text = encodeURIComponent(
+      `I just sent a $${amount} Stamp to @${recipientUsername}. Claim it on StampMe!`
+    );
+    const embedUrl = encodeURIComponent(appUrl);
+    window.open(
+      `https://warpcast.com/~/compose?text=${text}&embeds[]=${embedUrl}`,
+      '_blank'
+    );
   };
 
   return (

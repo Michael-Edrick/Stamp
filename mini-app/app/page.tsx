@@ -1,19 +1,17 @@
 "use client";
-import { useState, useEffect, useCallback } from 'react';
-import { useAccount, useDisconnect, useConnect } from "wagmi";
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { useAccount, useDisconnect, useConnect, useSignMessage, useChainId } from "wagmi";
+import { useRouter } from 'next/navigation';
+import { createSiweMessage, generateSiweNonce } from 'viem/siwe';
 import Link from 'next/link';
 import { UserCircleIcon, PaperAirplaneIcon, MagnifyingGlassIcon, ChatBubbleOvalLeftEllipsisIcon, PlusIcon, ChevronRightIcon } from '@heroicons/react/24/solid';
 import { User as PrismaUser, Conversation as PrismaConversation, Message as PrismaMessage } from '@prisma/client';
 import CustomAvatar from '@/app/components/CustomAvatar';
-import { useMiniKit } from '@coinbase/onchainkit/minikit';
-import { ConnectWallet } from '@coinbase/onchainkit/wallet';
 import SearchModal from '@/app/components/SearchModal';
 import { NetworkSwitcher } from '@/app/components/NetworkSwitcher';
 import Inbox from '@/app/components/Inbox';
 import Image from 'next/image';
 import ComposeModal from './components/ComposeModal';
-import AddAppButton from '@/app/components/AddAppButton';
-
 // Local type definition to avoid import issues with the SDK
 type NeynarUser = {
   fid: number;
@@ -102,15 +100,16 @@ export default function HomePage() {
   const { address, isConnected } = useAccount();
   const { disconnect } = useDisconnect();
   const { connect, connectors, isPending: isConnecting } = useConnect();
-  // const [conversations, setConversations] = useState<ConversationWithDetails[]>([]);
-  // const [following, setFollowing] = useState<NeynarUser[]>([]);
+  const { signMessageAsync } = useSignMessage();
+  const chainId = useChainId();
+  const router = useRouter();
+  const siweAttemptedRef = useRef(false);
+  const SIWE_KEY = 'stampme_siwe_signed';
   const [currentUser, setCurrentUser] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isClient, setIsClient] = useState(false);
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
-  const minikit = useMiniKit();
-  const { setFrameReady, isFrameReady } = minikit;
   const [isComposeModalOpen, setComposeModalOpen] = useState(false);
   const [hasAttemptedFetch, setHasAttemptedFetch] = useState(false);
 
@@ -118,16 +117,53 @@ export default function HomePage() {
     setIsClient(true);
   }, []);
 
-  useEffect(() => {
-    // Timeout to handle regular browser case where isFrameReady never becomes true
-    const timer = setTimeout(() => {
-      if (!isFrameReady) {
-        setLoading(false); // Stop loading to show "Connect Wallet"
-      }
-    }, 3000); // 3-second timeout
+  const signInWithSiwe = useCallback(async () => {
+    if (!address || !isConnected) return;
+    try {
+      const nonce = generateSiweNonce();
+      const message = createSiweMessage({
+        address: address as `0x${string}`,
+        chainId,
+        domain: window.location.host,
+        nonce,
+        uri: window.location.origin,
+        version: '1',
+        statement: 'Sign in to StampMe',
+      });
+      const signature = await signMessageAsync({ message });
+      const res = await fetch('/api/auth/siwe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message, signature }),
+      });
+      if (!res.ok) throw new Error('SIWE authentication failed');
+      // Persist that this address has signed in so we don't re-prompt on navigation
+      localStorage.setItem(SIWE_KEY, address.toLowerCase());
+      router.refresh();
+    } catch (err) {
+      // Allow retry on error/rejection by resetting the attempted flag
+      siweAttemptedRef.current = false;
+      console.error('SIWE sign-in error:', err);
+    }
+  }, [address, isConnected, chainId, signMessageAsync, router, SIWE_KEY]);
 
-    return () => clearTimeout(timer);
-  }, [isFrameReady]);
+  // Trigger SIWE once per address. We check localStorage so navigation (component
+  // remounts) never re-prompts a wallet that has already signed in this session.
+  useEffect(() => {
+    if (!isConnected || !address || siweAttemptedRef.current) return;
+    const alreadySigned = localStorage.getItem(SIWE_KEY) === address.toLowerCase();
+    if (!alreadySigned) {
+      siweAttemptedRef.current = true;
+      signInWithSiwe();
+    }
+  }, [isConnected, address, signInWithSiwe, SIWE_KEY]);
+
+  // Reset on disconnect so a new wallet gets prompted on next connect
+  useEffect(() => {
+    if (!isConnected) {
+      siweAttemptedRef.current = false;
+    }
+  }, [isConnected]);
 
   const fetchData = useCallback(async () => {
     if (!address) return;
@@ -136,21 +172,7 @@ export default function HomePage() {
     setError(null);
 
     try {
-      // Step 1: Fetch the current user's profile first.
-      // We now pass the minikit user data in headers if it exists.
-      const headers: HeadersInit = {};
-      const minikitUser = minikit?.context?.user;
-
-      if (minikitUser?.fid) {
-        headers['x-minikit-user-fid'] = String(minikitUser.fid);
-        headers['x-minikit-user-username'] = minikitUser.username || '';
-        headers['x-minikit-user-displayname'] = minikitUser.displayName || '';
-        headers['x-minikit-user-pfpurl'] = minikitUser.pfpUrl || '';
-      }
-
-      const userResponse = await fetch(`/api/users/me?walletAddress=${address}`, {
-        headers,
-      });
+      const userResponse = await fetch(`/api/users/me?walletAddress=${address}`);
 
       if (!userResponse.ok) {
         // If we can't get the main user, it's a critical error that stops the process.
@@ -205,57 +227,23 @@ export default function HomePage() {
     } finally {
       setLoading(false);
     }
-  }, [address, minikit]);
+  }, [address]);
 
   useEffect(() => {
-    // This is the new main logic hook based on your plan.
-
-    // Don't do anything if we aren't connected or have already fetched data.
     if (!isConnected || !address || hasAttemptedFetch) {
       return;
     }
-
-    const minikitUser = minikit?.context?.user;
-
-    // SUCCESS PATH: If the MiniKit user data is here, fetch immediately.
-    if (minikitUser?.fid) {
-      fetchData();
-      setHasAttemptedFetch(true);
-      return; // Stop.
-    }
-
-    // FALLBACK PATH: If no MiniKit user, start a 5-second timer.
-    const fallbackTimer = setTimeout(() => {
-      // Re-check the flag inside the timer. If the user data arrived while waiting,
-      // the other part of this hook would have already run and set the flag.
-      if (!hasAttemptedFetch) {
-        fetchData();
-        setHasAttemptedFetch(true);
-      }
-    }, 5000);
-
-    // Cleanup function: If dependencies change (e.g., minikitUser arrives)
-    // before the timer finishes, cancel the old timer.
-    return () => {
-      clearTimeout(fallbackTimer);
-    };
-  }, [isConnected, address, minikit?.context?.user, hasAttemptedFetch, fetchData]);
+    fetchData();
+    setHasAttemptedFetch(true);
+  }, [isConnected, address, hasAttemptedFetch, fetchData]);
 
   useEffect(() => {
-    console.log('OnchainKit Context:', minikit?.context);
-    // Reset the fetch flag if the user disconnects.
     if (!isConnected) {
       setHasAttemptedFetch(false);
       setCurrentUser(null);
-      setLoading(true); // Show loading for the next connection attempt
+      setLoading(true);
     }
   }, [isConnected]);
-
-  useEffect(() => {
-    if (!isFrameReady) {
-      setFrameReady();
-    }
-  }, [isFrameReady, setFrameReady]);
   
   const renderContent = () => {
     // Show loading until the frame is ready OR we've determined the connection state
@@ -292,8 +280,7 @@ export default function HomePage() {
               {isClient && !isConnected && (
                   <button
                     onClick={() => {
-                      // Find the Farcaster connector, or fall back to the first available one
-                      const connector = connectors.find(c => c.id === 'xyz.farcaster.MiniAppWallet') || connectors[0];
+                      const connector = connectors.find(c => c.id === 'coinbaseWalletSDK') || connectors[0];
                       if (connector) {
                         connect({ connector });
                       }
@@ -335,7 +322,6 @@ export default function HomePage() {
               )}
           </div>
       </header>
-      <AddAppButton />
       <main className="w-full max-w-md mx-auto px-4 flex-1 overflow-y-auto">
         {renderContent()}
       </main>
